@@ -32,8 +32,9 @@ class Sender(models.Model):
     send_delay_seconds = models.FloatField(default=3.0, help_text="Seconds to wait between each email send (rate limiting)")
     emails_sent_today = models.PositiveIntegerField(default=0)
     last_reset_date = models.DateField(null=True, blank=True)
-    is_active = models.BooleanField(default=True)
-    is_verified = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=False, help_text='Manually toggled on/off by user')
+    is_verified = models.BooleanField(default=False, help_text='Set to True only after successful SMTP connection test')
+    last_verified_at = models.DateTimeField(null=True, blank=True, help_text='When the SMTP connection was last successfully tested')
     created_at = models.DateTimeField(auto_now_add=True)
 
     @staticmethod
