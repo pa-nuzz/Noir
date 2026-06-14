@@ -1,0 +1,212 @@
+<style>
+  .tr-feed-card {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 16px; border-radius: 12px;
+    border: 1px solid #E2E8F0; background: #FFFFFF;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .tr-feed-card:hover { border-color: #06B6D4; box-shadow: 0 2px 12px rgba(6,182,212,0.08); }
+  .tr-feed-title { font-size: 0.9375rem; font-weight: 600; color: #0A2540; line-height: 1.4; }
+  .tr-feed-title a { color: inherit; text-decoration: none; }
+  .tr-feed-title a:hover { color: #06B6D4; }
+  .tr-feed-summary { font-size: 0.8125rem; color: #64748B; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .tr-feed-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 0.75rem; color: #94A3B8; margin-top: 4px; }
+  .tr-feed-topic { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 0.6875rem; font-weight: 600; }
+  .tr-feed-actions { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .tr-feed-btn { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 600; border: 1px solid #E2E8F0; background: #FFFFFF; color: #64748B; cursor: pointer; transition: all 0.12s; text-decoration: none; }
+  .tr-feed-btn:hover { border-color: #06B6D4; color: #06B6D4; background: #F0FDFA; }
+  .tr-feed-btn.active { border-color: #06B6D4; color: #06B6D4; background: #ECFEFF; }
+  .tr-feed-btn svg { width: 14px; height: 14px; }
+  .tr-feed-score { font-size: 0.6875rem; color: #94A3B8; font-weight: 500; margin-left: auto; }
+  .tr-topic-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; cursor: pointer; border: 1px solid #E2E8F0; background: #FFFFFF; color: #64748B; transition: all 0.12s; }
+  .tr-topic-chip:hover { border-color: #06B6D4; color: #06B6D4; }
+  .tr-topic-chip.active { border-color: #06B6D4; color: #FFFFFF; background: #06B6D4; }
+  .tr-loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: #94A3B8; font-size: 0.875rem; }
+  .tr-empty { text-align: center; padding: 40px 20px; color: #94A3B8; }
+  .tr-empty svg { width: 40px; height: 40px; margin: 0 auto 12px; opacity: 0.4; }
+  .tr-toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 10px; font-size: 0.8125rem; font-weight: 600; color: #FFFFFF; z-index: 9999; opacity: 0; transform: translateY(10px); transition: all 0.25s; }
+  .tr-toast.show { opacity: 1; transform: translateY(0); }
+  .tr-toast.success { background: #059669; }
+  .tr-toast.error { background: #DC2626; }
+</style>
+
+<div id="trending-root">
+  <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center gap-2">
+      <h3 class="text-base font-bold text-slate-900">Trending Feed</h3>
+      <button onclick="refreshTrendingProfile()" class="tr-feed-btn" title="Refresh your interests" style="padding:4px 8px;">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Topic filter chips -->
+  <div id="tr-topic-chips" class="flex flex-wrap gap-2 mb-4"></div>
+
+  <!-- Feed items -->
+  <div id="tr-feed-list" class="space-y-3">
+    <div class="tr-loading">Loading trending feed…</div>
+  </div>
+</div>
+
+<div id="tr-toast" class="tr-toast"></div>
+
+<script>
+function showTrendingToast(msg, type) {
+  var t = document.getElementById('tr-toast');
+  t.textContent = msg;
+  t.className = 'tr-toast ' + type + ' show';
+  clearTimeout(t._hide);
+  t._hide = setTimeout(function() { t.classList.remove('show'); }, 3000);
+}
+
+function loadTrendingFeed(topicId) {
+  var list = document.getElementById('tr-feed-list');
+  list.innerHTML = '<div class="tr-loading">Loading trending feed…</div>';
+
+  var url = '/trending/api/feed/';
+  if (topicId) url += '?topic_id=' + topicId;
+
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.items || data.items.length === 0) {
+        list.innerHTML = '<div class="tr-empty"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg><p>No trending items yet. Content collection runs every 6 hours.</p></div>';
+        return;
+      }
+
+      var html = '';
+      data.items.forEach(function(item) {
+        var topicHtml = '';
+        if (item.topic) {
+          topicHtml = '<span class="tr-feed-topic" style="background:' + item.topic.color + '15;color:' + item.topic.color + '">' + item.topic.icon + ' ' + item.topic.name + '</span>';
+        }
+        var bookmarkClass = item.is_bookmarked ? 'active' : '';
+        html += '<div class="tr-feed-card">' +
+          '<div class="tr-feed-title"><a href="' + item.url + '" target="_blank" rel="noopener">' + escapeHtml(item.title) + '</a></div>' +
+          '<div class="tr-feed-summary">' + escapeHtml(item.summary) + '</div>' +
+          '<div class="tr-feed-meta">' +
+            topicHtml +
+            '<span>' + escapeHtml(item.source) + '</span>' +
+            (item.author ? '<span>' + escapeHtml(item.author) + '</span>' : '') +
+            (item.published_at ? '<span>' + timeAgo(item.published_at) + '</span>' : '') +
+          '</div>' +
+          '<div class="tr-feed-actions">' +
+            '<button onclick="saveDraft(' + item.id + ')" class="tr-feed-btn">' +
+              '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>' +
+              ' Save as Draft' +
+            '</button>' +
+            '<button onclick="toggleBookmark(' + item.id + ', this)" class="tr-feed-btn ' + bookmarkClass + '">' +
+              '<svg fill="' + (item.is_bookmarked ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>' +
+              ' Bookmark' +
+            '</button>' +
+            '<span class="tr-feed-score">Score: ' + item.score.toFixed(1) + '</span>' +
+          '</div>' +
+        '</div>';
+      });
+      list.innerHTML = html;
+    })
+    .catch(function(err) {
+      list.innerHTML = '<div class="tr-empty"><p>Failed to load feed. Please try again.</p></div>';
+      console.error('Trending feed error:', err);
+    });
+}
+
+function loadTrendingTopics() {
+  var chips = document.getElementById('tr-topic-chips');
+
+  fetch('/trending/api/topics/')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.topics || data.topics.length === 0) return;
+
+      var html = '<button class="tr-topic-chip active" onclick="filterTrending(this, null)">All Topics</button>';
+      data.topics.forEach(function(t) {
+        var cls = 'tr-topic-chip';
+        if (t.is_subscribed) cls += ' active';
+        html += '<button class="' + cls + '" onclick="filterTrending(this, ' + t.id + ')" style="' +
+          (t.is_subscribed ? 'background:' + t.color + ';border-color:' + t.color + ';color:#fff' : '') + '">' +
+          t.icon + ' ' + escapeHtml(t.name) +
+        '</button>';
+      });
+      chips.innerHTML = html;
+    })
+    .catch(function(err) { console.error('Trending topics error:', err); });
+}
+
+function filterTrending(btn, topicId) {
+  document.querySelectorAll('.tr-topic-chip').forEach(function(c) { c.classList.remove('active'); c.style.background = ''; c.style.borderColor = ''; c.style.color = ''; });
+  btn.classList.add('active');
+  if (btn.style) {
+    var color = btn.textContent.trim().match(/[#][0-9a-fA-F]{6}/);
+    if (color) { btn.style.background = color[0]; btn.style.borderColor = color[0]; btn.style.color = '#fff'; }
+  }
+  loadTrendingFeed(topicId);
+}
+
+function saveDraft(itemId) {
+  fetch('/trending/api/feed/' + itemId + '/save-draft/', { method: 'POST', headers: {'X-CSRFToken': getCookie('csrftoken')} })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      showTrendingToast('Saved as draft!', 'success');
+      setTimeout(function() {
+        if (data.redirect_url) window.location.href = data.redirect_url;
+      }, 1000);
+    })
+    .catch(function() { showTrendingToast('Failed to save draft', 'error'); });
+}
+
+function toggleBookmark(itemId, btn) {
+  fetch('/trending/api/feed/' + itemId + '/bookmark/', { method: 'POST', headers: {'X-CSRFToken': getCookie('csrftoken')} })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var isBookmarked = data.bookmarked;
+      btn.classList.toggle('active', isBookmarked);
+      btn.querySelector('svg').setAttribute('fill', isBookmarked ? 'currentColor' : 'none');
+      showTrendingToast(isBookmarked ? 'Bookmarked!' : 'Bookmark removed', 'success');
+    })
+    .catch(function() { showTrendingToast('Failed to update bookmark', 'error'); });
+}
+
+function refreshTrendingProfile() {
+  fetch('/trending/api/profile/refresh/', { method: 'POST', headers: {'X-CSRFToken': getCookie('csrftoken')} })
+    .then(function(r) { return r.json(); })
+    .then(function() {
+      showTrendingToast('Interests refreshed!', 'success');
+      loadTrendingFeed();
+      loadTrendingTopics();
+    })
+    .catch(function() { showTrendingToast('Failed to refresh profile', 'error'); });
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  var d = document.createElement('div');
+  d.textContent = text;
+  return d.innerHTML;
+}
+
+function timeAgo(iso) {
+  var now = new Date();
+  var then = new Date(iso);
+  var secs = Math.floor((now - then) / 1000);
+  if (secs < 60) return 'just now';
+  var mins = Math.floor(secs / 60);
+  if (mins < 60) return mins + 'm ago';
+  var hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  var days = Math.floor(hrs / 24);
+  if (days < 7) return days + 'd ago';
+  return then.toLocaleDateString();
+}
+
+function getCookie(name) {
+  var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? match[2] : '';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  loadTrendingTopics();
+  loadTrendingFeed();
+});
+</script>

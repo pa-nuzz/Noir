@@ -27,6 +27,7 @@ urlpatterns = static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) + [
     path('content-studio/', include('apps.content_studio.urls', namespace='content_studio')),
     path('media-assets/', include('apps.media_assets.urls', namespace='media_assets')),
     path('creative/', include('apps.creative.urls', namespace='creative')),
+    path('trending/', include('apps.trending.urls', namespace='trending')),
     path('billing/', include('apps.billing.urls', namespace='billing')),
     path('webhooks/', include('apps.webhooks.urls', namespace='webhooks')),
     path('mfa/', include('apps.mfa.urls', namespace='mfa')),
