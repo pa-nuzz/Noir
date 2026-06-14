@@ -118,15 +118,16 @@
               </div>
 
               <div class="flex items-center gap-2">
-                <button
-                  type="button"
-                  class="sender-test-btn inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-semibold hover:border-primary/30 hover:text-primary transition-colors"
-                  data-host="{{ s.smtp_host }}"
-                  data-port="{{ s.smtp_port }}"
-                  data-username="{{ s.username }}"
-                  data-from-email="{{ s.from_email }}"
-                  data-use-tls="{{ s.use_tls|yesno:'true,false' }}"
-                >
+                  <button
+                    type="button"
+                    class="sender-test-btn inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-semibold hover:border-primary/30 hover:text-primary transition-colors"
+                    data-sender-id="{{ s.id }}"
+                    data-host="{{ s.smtp_host }}"
+                    data-port="{{ s.smtp_port }}"
+                    data-username="{{ s.username }}"
+                    data-from-email="{{ s.from_email }}"
+                    data-use-tls="{{ s.use_tls|yesno:'true,false' }}"
+                  >
                   <span class="sender-test-label">Test Connection</span>
                 </button>
                 <button
@@ -551,6 +552,7 @@
 
     testButtons.forEach(function (button) {
       button.addEventListener('click', async function () {
+        const senderId = button.dataset.senderId;
         const host = button.dataset.host;
         const port = button.dataset.port;
         const username = button.dataset.username;
@@ -578,6 +580,7 @@
               'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify({
+              sender_id: senderId,
               host: host,
               port: port,
               username: username,
@@ -602,6 +605,17 @@
           }
 
           if (response.ok && data.success) {
+            // Update badge from Inactive to Active
+            var card = button.closest('.rounded-2xl.border');
+            if (card) {
+              var badge = card.querySelector('[class*="badge"]');
+              if (badge && badge.textContent.trim() === 'Inactive') {
+                badge.textContent = 'Active';
+                badge.className = badge.className.replace(/bg-slate-100/g, 'bg-emerald-50').replace(/text-slate-/g, 'text-emerald-').replace(/variant="gray"/g, 'variant="green"');
+                badge.classList.remove('text-slate-600');
+                badge.classList.add('text-emerald-600', 'bg-emerald-50');
+              }
+            }
             button.classList.remove('border-slate-200', 'text-slate-600');
             button.classList.add('border-emerald-300', 'text-emerald-700', 'bg-emerald-50');
             label.textContent = 'Passed ✓';
