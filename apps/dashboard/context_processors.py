@@ -6,23 +6,11 @@ from django.utils import timezone
 from apps.campaigns.models import Campaign
 from apps.senders.models import Sender
 from apps.workspaces.models import TeamInvitation
-from .models import Notification as NotificationModel
 
 
 def _build_notifications(user, dismissed_at):
     notifications = []
     now = timezone.now()
-
-    # Persistent notifications (from Notification model)
-    stored = NotificationModel.objects.filter(user=user, is_read=False)
-    for n in stored:
-        notifications.append({
-            'title': n.title,
-            'message': n.message,
-            'tone': n.tone,
-            'url': n.url,
-            'created_at': n.created_at,
-        })
 
     senders_qs = Sender.objects.filter(user=user)
     campaigns_qs = Campaign.objects.filter(user=user)

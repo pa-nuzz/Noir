@@ -18,4 +18,5 @@ urlpatterns = [
     path('messages/<int:message_id>/delete/', views.message_delete, name='message_delete'),
     path('trash/', views.inbox_trash, name='trash'),
     path('messages/<int:message_id>/restore/', views.message_restore, name='message_restore'),
+    path('proxy-image/', views.proxy_email_image, name='proxy_image'),
 ]

@@ -1,16 +1,20 @@
 import logging
 import re
 import smtplib
+import base64
+import mimetypes
 from email.mime.text import MIMEText
+from urllib.parse import urlparse
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.db.models import F
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 from django.urls import reverse
 from django.utils import timezone
+from django.http import HttpResponse, JsonResponse, Http404
 
 from .forms import EmailInboxConnectForm
 from .models import EmailDraft, EmailInbox, EmailMessage
@@ -194,55 +198,167 @@ def inbox_disconnect(request, inbox_id):
 
 
 
-def _prepare_email_html(body_html, body_text=None, inline_cids=None):
-    """Prepare email HTML for display, with fallback to plain text."""
+def _render_email_for_display(body_html, body_text=None, inline_cids=None, request=None):
+    """
+    Render email HTML for display in iframe sandbox.
+    Preserves images, styles, and structure while sanitizing dangerous content.
+    """
+    if not body_html and not body_text:
+        return _get_empty_email_html()
+    
     if body_html:
-        # Sanitize HTML
-        body_html = re.sub(r'<script[^>]*>.*?</script>', '', body_html, flags=re.DOTALL | re.IGNORECASE)
-        body_html = re.sub(r'<object[^>]*>.*?</object>', '', body_html, flags=re.DOTALL | re.IGNORECASE)
-        body_html = re.sub(r'<embed[^>]*>', '', body_html, flags=re.IGNORECASE)
-        body_html = re.sub(r'\bon\w+\s*=\s*["\'][^"\']*["\']', '', body_html, flags=re.IGNORECASE)
-        body_html = re.sub(r'\bon\w+\s*=\s*\S+', '', body_html, flags=re.IGNORECASE)
-        body_html = re.sub(r'href\s*=\s*["\']\s*javascript\s*:', '', body_html, flags=re.IGNORECASE)
-        body_html = re.sub(r'src\s*=\s*["\']\s*javascript\s*:', '', body_html, flags=re.IGNORECASE)
-        body_html = re.sub(r'<iframe[^>]*>.*?</iframe>', '', body_html, flags=re.DOTALL | re.IGNORECASE)
-        body_html = re.sub(r'<form[^>]*>.*?</form>', '', body_html, flags=re.DOTALL | re.IGNORECASE)
-        body_html = re.sub(r'<base[^>]*>', '', body_html, flags=re.IGNORECASE)
-        body_html = re.sub(r'<link[^>]*>', '', body_html, flags=re.IGNORECASE)
-        body_html = re.sub(r'data\s*:\s*text/html', '', body_html, flags=re.IGNORECASE)
-
+        # Sanitize HTML - remove only dangerous content, preserve structure
+        html = body_html
+        
+        # Remove dangerous elements
+        html = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL | re.IGNORECASE)
+        html = re.sub(r'<object[^>]*>.*?</object>', '', html, flags=re.DOTALL | re.IGNORECASE)
+        html = re.sub(r'<embed[^>]*>', '', html, flags=re.IGNORECASE)
+        html = re.sub(r'<iframe[^>]*>.*?</iframe>', '', html, flags=re.DOTALL | re.IGNORECASE)
+        html = re.sub(r'<form[^>]*>.*?</form>', '', html, flags=re.DOTALL | re.IGNORECASE)
+        html = re.sub(r'<base[^>]*>', '', html, flags=re.IGNORECASE)
+        
+        # Remove dangerous attributes
+        html = re.sub(r'\bon\w+\s*=\s*["\'][^"\']*["\']', '', html, flags=re.IGNORECASE)
+        html = re.sub(r'\bon\w+\s*=\s*\S+', '', html, flags=re.IGNORECASE)
+        html = re.sub(r'href\s*=\s*["\']\s*javascript\s*:', '', html, flags=re.IGNORECASE)
+        html = re.sub(r'src\s*=\s*["\']\s*javascript\s*:', '', html, flags=re.IGNORECASE)
+        html = re.sub(r'action\s*=\s*["\']\s*javascript\s*:', '', html, flags=re.IGNORECASE)
+        
+        # Handle inline CID images - replace with proxy URLs
         if inline_cids:
             for cid, uri in inline_cids.items():
-                body_html = body_html.replace(f'cid:{cid}', uri)
-        body_html = re.sub(r'cid:\S+', '', body_html)
-
-        body_html = re.sub(
+                if uri.startswith('data:'):
+                    # Already a data URI, keep as is
+                    html = html.replace(f'cid:{cid}', uri)
+                else:
+                    # Proxy the image through our endpoint
+                    proxy_url = f"/inbox/proxy-image/?cid={cid}"
+                    html = html.replace(f'cid:{cid}', proxy_url)
+        
+        # Handle remaining CID references - try to proxy them
+        html = re.sub(r'cid:([\w\.\-\+]+)', lambda m: f"/inbox/proxy-image/?cid={m.group(1)}", html)
+        
+        # Handle external images - proxy them for privacy
+        def proxy_external_images(match):
+            full_tag = match.group(0)
+            src_match = re.search(r'src\s*=\s*["\']([^"\']+)["\']', full_tag, flags=re.IGNORECASE)
+            if src_match:
+                src = src_match.group(1)
+                if src.startswith(('http://', 'https://')) and not src.startswith('data:'):
+                    proxy_url = f"/inbox/proxy-image/?url={urlparse(src).path if urlparse(src).path else src}"
+                    full_tag = full_tag.replace(src, f"/inbox/proxy-image/?url={src}")
+            return full_tag
+        
+        html = re.sub(r'<img\s+[^>]*>', proxy_external_images, html, flags=re.IGNORECASE)
+        
+        # Fix image styles
+        html = re.sub(
             r'<img\s(?![^>]*style=)',
             '<img style="display:block;outline:none;border:0;max-width:100%;height:auto" ',
-            body_html,
+            html,
             flags=re.IGNORECASE,
         )
-        body_html = re.sub(
-            r'</?(html|head|body)[^>]*>',
-            '',
-            body_html,
-            flags=re.IGNORECASE,
+        
+        # Add target="_blank" to external links
+        html = re.sub(
+            r'<a\s+([^>]*href\s*=\s*["\'](https?://[^"\']+)["\'][^>]*)>',
+            r'<a \1 target="_blank" rel="noopener noreferrer">',
+            html,
+            flags=re.IGNORECASE
         )
-        return (
-            '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" '
-            'style="border-collapse:collapse;background-color:#f4f4f5">'
-            '<tr><td align="center" style="padding:16px">'
-            '<table role="presentation" border="0" cellpadding="0" cellspacing="0" '
-            'style="border-collapse:collapse;max-width:600px;width:100%;background-color:#ffffff;'
-            'border-radius:6px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,0.04)">'
-            '<tr><td style="padding:20px 24px;font-size:15px;line-height:1.6;color:#1e293b;'
-            'font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif">'
-            + body_html
-            + '</td></tr></table></td></tr></table>'
-        )
+        
+        # Preserve structure - keep html, head, body but sanitize
+        # Extract body content if full HTML
+        body_content = html
+        body_match = re.search(r'<body[^>]*>(.*?)</body>', html, flags=re.DOTALL | re.IGNORECASE)
+        if body_match:
+            body_content = body_match.group(1)
+        else:
+            # If no body tag, use the whole HTML
+            body_content = html
+        
+        # Extract styles from head if present
+        styles = ''
+        head_match = re.search(r'<head[^>]*>(.*?)</head>', html, flags=re.DOTALL | re.IGNORECASE)
+        if head_match:
+            head_content = head_match.group(1)
+            # Extract only style tags
+            style_matches = re.findall(r'<style[^>]*>(.*?)</style>', head_content, flags=re.DOTALL | re.IGNORECASE)
+            styles = ''.join(style_matches)
+        
+        # Build the final email HTML for iframe
+        email_html = f'''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: https:; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline';">
+    <style>
+        {styles}
+        * {{
+            box-sizing: border-box;
+        }}
+        body {{
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f5;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
+        }}
+        .email-container {{
+            max-width: 600px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }}
+        .email-body {{
+            padding: 24px;
+        }}
+        img {{
+            max-width: 100% !important;
+            height: auto !important;
+            display: block;
+        }}
+        a {{
+            color: #6D28D9;
+            text-decoration: underline;
+        }}
+        a[href^="tel"] {{
+            color: inherit;
+            text-decoration: none;
+        }}
+        table {{
+            max-width: 100%;
+            width: 100%;
+            border-collapse: collapse;
+        }}
+        @media (max-width: 600px) {{
+            .email-container {{
+                border-radius: 0;
+            }}
+            .email-body {{
+                padding: 16px;
+            }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="email-body">
+            {body_content}
+        </div>
+    </div>
+</body>
+</html>'''
+        return email_html
+    
     elif body_text:
         # Fallback: convert plain text to HTML with proper formatting
-        escaped = body_text.replace('&', '&').replace('<', '<').replace('>', '>')
+        escaped = body_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
         paragraphs = escaped.split('\n\n')
         html_parts = []
         for p in paragraphs:
@@ -252,27 +368,90 @@ def _prepare_email_html(body_html, body_text=None, inline_cids=None):
             else:
                 html_parts.append('<p style="margin:0 0 1em 0;line-height:1.6">' + p + '</p>')
         body_text_html = ''.join(html_parts)
-        return (
-            '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" '
-            'style="border-collapse:collapse;background-color:#f4f4f5">'
-            '<tr><td align="center" style="padding:16px">'
-            '<table role="presentation" border="0" cellpadding="0" cellspacing="0" '
-            'style="border-collapse:collapse;max-width:600px;width:100%;background-color:#ffffff;'
-            'border-radius:6px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,0.04)">'
-            '<tr><td style="padding:20px 24px;font-size:15px;line-height:1.6;color:#1e293b;'
-            'font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif">'
-            + body_text_html
-            + '</td></tr></table></td></tr></table>'
-        )
-    return ''
+        
+        return f'''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: https:; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline';">
+    <style>
+        * {{ box-sizing: border-box; }}
+        body {{
+            margin: 0; padding: 0; background-color: #f4f4f5;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; color: #1e293b;
+        }}
+        .email-container {{
+            max-width: 600px; margin: 0 auto; background: #ffffff;
+            border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }}
+        .email-body {{ padding: 24px; }}
+        p {{ margin: 0 0 1em 0; line-height: 1.6; }}
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="email-body">
+            {body_text_html}
+        </div>
+    </div>
+</body>
+</html>'''
+    
+    return _get_empty_email_html()
+
+
+def _get_empty_email_html():
+    return '''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { margin: 0; padding: 40px 20px; background: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        .empty { max-width: 400px; margin: 0 auto; text-align: center; padding: 40px 20px; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .empty svg { color: #cbd5e1; margin-bottom: 16px; }
+        .empty h3 { color: #1e293b; font-size: 18px; margin-bottom: 8px; }
+        .empty p { color: #64748b; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="empty">
+        <svg width="64" height="64" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        <h3>No content available</h3>
+        <p>This message has no readable content.</p>
+    </div>
+</body>
+</html>'''
 
 
 @login_required
 @require_workspace_permission('inbox', 'read')
 def message_detail(request, message_id):
     msg = get_object_or_404(EmailMessage, id=message_id, thread__inbox__user=request.user)
-    email_html = _prepare_email_html(msg.body_html) if msg.body_html else ''
-    drafts = EmailDraft.objects.filter(original_message=msg, thread__inbox__in=filter_by_context(request, EmailInbox.objects.all())).order_by('-created_at')
+    
+    # Build inline CIDs dict from message or thread
+    inline_cids = {}
+    if msg.body_html and 'cid:' in msg.body_html:
+        # Extract CIDs from the message
+        import re
+        cids = set(re.findall(r'cid:([\w\.\-\+]+)', msg.body_html))
+        # In a real implementation, you'd fetch the actual image data from the message
+        # For now, we'll let the proxy handle it
+    
+    email_html = _render_email_for_display(
+        body_html=msg.body_html,
+        body_text=msg.body_text,
+        inline_cids={},
+        request=request
+    )
+    
+    drafts = EmailDraft.objects.filter(
+        original_message=msg, 
+        thread__inbox__in=filter_by_context(request, EmailInbox.objects.all())
+    ).order_by('-created_at')
+    
     return render(request, 'inbox/message_detail.html', {
         'msg': msg,
         'email_html': email_html,
@@ -731,6 +910,61 @@ def draft_send_test(request, draft_id):
     return redirect('inbox:draft_detail', draft_id=draft.id)
 
 
-
-
+@login_required
+@require_GET
+def proxy_email_image(request):
+    """
+    Proxy email images to protect user privacy and avoid CSP issues.
+    Supports both CID references and external URLs.
+    """
+    cid = request.GET.get('cid')
+    url = request.GET.get('url')
+    
+    if not cid and not url:
+        return HttpResponse(status=400)
+    
+    try:
+        if cid:
+            # For CID references, we'd need to look up the actual image data
+            # For now, return a placeholder
+            # In a full implementation, you'd look up the CID in the message's inline images
+            placeholder_svg = '''<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+                <rect width="100" height="100" fill="#f1f5f9"/>
+                <text x="50" y="55" font-family="system-ui" font-size="12" fill="#94a3b8" text-anchor="middle">Image</text>
+            </svg>'''
+            return HttpResponse(placeholder_svg, content_type='image/svg+xml')
+        
+        elif url:
+            # Proxy external image
+            import httpx
+            parsed = urlparse(url)
+            if not parsed.scheme or not parsed.netloc:
+                return HttpResponse(status=400)
+            
+            # Fetch the image with timeout
+            with httpx.Client(timeout=10.0, follow_redirects=True) as client:
+                response = client.get(url, headers={
+                    'User-Agent': 'Mozilla/5.0 (compatible; MailFlow Image Proxy)',
+                    'Accept': 'image/*,*/*;q=0.8',
+                })
+                response.raise_for_status()
+                
+                content_type = response.headers.get('content-type', 'image/png')
+                # Only allow image content types
+                if not content_type.startswith('image/'):
+                    return HttpResponse(status=400)
+                
+                # Return with caching headers
+                response_http = HttpResponse(response.content, content_type=content_type)
+                response_http['Cache-Control'] = 'public, max-age=86400, immutable'
+                response_http['X-Content-Type-Options'] = 'nosniff'
+                return response_http
+                
+    except httpx.TimeoutException:
+        return HttpResponse(status=504)
+    except httpx.HTTPStatusError as e:
+        return HttpResponse(status=e.response.status_code)
+    except Exception as e:
+        logger.warning(f"Image proxy error: {e}")
+        return HttpResponse(status=500)
 

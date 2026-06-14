@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 from django_ratelimit.decorators import ratelimit
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
@@ -10,6 +10,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.conf import settings
 from django.contrib.auth.forms import SetPasswordForm
+from django.http import JsonResponse
 from .forms import RegisterForm, LoginForm
 from django.contrib import messages
 from .models import User, PasswordResetCode
@@ -287,7 +288,49 @@ def password_reset_resend_code(request):
     return redirect('accounts:password_reset_code')
 
 
+@ratelimit(key='ip', rate='20/m', method='GET', block=True)
+@require_GET
+def check_availability(request):
+    """Check if email or username is available for registration. Accepts a single field that can be either email or username."""
+    field_value = request.GET.get('field', '').strip().lower()
+    
+    if not field_value:
+        return JsonResponse({
+            'available': False,
+            'message': 'Enter a valid email or username',
+            'field': 'field'
+        })
 
-
+    # Check if field_value looks like an email (contains @)
+    is_email = '@' in field_value
+    
+    if is_email:
+        # Check email availability
+        exists = User.objects.filter(email__iexact=field_value).exists()
+        if exists:
+            return JsonResponse({
+                'available': False,
+                'message': 'This email is already registered',
+                'field': 'email'
+            })
+        return JsonResponse({
+            'available': True,
+            'message': 'Email is available',
+            'field': 'email'
+        })
+    else:
+        # Check username availability
+        exists = User.objects.filter(username__iexact=field_value).exists()
+        if exists:
+            return JsonResponse({
+                'available': False,
+                'message': 'This username is already taken',
+                'field': 'username'
+            })
+        return JsonResponse({
+            'available': True,
+            'message': 'Username is available',
+            'field': 'username'
+        })
 
 

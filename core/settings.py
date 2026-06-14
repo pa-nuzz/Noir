@@ -170,6 +170,7 @@ INSTALLED_APPS = [
     'apps.mfa',
     'apps.audit',
     'apps.creative',
+    'apps.notifications',
 ]
 
 MIDDLEWARE = [
@@ -546,14 +547,3 @@ PLAN_LIMITS = {
         'team_seats': None,
     },
 }
-
-# import sys
-# print("\n" + "="*50)
-# print("RUNNING DATABASES DIAGNOSTIC")
-# try:
-#     print("Engine:", DATABASES['default']['ENGINE'])
-#     print("DB Name:", repr(DATABASES['default'].get('NAME')))
-# except Exception as e:
-#     print("Error reading DATABASES:", e)
-# print("="*50 + "\n")
-# sys.exit("Stopping Django server forcefully to read diagnostic output.")

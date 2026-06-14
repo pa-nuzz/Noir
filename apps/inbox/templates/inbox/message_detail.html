@@ -85,14 +85,20 @@
 
     <div class="email-body">
       {% if email_html %}
-        {{ email_html|safe }}
+        <iframe 
+          id="email-iframe"
+          class="w-full min-h-[500px] border-0 bg-white"
+          sandbox="allow-scripts allow-same-origin allow-forms"
+          srcdoc="{{ email_html|safe }}"
+          loading="lazy"
+          title="Email content"
+        ></iframe>
       {% elif msg.body_text %}
         <div style="padding:24px; font-size:14px; line-height:1.7; color:#1e293b; white-space:pre-wrap; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">{{ msg.body_text }}</div>
       {% elif msg.body_html %}
         <div class="p-12 text-center text-sm text-slate-400">
           <svg class="w-10 h-10 mx-auto text-slate-200 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-          <p>This message contains HTML content that could not be displayed.</p>
-          <p class="mt-2 text-xs">Raw HTML length: {{ msg.body_html|length }} characters</p>
+          <p>This message contains HTML content that could not be displayed.</          <p class="mt-2 text-xs">Raw HTML length: {{ msg.body_html|length }} characters</p>
         </div>
       {% else %}
         <div class="p-12 text-center text-sm text-slate-400">

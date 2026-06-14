@@ -87,7 +87,6 @@ class TeamInvitation(models.Model):
     message = models.TextField(blank=True, help_text='Optional personal message')
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
-    notified_inviter = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['-created_at']
