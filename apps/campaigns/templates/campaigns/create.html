@@ -79,6 +79,7 @@
     {% csrf_token %}
     {% if selected_template %}<input type="hidden" name="template_id" value="{{ selected_template.id }}">{% endif %}
 
+
     <!-- ═══════════════════════ MAIN CONTENT ═══════════════════════ -->
     <section class="xl:col-span-2 space-y-6">
 
@@ -257,7 +258,7 @@
           </div>
         </div>
 
-        <div class="flex justify-between mt-6">
+        <div class="flex justify-between mt-6 items-center">
           <button type="button" onclick="goToStep(0)" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100 transition-all">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 12H5m7 7l-7-7 7-7"/></svg>
             Back: Contacts
@@ -266,6 +267,7 @@
             Next: Message
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
           </button>
+        </div>
         </div>
       </div>
 
@@ -402,7 +404,7 @@
           </div>
         </div>
 
-        <div class="flex justify-between mt-6">
+        <div class="flex justify-between mt-6 items-center">
           <button type="button" onclick="goToStep(1)" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100 transition-all">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 12H5m7 7l-7-7 7-7"/></svg>
             Back: Identity
@@ -564,7 +566,7 @@
           </div>
         </div>
 
-        <div class="flex justify-between mt-6">
+        <div class="flex justify-between mt-6 items-center">
           <button type="button" onclick="goToStep(2)" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100 transition-all">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 12H5m7 7l-7-7 7-7"/></svg>
             Back: Message
@@ -647,7 +649,7 @@
           </div>
         </div>
 
-        <div class="flex justify-between mt-6">
+        <div class="flex justify-between mt-6 items-center">
           <button type="button" onclick="goToStep(3)" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100 transition-all">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 12H5m7 7l-7-7 7-7"/></svg>
             Back: Delivery
@@ -655,25 +657,28 @@
         </div>
       </div>
     </section>
+
+    <div class="flex justify-end mt-6">
+      <button type="button" class="copilot-trigger inline-flex items-center justify-center w-14 h-14 rounded-full bg-transparent text-white shadow-none hover:-translate-y-1 transition-transform flex-shrink-0 border-0" title="Open AI Write" aria-label="Open AI Write">
+        <svg class="copilot-trigger-mark w-[32px] h-[32px] drop-shadow-[0_2px_6px_rgba(15,23,42,0.14)]" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+          <style>
+            .copilot-trigger { background: radial-gradient(circle at 30% 28%, rgba(255,255,255,0.36) 0%, rgba(255,255,255,0.14) 28%, rgba(255,255,255,0.03) 58%, rgba(255,255,255,0) 74%), linear-gradient(135deg, rgba(76,29,149,0.34), rgba(124,58,237,0.18), rgba(168,85,247,0.28)); box-shadow: 0 16px 34px -18px rgba(76,29,149,0.62), 0 5px 14px rgba(15,23,42,0.10), inset 0 1px 0 rgba(255,255,255,0.58), inset 0 0 0 1px rgba(255,255,255,0.18); backdrop-filter: blur(14px); animation: copilotFloat 4.2s ease-in-out infinite; }
+            .copilot-trigger-mark { animation: copilotGlow 2.8s ease-in-out infinite; }
+            .copilot-trigger-orbit { transform-origin: 63.6% 27.3%; animation: copilotOrbit 3.8s ease-in-out infinite; }
+            @keyframes copilotFloat { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-5px); } }
+            @keyframes copilotGlow { 0%, 100% { filter: drop-shadow(0 2px 5px rgba(76,29,149,0.18)); transform: scale(1); } 50% { filter: drop-shadow(0 8px 16px rgba(76,29,149,0.28)); transform: scale(1.04); } }
+            @keyframes copilotOrbit { 0%, 100% { opacity: .72; transform: rotate(0deg) scale(.98); } 50% { opacity: 1; transform: rotate(18deg) scale(1.06); } }
+            @media (prefers-reduced-motion: reduce) { .copilot-trigger, .copilot-trigger-mark, .copilot-trigger-orbit { animation: none; } }
+          </style>
+          <defs><linearGradient id="copilot-mark-gradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4C1D95"/><stop offset="45%" stop-color="#7C3AED"/><stop offset="100%" stop-color="#A855F7"/></linearGradient></defs>
+          <g><path class="copilot-trigger-orbit" d="M31.6 9.5C34.3 11.1 35.7 13.7 35.7 16.9" fill="none" stroke="url(#copilot-mark-gradient)" stroke-width="2.5" stroke-linecap="round"/><circle class="copilot-trigger-orbit" cx="35.8" cy="17.1" r="1.8" fill="url(#copilot-mark-gradient)"/><text x="11" y="30" fill="url(#copilot-mark-gradient)" font-size="21.5" font-weight="900" font-family="Inter, system-ui, sans-serif" letter-spacing="-1.5">AI</text></g>
+        </svg>
+      </button>
+    </div>
   </form>
 </div>
 
 <!-- ── AI Content Co-Pilot Slide-Over Panel ── -->
-<button type="button" id="copilot-trigger" class="copilot-trigger fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-transparent text-white shadow-none hover:-translate-y-1 transition-transform flex items-center justify-center border-0" title="Open AI Write" aria-label="Open AI Write">
-  <svg class="copilot-trigger-mark w-[32px] h-[32px] drop-shadow-[0_2px_6px_rgba(15,23,42,0.14)]" viewBox="0 0 44 44" fill="none" aria-hidden="true">
-    <style>
-      .copilot-trigger { background: radial-gradient(circle at 30% 28%, rgba(255,255,255,0.36) 0%, rgba(255,255,255,0.14) 28%, rgba(255,255,255,0.03) 58%, rgba(255,255,255,0) 74%), linear-gradient(135deg, rgba(76,29,149,0.34), rgba(124,58,237,0.18), rgba(168,85,247,0.28)); box-shadow: 0 16px 34px -18px rgba(76,29,149,0.62), 0 5px 14px rgba(15,23,42,0.10), inset 0 1px 0 rgba(255,255,255,0.58), inset 0 0 0 1px rgba(255,255,255,0.18); backdrop-filter: blur(14px); animation: copilotFloat 4.2s ease-in-out infinite; }
-      .copilot-trigger-mark { animation: copilotGlow 2.8s ease-in-out infinite; }
-      .copilot-trigger-orbit { transform-origin: 28px 12px; animation: copilotOrbit 3.8s ease-in-out infinite; }
-      @keyframes copilotFloat { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-5px); } }
-      @keyframes copilotGlow { 0%, 100% { filter: drop-shadow(0 2px 5px rgba(76,29,149,0.18)); transform: scale(1); } 50% { filter: drop-shadow(0 8px 16px rgba(76,29,149,0.28)); transform: scale(1.04); } }
-      @keyframes copilotOrbit { 0%, 100% { opacity: .72; transform: rotate(0deg) scale(.98); } 50% { opacity: 1; transform: rotate(18deg) scale(1.06); } }
-      @media (prefers-reduced-motion: reduce) { .copilot-trigger, .copilot-trigger-mark, .copilot-trigger-orbit { animation: none; } }
-    </style>
-    <defs><linearGradient id="copilot-mark-gradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4C1D95"/><stop offset="45%" stop-color="#7C3AED"/><stop offset="100%" stop-color="#A855F7"/></linearGradient></defs>
-    <g><path class="copilot-trigger-orbit" d="M31.6 9.5C34.3 11.1 35.7 13.7 35.7 16.9" fill="none" stroke="url(#copilot-mark-gradient)" stroke-width="2.5" stroke-linecap="round"/><circle class="copilot-trigger-orbit" cx="35.8" cy="17.1" r="1.8" fill="url(#copilot-mark-gradient)"/><text x="7.2" y="31.2" fill="url(#copilot-mark-gradient)" font-size="21.5" font-weight="900" font-family="Inter, system-ui, sans-serif" letter-spacing="-2.1">AI</text></g>
-  </svg>
-</button>
 
 <div id="copilot-drawer" class="copilot-drawer hidden flex flex-col">
   <div class="copilot-header">
@@ -683,13 +688,13 @@
           <svg class="w-6 h-6 drop-shadow-[0_2px_4px_rgba(15,23,42,0.10)]" viewBox="0 0 44 44" fill="none" aria-hidden="true">
             <style>
               .copilot-badge-mark { animation: copilotBadgeFloat 4.2s ease-in-out infinite; }
-              .copilot-badge-orbit { transform-origin: 28px 12px; animation: copilotBadgeOrbit 3.8s ease-in-out infinite; }
+              .copilot-badge-orbit { transform-origin: 63.6% 27.3%; animation: copilotBadgeOrbit 3.8s ease-in-out infinite; }
               @keyframes copilotBadgeFloat { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-2px); } }
               @keyframes copilotBadgeOrbit { 0%, 100% { opacity: .72; transform: rotate(0deg) scale(.98); } 50% { opacity: 1; transform: rotate(18deg) scale(1.06); } }
               @media (prefers-reduced-motion: reduce) { .copilot-badge-mark, .copilot-badge-orbit { animation: none; } }
             </style>
             <defs><linearGradient id="copilot-mark-gradient-header" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4C1D95"/><stop offset="45%" stop-color="#7C3AED"/><stop offset="100%" stop-color="#A855F7"/></linearGradient></defs>
-            <g class="copilot-badge-mark"><path class="copilot-badge-orbit" d="M31.6 9.5C34.3 11.1 35.7 13.7 35.7 16.9" fill="none" stroke="url(#copilot-mark-gradient-header)" stroke-width="2.5" stroke-linecap="round"/><circle class="copilot-badge-orbit" cx="35.8" cy="17.1" r="1.8" fill="url(#copilot-mark-gradient-header)"/><text x="7.2" y="31.2" fill="url(#copilot-mark-gradient-header)" font-size="21.5" font-weight="900" font-family="Inter, system-ui, sans-serif" letter-spacing="-2.1">AI</text></g>
+            <g class="copilot-badge-mark"><path class="copilot-badge-orbit" d="M31.6 9.5C34.3 11.1 35.7 13.7 35.7 16.9" fill="none" stroke="url(#copilot-mark-gradient-header)" stroke-width="2.5" stroke-linecap="round"/><circle class="copilot-badge-orbit" cx="35.8" cy="17.1" r="1.8" fill="url(#copilot-mark-gradient-header)"/><text x="10" y="30" fill="url(#copilot-mark-gradient-header)" font-size="21.5" font-weight="900" font-family="Inter, system-ui, sans-serif" letter-spacing="-1.5">AI</text></g>
           </svg>
         </div>
         <div>
@@ -1065,15 +1070,15 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && !do
 function previewCampaignInNewWindow() { var html = buildCampaignPreviewHtml(); var w = window.open(); if (w) { w.document.write(html); w.document.close(); } }
 
 // ── AI Write Copilot ──────────────────────────────────────────
-function openCopilot() { document.getElementById('copilot-drawer').classList.remove('hidden'); document.getElementById('copilot-trigger').classList.add('hidden'); }
-function closeCopilot() { document.getElementById('copilot-drawer').classList.add('hidden'); document.getElementById('copilot-trigger').classList.remove('hidden'); }
+function openCopilot() { document.getElementById('copilot-drawer').classList.remove('hidden'); document.querySelectorAll('.copilot-trigger').forEach(function(el) { el.classList.add('hidden'); }); }
+function closeCopilot() { document.getElementById('copilot-drawer').classList.add('hidden'); document.querySelectorAll('.copilot-trigger').forEach(function(el) { el.classList.remove('hidden'); }); }
 document.querySelectorAll('.tone-option').forEach(function(el) {
   el.addEventListener('click', function() {
     document.querySelectorAll('.tone-option').forEach(function(o) { o.classList.remove('border-violet-600','bg-violet-50/50'); o.classList.add('border-slate-200'); o.querySelector('div:first-child div').classList.add('hidden'); });
     el.classList.remove('border-slate-200'); el.classList.add('border-violet-600','bg-violet-50/50'); el.querySelector('div:first-child div').classList.remove('hidden'); el.querySelector('input[type="radio"]').checked = true;
   });
 });
-document.getElementById('copilot-trigger').addEventListener('click', openCopilot);
+document.querySelectorAll('.copilot-trigger').forEach(function(el) { el.addEventListener('click', openCopilot); });
 document.getElementById('copilot-generate-btn').addEventListener('click', function() {
   var prompt = document.getElementById('copilot-prompt').value.trim();
   if (!prompt) { alert('Please enter what you want to write about.'); return; }
