@@ -1,0 +1,128 @@
+{% extends 'base_dashboard.html' %}
+{% load workspace_tags %}
+{% block title %}{{ asset.title|default:asset.original_filename }} — Media Library{% endblock %}
+{% block page_title %}{{ asset.title|default:asset.original_filename }}{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none space-y-6">
+  <div class="flex items-center gap-3">
+    <a href="{% url 'media_assets:library' %}" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
+      <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    </a>
+    <div class="flex-1 min-w-0">
+      <h1 class="text-2xl font-bold text-slate-900 truncate">{{ asset.title|default:asset.original_filename }}</h1>
+      <p class="text-sm text-slate-500">{{ asset.get_file_type_display }} · {{ asset.file_size|filesizeformat }}</p>
+    </div>
+{% can_delete 'media' as can_delete_media %}{% if can_delete_media %}
+    <form method="post" action="{% url 'media_assets:delete_asset' asset.id %}" onsubmit="return confirm('Delete this asset permanently?')" class="inline">
+      {% csrf_token %}
+      <button type="submit" class="btn-action btn-action-danger inline-flex">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        Delete
+      </button>
+    </form>
+{% endif %}
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2">
+      <div class="premium-surface rounded-2xl overflow-hidden">
+        {% if asset.file_type == 'image' %}
+        <img src="{{ asset.display_url }}" alt="{{ asset.title|default:asset.original_filename }}" class="w-full h-auto object-contain bg-slate-50">
+        {% elif asset.file_type == 'video' %}
+        <video controls class="w-full bg-black">
+          <source src="{{ asset.display_url }}" type="{{ asset.mime_type }}">
+        </video>
+        {% elif asset.file_type == 'audio' %}
+        <div class="p-10 flex flex-col items-center justify-center bg-slate-50">
+          <svg class="w-16 h-16 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+          <audio controls class="w-full max-w-md">
+            <source src="{{ asset.display_url }}" type="{{ asset.mime_type }}">
+          </audio>
+        </div>
+        {% else %}
+        <div class="p-16 flex flex-col items-center justify-center bg-slate-50">
+          <svg class="w-16 h-16 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+          <p class="text-sm text-slate-500">Preview not available</p>
+          <a href="{{ asset.display_url }}" download class="btn-action btn-action-primary mt-4 inline-flex">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Download
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="space-y-5">
+      <div class="premium-surface rounded-2xl p-5">
+        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Details</h3>
+        <dl class="space-y-3 text-sm">
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Type</dt>
+            <dd class="font-semibold text-slate-800">{{ asset.get_file_type_display }}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Size</dt>
+            <dd class="font-semibold text-slate-800">{{ asset.file_size|filesizeformat }}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-slate-500">MIME</dt>
+            <dd class="font-semibold text-slate-800 text-xs truncate max-w-[140px]" title="{{ asset.mime_type }}">{{ asset.mime_type }}</dd>
+          </div>
+          {% if asset.width and asset.height %}
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Dimensions</dt>
+            <dd class="font-semibold text-slate-800">{{ asset.width }}×{{ asset.height }}</dd>
+          </div>
+          {% endif %}
+          {% if asset.duration %}
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Duration</dt>
+            <dd class="font-semibold text-slate-800">{{ asset.duration|floatformat:1 }}s</dd>
+          </div>
+          {% endif %}
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Created</dt>
+            <dd class="font-semibold text-slate-800">{{ asset.created_at|date:'M d, Y' }}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Updated</dt>
+            <dd class="font-semibold text-slate-800">{{ asset.updated_at|date:'M d, Y' }}</dd>
+          </div>
+          {% if asset.folder %}
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Folder</dt>
+            <dd class="font-semibold text-slate-800">{{ asset.folder.name }}</dd>
+          </div>
+          {% endif %}
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Optimized</dt>
+            <dd class="font-semibold {% if asset.is_optimized %}text-emerald-600{% else %}text-slate-400{% endif %}">{{ asset.is_optimized|yesno:'Yes,No' }}</dd>
+          </div>
+        </dl>
+      </div>
+
+      {% if asset.auto_tags or asset.tags.all %}
+      <div class="premium-surface rounded-2xl p-5">
+        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Tags</h3>
+        <div class="flex flex-wrap gap-1.5">
+          {% for tag in asset.tags.all %}
+          <span class="px-2.5 py-1 rounded-lg bg-primary/10 text-primary text-xs font-semibold">{{ tag.name }}</span>
+          {% endfor %}
+          {% for tag in asset.auto_tags %}
+          <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 text-xs font-semibold">{{ tag }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if asset.description %}
+      <div class="premium-surface rounded-2xl p-5">
+        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Description</h3>
+        <p class="text-sm text-slate-700">{{ asset.description }}</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

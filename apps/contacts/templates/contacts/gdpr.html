@@ -1,0 +1,51 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}GDPR Compliance — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}GDPR Compliance{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none space-y-6">
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+    <div class="premium-surface rounded-2xl p-5">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Total Contacts</p>
+      <p class="text-2xl font-bold text-slate-900 mt-1">{{ total_contacts }}</p>
+    </div>
+    <div class="premium-surface rounded-2xl p-5">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Consent Given</p>
+      <p class="text-2xl font-bold text-emerald-600 mt-1">{{ consent_given }}</p>
+    </div>
+    <div class="premium-surface rounded-2xl p-5">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Consent Missing</p>
+      <p class="text-2xl font-bold text-amber-600 mt-1">{{ consent_missing }}</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="premium-surface rounded-2xl p-6">
+      <h2 class="text-sm font-bold text-slate-900 mb-2">Export My Data</h2>
+      <p class="text-xs text-gray-500 mb-4">Download all your contact data in JSON format for GDPR compliance.</p>
+      <a href="{% url 'contacts:gdpr_export' %}" class="btn-action btn-action-primary inline-flex">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+        Export Data (JSON)
+      </a>
+    </div>
+
+    <div class="premium-surface rounded-2xl p-6">
+      <h2 class="text-sm font-bold text-slate-900 mb-2">Data Deletion / Anonymization</h2>
+      <p class="text-xs text-gray-500 mb-4">Anonymize a specific contact per GDPR deletion request.</p>
+      <p class="text-xs text-gray-400">Go to the contact detail page and use the "GDPR Anonymize" action.</p>
+    </div>
+  </div>
+
+  <div class="premium-surface rounded-2xl p-6">
+    <h2 class="text-sm font-bold text-slate-900 mb-3">GDPR Notes</h2>
+    <ul class="text-xs text-gray-600 space-y-2 list-disc list-inside">
+      <li>Consent tracking is available per contact (gdpr_consent field).</li>
+      <li>Enable consent collection on your signup forms to track gdpr_consent.</li>
+      <li>Data export provides a full JSON dump of all contacts.</li>
+      <li>Deletion anonymizes the contact record (email is replaced, name removed, tags cleared).</li>
+      <li>Bounce tracking auto-suppresses contacts after 3 bounces.</li>
+      <li>Unsubscribes are honored at both global and list level.</li>
+    </ul>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends 'base_dashboard.html' %}
+{% load workspace_tags %}
+{% can_create 'contacts' as can_create_contacts %}
+{% can_delete 'contacts' as can_delete_contacts %}
+{% block title %}Custom Fields — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Custom Fields{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none space-y-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Custom Fields</h1>
+      <p class="text-sm text-slate-500 mt-1">Create unlimited custom fields for your contacts</p>
+    </div>
+  </div>
+
+  <div class="premium-surface rounded-2xl p-6">
+{% if can_create_contacts %}
+    <form method="post" action="{% url 'contacts:custom_field_create' %}" class="flex flex-col sm:flex-row gap-3 items-end">
+      {% csrf_token %}
+      <div class="flex-1">
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Field Name</label>
+        <input type="text" name="name" required placeholder="e.g. Company, Job Title, Birthday..." class="input-field">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Type</label>
+        <select name="field_type" class="input-field">
+          <option value="text">Text</option>
+          <option value="number">Number</option>
+          <option value="date">Date</option>
+          <option value="boolean">Yes/No</option>
+          <option value="dropdown">Dropdown</option>
+        </select>
+      </div>
+      <div class="flex-1">
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Options (comma-separated, for dropdown)</label>
+        <input type="text" name="options" placeholder="Option1, Option2, Option3" class="input-field">
+      </div>
+      <div class="flex items-center gap-4">
+        <label class="flex items-center gap-1.5 text-xs text-slate-600">
+          <input type="checkbox" name="is_required" class="rounded border-slate-300"> Required
+        </label>
+        <button type="submit" class="btn-action btn-action-primary whitespace-nowrap">Add Field</button>
+      </div>
+    </form>
+{% endif %}
+  </div>
+
+  <div class="premium-surface rounded-2xl overflow-hidden">
+    {% if fields %}
+    <div class="divide-y divide-slate-100">
+      {% for field in fields %}
+      <div class="flex items-center justify-between px-6 py-4">
+        <div class="flex items-center gap-3">
+          <span class="text-sm font-semibold text-slate-900">{{ field.name }}</span>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">{{ field.get_field_type_display }}</span>
+          {% if field.is_required %}<span class="text-[10px] font-bold text-red-500">Required</span>{% endif %}
+        </div>
+{% if can_delete_contacts %}
+        <form method="post" action="{% url 'contacts:custom_field_delete' field.pk %}" onsubmit="return confirm('Delete custom field "{{ field.name }}" and all its values?')">
+          {% csrf_token %}
+          <button type="submit" class="text-xs font-semibold text-red-500 hover:text-red-700">Delete</button>
+        </form>
+{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="px-6 py-12 text-center text-sm text-gray-500">No custom fields yet. Create one above.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

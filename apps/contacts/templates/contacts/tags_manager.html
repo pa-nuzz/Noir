@@ -1,0 +1,80 @@
+{% extends 'base_dashboard.html' %}
+{% load workspace_tags %}
+{% can_create 'contacts' as can_create_contacts %}
+{% can_edit 'contacts' as can_edit_contacts %}
+{% can_delete 'contacts' as can_delete_contacts %}
+
+{% block title %}Tag Manager - Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Contact Tags{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none space-y-6">
+  <div class="premium-surface card-elevate section-card">
+    <div class="flex items-center justify-between gap-3 mb-5">
+      <div>
+        <h2 class="section-title">Tag Manager</h2>
+        <p class="section-subtitle">Create, rename, and delete contact tags for campaign segmentation.</p>
+      </div>
+      {% url 'contacts:list' as contacts_list_url %}
+      {% include "components/button.html" with label="Back to Contacts" variant="outline" href=contacts_list_url %}
+    </div>
+
+    <form method="post" class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center mb-6">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create">
+      <input type="text" name="name" class="auth-input" placeholder="e.g. vip, leads, webinar" required>
+      <div class="flex items-center gap-2 flex-wrap">
+
+    {% include "components/button.html" with label="Create Tag" variant="primary" size="lg" type="submit" class="whitespace-nowrap" %}
+    </div>
+  </form>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-100">
+            <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tag</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Contacts</th>
+            <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for tag in tags %}
+          <tr>
+            <td class="px-4 py-3">
+              {% include "components/badge.html" with label=tag.name variant="green" %}
+            </td>
+            <td class="px-4 py-3 text-slate-700">{{ tag.contact_count }}</td>
+            <td class="px-4 py-3">
+              <div class="flex justify-end gap-2">
+{% if can_edit_contacts %}
+                <form method="post" class="flex gap-2">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="rename">
+                  <input type="hidden" name="tag_id" value="{{ tag.id }}">
+                  <input type="text" name="new_name" class="auth-input py-1.5 text-xs" value="{{ tag.name }}" required>
+                  {% include "components/button.html" with label="Rename" variant="outline" size="sm" type="submit" %}
+                </form>
+{% endif %}
+{% if can_delete_contacts %}
+                <form method="post" onsubmit="return confirm('Delete tag {{ tag.name }}?');">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="delete">
+                  <input type="hidden" name="tag_id" value="{{ tag.id }}">
+                  {% include "components/button.html" with label="Delete" variant="danger" size="sm" type="submit" %}
+                </form>
+{% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="3" class="px-4 py-10 text-center text-slate-500">No tags yet. Create your first tag above.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

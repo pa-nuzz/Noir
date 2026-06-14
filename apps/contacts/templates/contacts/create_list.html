@@ -1,0 +1,91 @@
+{% extends 'base_dashboard.html' %}
+{% load workspace_tags %}
+{% can_create 'contacts' as can_create_contacts %}
+
+{% block title %}Create List - Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Create List{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-2xl">
+  <div class="premium-surface card-elevate section-card">
+    <!-- Header with Icon -->
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-7 h-7 bg-primary text-white rounded-lg flex items-center justify-center text-xs font-bold">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+      </div>
+      <div>
+        <h2 class="section-title">Create New List</h2>
+        <p class="section-subtitle">Create a contact list to organize your subscribers</p>
+      </div>
+    </div>
+
+    <!-- Form -->
+    <form method="post" action="{% url 'contacts:create_list' %}" class="space-y-5">
+      {% csrf_token %}
+
+      <!-- List Name -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">
+          List Name <span class="text-red-500">*</span>
+        </label>
+        <input type="text" name="name" required
+          class="auth-input py-2.5 text-sm w-full"
+          placeholder="e.g., Newsletter Subscribers, VIP Customers..." />
+      </div>
+
+      <!-- Description -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">
+          Description <span class="text-slate-400 font-normal">(optional)</span>
+        </label>
+        <textarea name="description" rows="4"
+          class="auth-input py-2.5 text-sm w-full resize-none"
+          placeholder="Briefly describe the purpose of this list... (e.g., 'Customers who signed up via the homepage popup')"
+        ></textarea>
+      </div>
+
+      <!-- Info Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+{% if can_create_contacts %}
+        <a href="{% url 'contacts:list' %}?open_add_contact=1" class="block bg-indigo-50 border border-indigo-100 rounded-xl p-4 hover:bg-indigo-100 transition-colors">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-indigo-900">Add Contacts</p>
+              <p class="text-xs text-indigo-700 mt-1">Add contacts manually one by one</p>
+            </div>
+          </div>
+        </a>
+{% endif %}
+{% if can_create_contacts %}
+        <a href="{% url 'contacts:import_csv' %}" class="block bg-indigo-50 border border-indigo-100 rounded-xl p-4 hover:bg-indigo-100 transition-colors">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-indigo-900">Import CSV</p>
+              <p class="text-xs text-indigo-700 mt-1">Bulk import from a CSV file</p>
+            </div>
+          </div>
+        </a>
+{% endif %}
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex gap-3 pt-4">
+        <button type="submit" class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary-hover text-white font-semibold text-sm transition-colors shadow-lg shadow-indigo-500/20">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Create List
+        </button>
+        <a href="{% url 'contacts:list' %}"
+          class="inline-flex items-center px-5 py-3 rounded-xl border border-gray-200 text-slate-600 hover:bg-gray-50 transition-colors text-sm font-semibold">
+          Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Unsubscribe — Digital Intelligence Automation{% endblock %}
+{% block page_title %}Unsubscribe{% endblock %}
+{% block content %}
+<div class="max-w-lg mx-auto mt-10">
+  <div class="glass-card p-8 text-center">
+    {% if email %}
+    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+      <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+      </svg>
+    </div>
+    <h2 class="text-xl font-bold text-slate-800 mb-2">Unsubscribe from all campaigns</h2>
+    <p class="text-sm text-slate-500 mb-6">
+      You are about to unsubscribe <strong class="text-slate-700">{{ email }}</strong> from all future email campaigns.
+    </p>
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="px-6 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors">
+        Yes, unsubscribe me
+      </button>
+      <a href="{{ request.META.HTTP_REFERER|default:'' }}" class="ml-3 px-6 py-3 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-semibold transition-colors inline-block">
+        Cancel
+      </a>
+    </form>
+    {% else %}
+    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-100 flex items-center justify-center">
+      <svg class="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+      </svg>
+    </div>
+    <h2 class="text-xl font-bold text-slate-800 mb-2">Invalid unsubscribe link</h2>
+    <p class="text-sm text-slate-500 mb-6">
+      This unsubscribe link is invalid or expired. Please contact the sender directly.
+    </p>
+    <a href="{% url 'home' %}" class="px-6 py-3 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-colors inline-block">
+      Go home
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

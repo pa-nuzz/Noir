@@ -1,0 +1,41 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}{{ title }} — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Workspace Invitation{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-lg mx-auto">
+  <div class="premium-surface rounded-2xl p-8 sm:p-10 text-center">
+    {% if icon == 'success' %}
+    <div class="w-16 h-16 mx-auto rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center mb-5">
+      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+    </div>
+    {% elif icon == 'error' %}
+    <div class="w-16 h-16 mx-auto rounded-2xl bg-red-50 text-red-500 flex items-center justify-center mb-5">
+      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+    </div>
+    {% elif icon == 'warning' %}
+    <div class="w-16 h-16 mx-auto rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center mb-5">
+      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+    </div>
+    {% else %}
+    <div class="w-16 h-16 mx-auto rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center mb-5">
+      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+    {% endif %}
+
+    <h2 class="text-2xl font-bold text-slate-900 mb-3">{{ title }}</h2>
+    <p class="text-slate-600 leading-relaxed mb-8">{{ message|safe }}</p>
+
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+      {% if workspace_id %}
+      <a href="{% url 'workspaces:detail' workspace_id %}" class="btn-action btn-action-primary">
+        Go to Workspace
+      </a>
+      {% endif %}
+      <a href="{% url 'workspaces:list' %}" class="btn-action btn-action-secondary">
+        Back to Workspaces
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

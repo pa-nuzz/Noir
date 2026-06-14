@@ -1,0 +1,97 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Create Segment — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Create Dynamic Segment{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-2xl mx-auto">
+  <div class="premium-surface rounded-2xl p-8">
+    <form method="post" id="segment-form" class="space-y-5">
+      {% csrf_token %}
+      <input type="hidden" name="rules" id="rules-input" value="[]">
+
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Segment Name</label>
+        <input type="text" name="name" required class="input-field" placeholder="e.g. Inactive Subscribers">
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Description (optional)</label>
+        <input type="text" name="description" class="input-field" placeholder="Describe what this segment targets">
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Match Type</label>
+        <select name="match_type" class="input-field">
+          <option value="all">Match ALL conditions</option>
+          <option value="any">Match ANY condition</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-3">Rules</label>
+        <div id="rules-list" class="space-y-3">
+          <div class="rule-row flex items-center gap-2 p-3 bg-slate-50 rounded-xl">
+            <select class="rule-field input-field text-sm flex-1">
+              <option value="email">Email</option>
+              <option value="first_name">First Name</option>
+              <option value="last_name">Last Name</option>
+              <option value="is_active">Active</option>
+              <option value="unsubscribed">Unsubscribed</option>
+              <option value="bounce_count">Bounce Count</option>
+              <option value="created_at">Created Date</option>
+              <option value="tag">Has Tag</option>
+              <option value="contact_list">Contact List</option>
+            </select>
+            <select class="rule-operator input-field text-sm">
+              <option value="contains">contains</option>
+              <option value="equals">equals</option>
+              <option value="starts_with">starts with</option>
+              <option value="ends_with">ends with</option>
+              <option value="gt">greater than</option>
+              <option value="gte">greater or equal</option>
+              <option value="lt">less than</option>
+              <option value="lte">less or equal</option>
+              <option value="before">before</option>
+              <option value="after">after</option>
+              <option value="has">has</option>
+              <option value="not_has">does not have</option>
+              <option value="is">is</option>
+              <option value="is_not">is not</option>
+            </select>
+            <input type="text" class="rule-value input-field text-sm flex-1" placeholder="Value">
+            <button type="button" class="remove-rule p-1 text-red-400 hover:text-red-600" onclick="this.closest('.rule-row').remove()">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>
+        <button type="button" onclick="addRule()" class="mt-2 text-xs font-semibold text-primary hover:underline">+ Add another rule</button>
+      </div>
+
+      <button type="submit" class="btn-action btn-action-primary">Create Segment</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function addRule() {
+    const list = document.getElementById('rules-list');
+    const row = document.querySelector('.rule-row').cloneNode(true);
+    row.querySelectorAll('input').forEach(i => i.value = '');
+    row.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+    list.appendChild(row);
+  }
+
+  document.getElementById('segment-form').addEventListener('submit', function() {
+    const rules = [];
+    document.querySelectorAll('.rule-row').forEach(function(row) {
+      const field = row.querySelector('.rule-field').value;
+      const operator = row.querySelector('.rule-operator').value;
+      const value = row.querySelector('.rule-value').value.trim();
+      if (value) {
+        rules.push({ field: field, operator: operator, value: value });
+      }
+    });
+    document.getElementById('rules-input').value = JSON.stringify(rules);
+  });
+</script>
+{% endblock %}

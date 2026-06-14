@@ -1,0 +1,416 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Storage — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Storage{% endblock %}
+{% block content %}
+
+{% load widget_tweaks %}
+
+<div class="page-shell max-w-none space-y-8">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h2 class="page-title">Storage</h2>
+      <p class="page-subtitle">Choose where {{ workspace.name }} stores its media assets, campaign attachments, and exports.</p>
+    </div>
+    <div class="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider
+      {% if config.is_verified %}bg-emerald-50 text-emerald-700{% else %}bg-amber-50 text-amber-700{% endif %}">
+      <span class="w-2 h-2 rounded-full {% if config.is_verified %}bg-emerald-500{% else %}bg-amber-500{% endif %}"></span>
+      {% if config.backend == 'local' %}Local Storage{% elif config.backend == 'dia_s3' %}DIA Managed S3{% else %}{{ config.get_backend_display }}{% endif %}
+      {% if config.is_verified %}· Verified{% else %}· Not Verified{% endif %}
+    </div>
+  </div>
+
+
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+    <div class="xl:col-span-4 space-y-6">
+      <div class="premium-surface card-elevate surface-hover-clean section-card">
+        <div class="section-head">
+          <h2 class="section-title">Choose Storage</h2>
+          <p class="section-subtitle">Select where new uploads go</p>
+        </div>
+
+        <form method="post" action="{% url 'workspaces:storage_select' %}" class="space-y-3">
+          {% csrf_token %}
+          {% for value, label in backend_choices %}
+          <label class="storage-option block cursor-pointer">
+            <input type="radio" name="backend" value="{{ value }}" class="peer sr-only" {% if config.backend == value %}checked{% endif %}>
+            <div class="rounded-2xl border-2 border-slate-200 px-4 py-4 transition-all peer-checked:border-primary peer-checked:bg-primary/5 hover:border-slate-300">
+              <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg
+                  {% if value == 'local' %}bg-slate-100 text-slate-600
+                  {% elif value == 'dia_s3' %}bg-emerald-50 text-emerald-600
+                  {% elif value == 'google_drive' %}bg-amber-50 text-amber-600
+                  {% else %}bg-indigo-50 text-indigo-600{% endif %}">
+                  {% if value == 'local' %}
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12v6a2 2 0 002 2h10a2 2 0 002-2v-6"/></svg>
+                  {% elif value == 'dia_s3' %}
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12v6a2 2 0 002 2h10a2 2 0 002-2v-6m-7-5l-4 4m0 0l4 4m-4-4h12"/></svg>
+                  {% elif value == 'google_drive' %}
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8.5 3l-7 12 4 7h7l7-12-4-7H8.5zM12 17.5L8 11l3-5h6l-3 5 4 6.5H12z"/></svg>
+                  {% else %}
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 014-4h.5a5.5 5.5 0 0110.78-1.5A4.5 4.5 0 0118 19h-1a3 3 0 00-3-3v-1a3 3 0 00-6 0v1a3 3 0 00-3 3H3z"/></svg>
+                  {% endif %}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="font-bold text-slate-900 text-sm">{{ label }}</p>
+                  <p class="text-xs text-slate-500 mt-0.5">
+                    {% if value == 'local' %}Files stay on Intelligent Digital Automation's server disk. Best for development.
+                    {% elif value == 'dia_s3' %}Secure cloud storage managed by Intelligent Digital Automation. Billed at Rs 10/GB/month.
+                    {% elif value == 'google_drive' %}Use your own Google Drive. Intelligent Digital Automation creates and manages a folder.
+                    {% else %}Connect AWS S3, Cloudflare R2, MinIO, Wasabi, or any S3-compatible server.
+                    {% endif %}
+                  </p>
+                </div>
+                <div class="storage-indicator ml-2 w-5 h-5 rounded-full border-2 border-slate-300 flex items-center justify-center">
+                  <svg class="storage-checkmark w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                </div>
+              </div>
+            </div>
+          </label>
+          {% endfor %}
+          <button type="submit" class="btn-primary w-full justify-center shadow-lg shadow-indigo-500/20">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            Activate Selected Backend
+          </button>
+        </form>
+
+        <button type="button" id="storage-test-btn" class="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:border-primary/30 hover:text-primary transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          <span id="storage-test-label">Test Active Connection</span>
+        </button>
+        <p id="storage-test-result" class="hidden text-xs mt-2"></p>
+      </div>
+    </div>
+
+    <div class="xl:col-span-8 space-y-6">
+
+      {% if config.backend == 'google_drive' %}
+      <div class="premium-surface card-elevate section-card" id="card-google-drive">
+        <div class="section-head flex items-start justify-between gap-4">
+          <div>
+            <h2 class="section-title">Google Drive</h2>
+            <p class="section-subtitle">Connect your personal or business Google Drive account</p>
+          </div>
+        {% if not drive_credentials_saved %}
+        <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          <p>Save your Google OAuth <strong>Client ID</strong> and <strong>Client Secret</strong> above, then you can connect your Drive account.</p>
+        </div>
+        {% endif %}
+
+        {% if config.is_google_drive_connected %}
+          {% include "components/badge.html" with label="Connected" variant="green" dot=True %}
+          {% elif drive_credentials_saved %}
+          {% include "components/badge.html" with label="Credentials saved — connect account" variant="yellow" dot=True %}
+          {% else %}
+          {% include "components/badge.html" with label="Not configured" variant="gray" dot=True %}
+          {% endif %}
+        </div>
+
+        <div class="rounded-xl border border-indigo-100 bg-indigo-50/40 px-4 py-3 text-sm text-slate-700">
+          <p class="font-bold text-slate-800">Bring your own OAuth client.</p>
+          <p class="mt-1 leading-relaxed">Each workspace uses its own Google OAuth credentials so that storage is tied to a single user (you) and not to the server itself. Create a project at <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener" class="underline font-semibold text-indigo-700">Google Cloud Console</a>, enable the <strong>Google Drive API</strong>, create an <strong>OAuth 2.0 Client ID</strong> (type: <em>Web application</em>), and add this exact <strong>Authorized redirect URI</strong>:</p>
+          <code class="mt-2 block px-3 py-2 bg-white border border-indigo-100 rounded-lg font-mono text-xs text-slate-800 break-all">{{ google_drive_redirect_uri|default:"" }}</code>
+        </div>
+
+        <form method="post" action="{% url 'workspaces:storage_google_drive_save_credentials' %}" class="mt-4 space-y-4">
+          {% csrf_token %}
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-2">Client ID</label>
+              <input type="text" name="google_drive_client_id" autocomplete="off" class="auth-input" placeholder="{% if config.get_google_drive_client_id %}••••••••{{ config.get_google_drive_client_id|slice:'-12:' }}{% else %}xxxxx.apps.googleusercontent.com{% endif %}">
+              {% if config.get_google_drive_client_id %}<p class="text-[10px] text-slate-400 mt-2 font-medium">Leave blank to keep the existing Client ID.</p>{% endif %}
+            </div>
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-2">Client Secret</label>
+              <input type="password" name="google_drive_client_secret" autocomplete="new-password" class="auth-input" placeholder="{% if config.get_google_drive_client_secret %}•••••••• (saved){% else %}GOCSPX-…{% endif %}">
+              {% if config.get_google_drive_client_secret %}<p class="text-[10px] text-slate-400 mt-2 font-medium">Leave blank to keep the existing Client Secret.</p>{% endif %}
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:border-primary/30 hover:text-primary transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              Save Credentials
+            </button>
+            {% if drive_credentials_saved %}
+            <span class="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-semibold">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+              Credentials encrypted and saved
+            </span>
+            {% endif %}
+          </div>
+        </form>
+
+        {% if config.is_google_drive_connected %}
+        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mt-2">
+          <div class="rounded-xl bg-slate-50 px-3 py-2">
+            <dt class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Google account</dt>
+            <dd class="font-semibold text-slate-800">{{ config.google_drive_connected_email|default:"—" }}</dd>
+          </div>
+          <div class="rounded-xl bg-slate-50 px-3 py-2">
+            <dt class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Drive folder</dt>
+            <dd class="font-semibold text-slate-800">{{ config.google_drive_folder_name|default:"DIA" }}</dd>
+          </div>
+        </dl>
+        <div class="mt-4 flex flex-wrap items-center gap-2">
+          <form action="{% url 'workspaces:storage_google_drive_start' %}" method="post">
+            {% csrf_token %}
+            <button type="submit" class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:border-primary/30 hover:text-primary transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              Reconnect
+            </button>
+          </form>
+          <form action="{% url 'workspaces:storage_google_drive_disconnect' %}" method="post" onsubmit="return confirm('Disconnect Google Drive? New uploads will use the active backend.')">
+            {% csrf_token %}
+            <button type="submit" class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50 transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              Disconnect
+            </button>
+          </form>
+        </div>
+        {% else %}
+        <p class="text-sm text-slate-600 mt-1">When you connect, Intelligent Digital Automation will create a <strong>Intelligent Digital Automation</strong> folder in your Drive and store all assets there. You can revoke access any time from your Google account settings.</p>
+        <form action="{% url 'workspaces:storage_google_drive_start' %}" method="post" class="mt-4">
+          {% csrf_token %}
+          <button type="submit" {% if not drive_credentials_saved %}disabled{% endif %} class="btn-primary inline-flex items-center gap-2 shadow-lg shadow-indigo-500/20 {% if not drive_credentials_saved %}opacity-50 cursor-not-allowed{% endif %}">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8.5 3l-7 12 4 7h7l7-12-4-7H8.5z"/></svg>
+            Connect Google Drive
+          </button>
+        </form>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if config.backend == 'dia_s3' %}
+      <div class="premium-surface card-elevate section-card">
+        <div class="section-head flex items-start justify-between gap-4">
+          <div>
+            <h2 class="section-title">DIA Managed S3</h2>
+            <p class="section-subtitle">Secure cloud storage managed by Intelligent Digital Automation</p>
+          </div>
+          {% if dia_s3_configured %}
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider {% if config.is_verified %}bg-emerald-50 text-emerald-700{% else %}bg-amber-50 text-amber-700{% endif %}">
+            <span class="w-1.5 h-1.5 rounded-full {% if config.is_verified %}bg-emerald-500{% else %}bg-amber-500{% endif %}"></span>
+            {% if config.is_verified %}Verified{% else %}Unverified{% endif %}
+          </span>
+          {% endif %}
+        </div>
+
+        <div class="rounded-xl border border-emerald-100 bg-emerald-50/40 px-4 py-4">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-100 text-emerald-600">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12v6a2 2 0 002 2h10a2 2 0 002-2v-6m-7-5l-4 4m0 0l4 4m-4-4h12"/></svg>
+            </div>
+            <div>
+              <p class="font-bold text-slate-800 text-sm">DIA Managed S3 is active</p>
+              <p class="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                All files are saved to Intelligent Digital Automation's secure S3-compatible cloud storage.
+                This is billed at <strong>Rs 10/GB/month</strong>.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3 mt-4">
+          <button type="button" id="dia-s3-test-btn" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:border-primary/30 hover:text-primary transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            <span id="dia-s3-test-label">Test Connection</span>
+          </button>
+        </div>
+        <p id="dia-s3-test-result" class="hidden text-xs mt-2"></p>
+      </div>
+      {% endif %}
+
+      {% if config.backend == 's3_compatible' %}
+      <div class="premium-surface card-elevate section-card" id="card-s3">
+        <div class="section-head flex items-start justify-between gap-4">
+          <div>
+            <h2 class="section-title">S3-Compatible Cloud Server</h2>
+            <p class="section-subtitle">AWS S3, Cloudflare R2, MinIO, Wasabi, Backblaze B2, or any S3-compatible server</p>
+          </div>
+          {% if config.is_s3_configured %}
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider {% if config.is_verified %}bg-emerald-50 text-emerald-700{% else %}bg-amber-50 text-amber-700{% endif %}">
+            <span class="w-1.5 h-1.5 rounded-full {% if config.is_verified %}bg-emerald-500{% else %}bg-amber-500{% endif %}"></span>
+            {% if config.is_verified %}Connected{% else %}Unverified{% endif %}
+          </span>
+          {% endif %}
+        </div>
+
+        <form method="post" action="{% url 'workspaces:storage_s3_save' %}" class="space-y-4">
+          {% csrf_token %}
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="col-span-2">
+              <label class="block text-sm font-bold text-slate-700 mb-2">Provider label</label>
+              <input type="text" name="s3_provider_label" value="{{ config.s3_provider_label|default:'S3-Compatible' }}" class="auth-input" placeholder="e.g. Cloudflare R2, MinIO, AWS S3">
+            </div>
+            <div class="col-span-2">
+              <label class="block text-sm font-bold text-slate-700 mb-2">Endpoint URL</label>
+              <input type="url" name="s3_endpoint_url" value="{{ config.s3_endpoint_url }}" class="auth-input" placeholder="https://s3.amazonaws.com  or  https://<accountid>.r2.cloudflarestorage.com" required>
+            </div>
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-2">Region</label>
+              <input type="text" name="s3_region" value="{{ config.s3_region|default:'us-east-1' }}" class="auth-input" placeholder="us-east-1" required>
+            </div>
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-2">Bucket</label>
+              <input type="text" name="s3_bucket" value="{{ config.s3_bucket }}" class="auth-input" placeholder="my-bucket" required>
+            </div>
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-2">Access Key</label>
+              <input type="text" name="s3_access_key" value="" class="auth-input" placeholder="{% if config.is_s3_configured %}•••••••• (saved){% else %}AKIA…{% endif %}" autocomplete="off">
+              {% if config.is_s3_configured %}<p class="text-[10px] text-slate-400 mt-2 font-medium">Leave blank to keep the existing key.</p>{% endif %}
+            </div>
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-2">Secret Key</label>
+              <input type="password" name="s3_secret_key" value="" class="auth-input" placeholder="••••••••" autocomplete="new-password">
+              <p class="text-[10px] text-slate-400 mt-2 font-medium">Leave blank to keep the existing secret.</p>
+            </div>
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-2">Path prefix (optional)</label>
+              <input type="text" name="s3_path_prefix" value="{{ config.s3_path_prefix }}" class="auth-input" placeholder="dia/">
+              <p class="text-[10px] text-slate-400 mt-2 font-medium">Prepended to every object key, e.g. <code>dia/</code>.</p>
+            </div>
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-2">CDN / Public Base URL (optional)</label>
+              <input type="url" name="s3_public_base_url" value="{{ config.s3_public_base_url }}" class="auth-input" placeholder="https://cdn.example.com">
+            </div>
+            <label class="col-span-2 flex items-center gap-3 p-3 rounded-xl border border-indigo-100 bg-indigo-50/50 text-sm font-semibold text-slate-700">
+              <input type="checkbox" name="s3_use_path_style" {% if config.s3_use_path_style %}checked{% endif %} class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary">
+              Use path-style addressing (required for MinIO and most non-AWS providers)
+            </label>
+            <label class="col-span-2 flex items-center gap-3 p-3 rounded-xl border border-emerald-100 bg-emerald-50/50 text-sm font-semibold text-slate-700">
+              <input type="checkbox" name="make_active" value="1" {% if config.backend == 's3_compatible' %}checked{% endif %} class="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500">
+              Activate this as the active storage backend after saving
+            </label>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <button type="submit" class="btn-primary inline-flex items-center gap-2 shadow-lg shadow-indigo-500/20">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              Save & Verify
+            </button>
+            <button type="button" id="s3-test-btn" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:border-primary/30 hover:text-primary transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+              <span id="s3-test-label">Test Connection</span>
+            </button>
+            {% if config.is_s3_configured %}
+            <form action="{% url 'workspaces:storage_s3_disconnect' %}" method="post" onsubmit="return confirm('Clear S3 settings? Active storage will revert to local disk.')" class="inline">
+              {% csrf_token %}
+              <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                Clear Settings
+              </button>
+            </form>
+            {% endif %}
+          </div>
+          <p id="s3-test-result" class="hidden text-xs mt-2"></p>
+        </form>
+      </div>
+      {% endif %}
+
+      {% if config.backend == 'local' %}
+      <div class="premium-surface card-elevate section-card">
+        <div class="section-head">
+          <h2 class="section-title">Local Storage (Server Disk)</h2>
+          <p class="section-subtitle">Files are stored on DIA's server</p>
+        </div>
+        <div class="rounded-xl border border-amber-100 bg-amber-50/40 px-4 py-4">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-amber-100 text-amber-600">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12v6a2 2 0 002 2h10a2 2 0 002-2v-6"/></svg>
+            </div>
+            <div>
+              <p class="font-bold text-slate-800 text-sm">Local storage is active</p>
+              <p class="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                All files are saved to the server's local disk under <code class="bg-slate-200 px-1 rounded">media/</code>.
+                This is billed at <strong>Rs 10/GB/month</strong>.
+                Switch to Google Drive or S3-Compatible storage to store files for free using your own infrastructure.
+              </p>
+            </div>
+          </div>
+        </div>
+        {% if config.storage_used_mb %}
+        <div class="mt-3 rounded-xl bg-slate-50 px-4 py-3 text-sm">
+          <p class="text-slate-600">Currently using <strong class="text-slate-800">{{ config.storage_used_mb }} MB</strong> of server storage.</p>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <div class="premium-surface card-elevate section-card">
+        <div class="section-head">
+          <h2 class="section-title">How storage works</h2>
+          <p class="section-subtitle">Where your files live</p>
+        </div>
+        <ul class="text-sm text-slate-600 space-y-2 leading-relaxed list-disc pl-5">
+          <li><strong>Local:</strong> Files are saved to the Intelligent Digital Automation server's disk under <code>media/</code>. Works out of the box, no setup.</li>
+          <li><strong>DIA Managed S3:</strong> Files are saved to Intelligent Digital Automation's secure S3-compatible cloud storage. Billed at Rs 10/GB/month.</li>
+          <li><strong>Google Drive:</strong> Intelligent Digital Automation creates a "DAI" folder in your Drive. You can browse and share those files like any other Drive file.</li>
+          <li><strong>S3-Compatible:</strong> Point at your own S3, R2, or MinIO bucket. Intelligent Digital Automation uploads there directly. If you set a CDN/public base URL, asset URLs are public; otherwise they're served via short-lived presigned links.</li>
+        </ul>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .storage-indicator { border-color: #cbd5e1; background-color: transparent; }
+  .storage-option:has(input:checked) .storage-indicator { border-color: #6D28D9; background-color: #6D28D9; }
+  .storage-checkmark { display: none; }
+  .storage-option:has(input:checked) .storage-checkmark { display: block; }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const csrfToken = document.querySelector('input[name=csrfmiddlewaretoken]')?.value || '';
+
+  async function runTest(url, label, resultEl) {
+    label.dataset.busy = '1';
+    const original = label.textContent;
+    label.textContent = 'Testing...';
+    resultEl.classList.remove('hidden');
+    resultEl.textContent = '';
+    resultEl.className = 'text-xs mt-2 text-slate-500';
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest'},
+        body: JSON.stringify({}),
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        resultEl.className = 'text-xs mt-2 text-emerald-600 font-semibold';
+        resultEl.textContent = 'Connection succeeded.';
+      } else {
+        resultEl.className = 'text-xs mt-2 text-red-600 font-semibold';
+        resultEl.textContent = 'Failed: ' + (data.error || 'unknown error');
+      }
+    } catch (e) {
+      resultEl.className = 'text-xs mt-2 text-red-600 font-semibold';
+      resultEl.textContent = 'Network error: ' + (e.message || 'unknown');
+    } finally {
+      label.textContent = original;
+      delete label.dataset.busy;
+    }
+  }
+
+  const testBtn = document.getElementById('storage-test-btn');
+  if (testBtn) {
+    const label = document.getElementById('storage-test-label');
+    const result = document.getElementById('storage-test-result');
+    testBtn.addEventListener('click', () => runTest("{% url 'workspaces:storage_test' %}", label, result));
+  }
+
+  const s3Btn = document.getElementById('s3-test-btn');
+  if (s3Btn) {
+    const label = document.getElementById('s3-test-label');
+    const result = document.getElementById('s3-test-result');
+    s3Btn.addEventListener('click', () => runTest("{% url 'workspaces:storage_s3_test' %}", label, result));
+  }
+
+  const diaS3Btn = document.getElementById('dia-s3-test-btn');
+  if (diaS3Btn) {
+    const label = document.getElementById('dia-s3-test-label');
+    const result = document.getElementById('dia-s3-test-result');
+    diaS3Btn.addEventListener('click', () => runTest("{% url 'workspaces:storage_dia_s3_test' %}", label, result));
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,186 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}AI Email Agent — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}AI Email Agent{% endblock %}
+{% block content %}
+<div class="page-shell max-w-none space-y-6">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <img src="{% static 'images/logo-mark.svg' %}" alt="MailFlow" class="w-10 h-10">
+      <div>
+        <p class="eyebrow">Email</p>
+        <h1 class="page-title mt-1">AI Email Agent</h1>
+        <p class="page-lead mt-1">Manage your connected inboxes, reply with AI, and stay on top of conversations.</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      {% url 'inbox:connect' as inbox_connect_url %}
+      {% include "components/button.html" with label="Connect Inbox" variant="primary" href=inbox_connect_url icon="M12 4v16m8-8H4" class="whitespace-nowrap" %}
+    </div>
+  </div>
+
+  {% if inboxes %}
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 glass-card p-4">
+    <div class="flex items-center gap-3">
+      <div class="relative">
+        <select onchange="if(this.value) window.location.href='?inbox_id='+this.value+'&folder={{ folder }}'"
+          class="appearance-none bg-white border border-slate-200 rounded-xl px-4 py-2 pr-8 text-sm font-semibold text-slate-700 hover:border-primary/30 cursor-pointer min-w-[200px] focus:outline-none focus:ring-2 focus:ring-primary/20">
+          {% for ib in inboxes %}
+          <option value="{{ ib.id }}" {% if selected_inbox and selected_inbox.id == ib.id %}selected{% endif %}>{{ ib.email_address }}</option>
+          {% endfor %}
+        </select>
+        <svg class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      {% if selected_inbox %}
+      <span class="text-xs text-slate-400 flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full {% if selected_inbox.last_sync_status == 'success' %}bg-emerald-400{% elif selected_inbox.last_sync_status == 'error' %}bg-red-400{% else %}bg-amber-400{% endif %}"></span>
+        {{ selected_inbox.last_sync_status|default:'Pending' }}
+      </span>
+      {% endif %}
+    </div>
+    <div class="flex items-center gap-2">
+      {% if selected_inbox.last_sync_status == 'error' and 'password' in selected_inbox.last_sync_error|lower %}
+      <a href="{% url 'inbox:connect' %}?reconnect={{ selected_inbox.id }}" 
+         class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 hover:text-amber-800 transition-colors px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Reconnect
+      </a>
+      {% endif %}
+      <a href="{% url 'inbox:sync' selected_inbox.id %}" data-loading="Syncing..." 
+         class="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary-hover transition-colors px-3 py-1.5 rounded-lg hover:bg-primary-light">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        Sync
+      </a>
+      <form method="post" action="{% url 'inbox:disconnect' selected_inbox.id %}" class="inline" data-confirm="Disconnect this inbox?">
+        {% csrf_token %}
+        <button type="submit" data-loading="Removing..." 
+                class="inline-flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:text-red-600 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50 cursor-pointer">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          Remove
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if not inboxes %}
+  {% url 'inbox:connect' as inbox_connect_url %}
+  {% include "components/empty_state.html" with title="No inboxes connected" description="Connect a Gmail or Outlook account to start managing your emails with AI-powered summaries, drafts, and replies." cta_url=inbox_connect_url cta_label="Connect Inbox" icon="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" %}
+  {% elif not selected_inbox %}
+  {% include "components/empty_state.html" with title="Select an account above to view emails." icon="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" description="" %}
+  {% else %}
+
+  <div class="flex items-center gap-0 border-b border-slate-200 overflow-x-auto">
+    <a href="?inbox_id={{ selected_inbox.id }}&folder=inbox" 
+       class="folder-tab px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap {% if folder == 'inbox' %}border-primary text-primary{% else %}border-transparent text-slate-500 hover:text-slate-700{% endif %}"
+       data-folder="inbox">
+      <svg class="w-4 h-4 inline mr-1.5 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+      Inbox
+    </a>
+    <a href="?inbox_id={{ selected_inbox.id }}&folder=sent" 
+       class="folder-tab px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap {% if folder == 'sent' %}border-primary text-primary{% else %}border-transparent text-slate-500 hover:text-slate-700{% endif %}"
+       data-folder="sent">
+      <svg class="w-4 h-4 inline mr-1.5 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+      Sent
+    </a>
+    <a href="?inbox_id={{ selected_inbox.id }}&folder=drafts" 
+       class="folder-tab px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap {% if folder == 'drafts' %}border-primary text-primary{% else %}border-transparent text-slate-500 hover:text-slate-700{% endif %}"
+       data-folder="drafts">
+      <svg class="w-4 h-4 inline mr-1.5 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+      Drafts
+    </a>
+    <a href="{% url 'inbox:trash' %}?inbox_id={{ selected_inbox.id }}" 
+       class="px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap border-transparent text-slate-400 hover:text-slate-600">
+      <svg class="w-4 h-4 inline mr-1.5 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+      Trash
+      {% if trash_count %}<span class="ml-1.5 text-[10px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded-full font-bold">{{ trash_count }}</span>{% endif %}
+    </a>
+  </div>
+
+  <div class="glass-card overflow-hidden">
+    {% if folder == 'drafts' %}
+      {% if drafts %}
+        {% for d in drafts %}
+        <a href="{% url 'inbox:draft_detail' d.id %}" 
+           class="flex items-center gap-4 px-5 py-3.5 border-b border-slate-50 hover:bg-gradient-to-r hover:from-slate-50/80 hover:to-white transition-all duration-150 last:border-b-0 group">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-sm font-bold text-white shadow-sm shrink-0">
+            {{ d.thread.subject|default:'D'|first|upper }}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-semibold text-slate-900 truncate group-hover:text-primary transition-colors">Re: {{ d.thread.subject|default:'(No subject)' }}</span>
+              <span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded
+                {% if d.status == 'pending_review' %}bg-amber-50 text-amber-700
+                {% elif d.status == 'approved' %}bg-emerald-50 text-emerald-700
+                {% elif d.status == 'sent' %}bg-sky-50 text-sky-700
+                {% else %}bg-slate-100 text-slate-500{% endif %}">{{ d.get_status_display }}</span>
+            </div>
+            <p class="text-xs text-slate-500 truncate mt-0.5">{{ d.ai_generated_body|striptags|truncatechars:100 }}</p>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="text-[11px] text-slate-400">{{ d.created_at|date:'M d' }}</span>
+            <svg class="w-4 h-4 text-slate-300 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </div>
+        </a>
+        {% endfor %}
+      {% else %}
+        <div class="p-12 text-center">
+          <svg class="w-10 h-10 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          <p class="text-sm text-slate-500">No drafts yet. Generate AI drafts from your inbox messages.</p>
+        </div>
+      {% endif %}
+    {% else %}
+      {% if email_messages %}
+        {% for msg in email_messages %}
+        <a href="{% url 'inbox:message_detail' msg.id %}" 
+           class="flex items-center gap-4 px-5 py-3.5 border-b border-slate-50 hover:bg-gradient-to-r hover:from-slate-50/80 hover:to-white transition-all duration-150 last:border-b-0 group">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center text-sm font-bold text-white shadow-sm shrink-0">
+            {{ msg.from_name|default:msg.from_email|first|upper }}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-semibold text-slate-900 truncate group-hover:text-primary transition-colors">{{ msg.from_name|default:msg.from_email }}</span>
+              {% if msg.intent %}
+              <span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{{ msg.intent }}</span>
+              {% endif %}
+            </div>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span class="text-xs font-medium text-slate-600 truncate">{{ msg.subject|default:'(No subject)' }}</span>
+              <span class="text-xs text-slate-400">·</span>
+              <span class="text-xs text-slate-400 truncate">{{ msg.body_text|default:msg.body_html|striptags|truncatechars:80 }}</span>
+            </div>
+          </div>
+          <div class="flex flex-col items-end gap-1 shrink-0">
+            <span class="text-[11px] text-slate-400">{{ msg.received_at|date:'M d' }}</span>
+            {% if msg.urgency == 'urgent' %}
+            <span class="text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded">Urgent</span>
+            {% elif msg.urgency == 'high' %}
+            <span class="text-[10px] font-bold text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded">High</span>
+            {% endif %}
+          </div>
+        </a>
+        {% endfor %}
+      {% else %}
+        <div class="p-12 text-center">
+          <svg class="w-10 h-10 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          <p class="text-sm text-slate-500">No messages in this folder yet. Sync your inbox to get started.</p>
+        </div>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  {% if page_obj and page_obj.paginator.num_pages > 1 %}
+  <div class="flex items-center justify-center gap-2 pt-2">
+    {% if page_obj.has_previous %}
+    <a href="?inbox_id={{ selected_inbox.id }}&folder={{ folder }}&page={{ page_obj.previous_page_number }}" 
+       class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors border border-slate-200">Previous</a>
+    {% endif %}
+    <span class="text-xs text-slate-500">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?inbox_id={{ selected_inbox.id }}&folder={{ folder }}&page={{ page_obj.next_page_number }}" 
+       class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors border border-slate-200">Next</a>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

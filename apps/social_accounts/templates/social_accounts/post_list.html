@@ -1,0 +1,217 @@
+{% extends 'base_dashboard.html' %}
+{% load workspace_tags %}
+{% can_create 'social' as can_create_social %}
+{% can_delete 'social' as can_delete_social %}
+{% block title %}Posts — Social Media — Intelligent Digital Automation (IDA){% endblock %}
+{% block content %}
+<div class="page-shell max-w-none space-y-6">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">All Posts</h1>
+      <p class="text-sm text-slate-500 mt-1">Manage and monitor your social media posts</p>
+    </div>
+    {% if can_create_social %}
+    {% url 'social_accounts:post_create' as new_post_url %}
+    {% include "components/button.html" with label="New Post" variant="primary" href=new_post_url icon="M12 4v16m8-8H4" %}
+    {% endif %}
+  </div>
+
+  <!-- Queue Health Indicator -->
+  <div class="premium-surface rounded-2xl p-4">
+    <div class="flex items-center justify-between mb-2">
+      <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Queue Health</h3>
+      <span class="text-xs font-semibold text-emerald-600">{{ status_counts.published|default:0 }} published</span>
+    </div>
+    <div class="flex h-2 rounded-full overflow-hidden bg-slate-100">
+      {% if status_counts.draft %}<div class="h-full bg-slate-400 transition-all" style="width:{{ status_counts.draft_pct|default:0 }}%" title="Drafts: {{ status_counts.draft }}"></div>{% endif %}
+      {% if status_counts.scheduled %}<div class="h-full bg-indigo-500 transition-all" style="width:{{ status_counts.scheduled_pct|default:0 }}%" title="Scheduled: {{ status_counts.scheduled }}"></div>{% endif %}
+      {% if status_counts.publishing %}<div class="h-full bg-amber-500 transition-all" style="width:{{ status_counts.publishing_pct|default:0 }}%" title="Publishing: {{ status_counts.publishing }}"></div>{% endif %}
+      {% if status_counts.published %}<div class="h-full bg-emerald-500 transition-all" style="width:{{ status_counts.published_pct|default:0 }}%" title="Published: {{ status_counts.published }}"></div>{% endif %}
+      {% if status_counts.failed %}<div class="h-full bg-red-500 transition-all" style="width:{{ status_counts.failed_pct|default:0 }}%" title="Failed: {{ status_counts.failed }}"></div>{% endif %}
+    </div>
+    <div class="flex gap-4 mt-2 text-[10px] font-semibold text-slate-500">
+      <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-slate-400"></span>Draft {{ status_counts.draft|default:0 }}</span>
+      <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-indigo-500"></span>Scheduled {{ status_counts.scheduled|default:0 }}</span>
+      <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span>Publishing {{ status_counts.publishing|default:0 }}</span>
+      <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Published {{ status_counts.published|default:0 }}</span>
+      <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span>Failed {{ status_counts.failed|default:0 }}</span>
+    </div>
+  </div>
+
+  <div class="flex flex-wrap gap-2">
+    <a href="{% url 'social_accounts:post_list' %}" class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if not current_status and not current_source %}bg-primary text-white{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">All</a>
+    <a href="{% url 'social_accounts:post_list' %}?status=draft" class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if current_status == 'draft' %}bg-primary text-white{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">Drafts</a>
+    <a href="{% url 'social_accounts:post_list' %}?status=scheduled" class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if current_status == 'scheduled' %}bg-primary text-white{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">Scheduled</a>
+    <a href="{% url 'social_accounts:post_list' %}?status=published" class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if current_status == 'published' %}bg-primary text-white{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">Published</a>
+    <a href="{% url 'social_accounts:post_list' %}?status=failed" class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if current_status == 'failed' %}bg-primary text-white{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">Failed</a>
+    <a href="{% url 'social_accounts:post_list' %}?source=content_studio" class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if current_source == 'content_studio' %}bg-primary text-white{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">
+      <svg class="w-3.5 h-3.5 inline mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      From Content Studio
+    </a>
+  </div>
+
+  <div class="premium-surface rounded-2xl overflow-hidden skeleton-wrap">
+    <div class="skeleton-only p-6">
+      {% include "components/skeleton.html" with type="text_block" count=1 %}
+      {% include "components/skeleton.html" with type="table_row" count=5 %}
+    </div>
+    <div class="content-only">
+    {% if posts %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-100 bg-slate-50/50">
+            <th class="w-10 px-2 py-3">
+              <input type="checkbox" id="selectAll" onchange="toggleAll(this)"
+                     class="rounded border-slate-300">
+            </th>
+            <th class="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Post</th>
+            <th class="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Platform</th>
+            <th class="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Account</th>
+            <th class="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+            <th class="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Scheduled</th>
+            <th class="text-right px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-slate-50">
+          {% for post in posts %}
+          <tr class="hover:bg-slate-50/50 transition-colors">
+            <td class="px-2 py-4">
+              <input type="checkbox"
+                     class="post-checkbox rounded border-slate-300"
+                     value="{{ post.id }}">
+            </td>
+
+            <td class="px-4 py-4">
+              <a href="{% url 'social_accounts:post_detail' post.id %}"
+                 class="font-medium text-slate-900 hover:text-primary transition-colors truncate block max-w-[240px]">
+                {{ post.content|truncatechars:60|default:"No text" }}
+              </a>
+
+              {% if post.content_item %}
+              <a href="{% url 'content_studio:detail' post.content_item.id %}"
+                 class="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded mt-1 hover:bg-indigo-100 transition-colors">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Content Studio
+              </a>
+              {% endif %}
+
+              {% if post.hashtags %}
+              <p class="text-xs text-gray-400 mt-0.5 truncate max-w-[240px]">
+                {% for tag in post.hashtags %}#{{ tag }} {% endfor %}
+              </p>
+              {% endif %}
+            </td>
+
+            <td class="px-4 py-4">
+              {% if post.platform == 'facebook' %}
+              {% include "components/badge.html" with label=post.get_platform_display variant="blue" %}
+              {% elif post.platform == 'instagram' %}
+              {% include "components/badge.html" with label=post.get_platform_display variant="purple" %}
+              {% elif post.platform == 'twitter' %}
+              {% include "components/badge.html" with label=post.get_platform_display variant="blue" %}
+              {% elif post.platform == 'linkedin' %}
+              {% include "components/badge.html" with label=post.get_platform_display variant="blue" %}
+              {% elif post.platform == 'tiktok' %}
+              {% include "components/badge.html" with label=post.get_platform_display variant="gray" %}
+              {% elif post.platform == 'youtube' %}
+              {% include "components/badge.html" with label=post.get_platform_display variant="red" %}
+              {% else %}
+              {% include "components/badge.html" with label=post.get_platform_display variant="gray" %}
+              {% endif %}
+            </td>
+
+            <td class="px-4 py-4 text-sm text-slate-700">
+              {{ post.account.account_name }}
+            </td>
+
+            <td class="px-4 py-4">
+              {% if post.status == 'draft' %}
+              {% include "components/badge.html" with label=post.status variant="gray" %}
+              {% elif post.status == 'scheduled' %}
+              {% include "components/badge.html" with label=post.status variant="blue" %}
+              {% elif post.status == 'publishing' %}
+              {% include "components/badge.html" with label=post.status variant="yellow" %}
+              {% elif post.status == 'published' %}
+              {% include "components/badge.html" with label=post.status variant="green" %}
+              {% elif post.status == 'failed' %}
+              {% include "components/badge.html" with label=post.status variant="red" %}
+              {% else %}
+              {% include "components/badge.html" with label=post.status variant="gray" %}
+              {% endif %}
+            </td>
+
+            <td class="px-4 py-4 text-sm text-slate-600">
+              {% if post.scheduled_at %}
+                <span class="countdown-timer"
+                      data-scheduled="{{ post.scheduled_at|date:'c' }}">
+                  {{ post.scheduled_at|date:'M d, H:i' }}
+                </span>
+              {% else %}
+                <span class="text-gray-400">—</span>
+              {% endif %}
+            </td>
+
+            <td class="px-4 py-4 text-right">
+              <div class="flex items-center justify-end gap-2">
+                <a href="{% url 'social_accounts:post_detail' post.id %}"
+                   class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100">
+                  View
+                </a>
+
+                {% if post.status == 'draft' or post.status == 'scheduled' %}
+                <a href="{% url 'social_accounts:publish_post' post.id %}"
+                   class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                   onclick="return confirm('Publish this post now?')">
+                  Publish
+                </a>
+                {% endif %}
+
+                <a href="{% url 'social_accounts:post_delete' post.id %}"
+                   class="px-3 py-1.5 rounded-lg text-xs font-semibold text-red-500 hover:bg-red-50"
+                   onclick="return confirm('Delete this post?')">
+                  Delete
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% else %}
+    {% url 'social_accounts:post_create' as create_post_url %}
+    {% if current_status %}
+    {% with "No posts with status '"|add:current_status|add:"'." as desc_text %}
+    {% include "components/empty_state.html" with title="No posts found" description=desc_text cta_url=create_post_url cta_label="Create Post" %}
+    {% endwith %}
+    {% else %}
+    {% include "components/empty_state.html" with title="No posts found" description="Create your first social media post." cta_url=create_post_url cta_label="Create Post" %}
+    {% endif %}
+    {% endif %}
+</div>
+
+
+</div>
+
+<script>
+function toggleAll(master) {
+  document.querySelectorAll('.post-checkbox').forEach(function(cb) { cb.checked = master.checked; });
+}
+function updateCountdowns() {
+  document.querySelectorAll('.countdown-timer').forEach(function(el) {
+    var scheduled = new Date(el.dataset.scheduled);
+    var now = new Date();
+    var diff = scheduled - now;
+    if (diff <= 0) { el.textContent = 'Now'; return; }
+    var hours = Math.floor(diff / 3600000);
+    var mins = Math.floor((diff % 3600000) / 60000);
+    el.textContent = hours + 'h ' + mins + 'm';
+  });
+}
+updateCountdowns();
+setInterval(updateCountdowns, 60000);
+</script>
+{% endblock %}

@@ -1,0 +1,283 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Billing — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Billing{% endblock %}
+{% block content %}
+
+<div class="page-shell max-w-none space-y-8">
+
+  {% if request.GET.checkout == 'success' %}
+  <div class="rounded-xl bg-emerald-50 border border-emerald-200 px-5 py-4 text-sm text-emerald-800">
+    <p class="font-bold">Subscription updated!</p>
+    <p class="mt-1">Your plan change has been processed. It may take a moment to reflect.</p>
+  </div>
+  {% endif %}
+
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h2 class="page-title">Billing &amp; Plan</h2>
+      <p class="page-subtitle">Usage, plan limits, and subscription for {{ workspace.name }}</p>
+    </div>
+    <div class="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700">
+      <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+      {{ plan_display }} plan
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+
+    <!-- Left sidebar: storage cost breakdown -->
+    <div class="xl:col-span-4 space-y-6">
+      <div class="premium-surface card-elevate surface-hover-clean section-card">
+        <div class="section-head">
+          <h2 class="section-title">Storage Cost Breakdown</h2>
+          <p class="section-subtitle">Per-GB pricing by backend</p>
+        </div>
+
+        <div class="space-y-4">
+          <div class="rounded-2xl border-2 border-emerald-200 bg-emerald-50/40 px-4 py-4">
+            <div class="flex items-start gap-3">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-100 text-emerald-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 014-4h.5a5.5 5.5 0 0110.78-1.5A4.5 4.5 0 0118 19h-1a3 3 0 00-3-3v-1a3 3 0 00-6 0v1a3 3 0 00-3 3H3z"/></svg>
+              </div>
+              <div>
+                <p class="font-bold text-slate-900 text-sm">Your Own Drive / Cloud</p>
+                <p class="text-xs text-slate-500 mt-0.5">Google Drive or S3-Compatible</p>
+                <p class="text-lg font-extrabold text-emerald-600 mt-1">Rs 0 <span class="text-sm font-normal text-slate-500">/ GB / month</span></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border-2 {% if is_using_server_storage %}border-amber-200 bg-amber-50/40{% else %}border-slate-200 bg-slate-50/40{% endif %} px-4 py-4">
+            <div class="flex items-start gap-3">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center {% if is_using_server_storage %}bg-amber-100 text-amber-600{% else %}bg-slate-100 text-slate-400{% endif %}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12v6a2 2 0 002 2h10a2 2 0 002-2v-6"/></svg>
+              </div>
+              <div>
+                <p class="font-bold text-slate-900 text-sm">Server Storage (IDA)</p>
+                <p class="text-xs text-slate-500 mt-0.5">Local disk on our servers</p>
+                <p class="text-lg font-extrabold text-slate-900 mt-1">Rs {{ SERVER_STORAGE_PRICE|floatformat:0 }} <span class="text-sm font-normal text-slate-500">/ GB / month</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          <p class="font-semibold text-slate-800">Tip</p>
+          <p class="mt-1 leading-relaxed">Connect your own Google Drive or S3 bucket to store files for free. Only files on our server count toward billed storage.</p>
+        </div>
+      </div>
+
+      {% if subscription %}
+      <div class="premium-surface card-elevate section-card">
+        <div class="section-head">
+          <h2 class="section-title">Subscription</h2>
+          <p class="section-subtitle">Manage your billing via Stripe</p>
+        </div>
+        <div class="space-y-3 text-sm">
+          <div class="flex justify-between"><span class="text-slate-500">Plan</span><span class="font-semibold">{{ subscription.plan.name }}</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Status</span><span class="font-semibold {% if subscription.status == 'active' or subscription.status == 'trialing' %}text-emerald-600{% else %}text-amber-600{% endif %}">{{ subscription.get_status_display }}</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Billing</span><span class="font-semibold">{{ subscription.get_interval_display }}</span></div>
+          {% if subscription.current_period_end %}
+          <div class="flex justify-between"><span class="text-slate-500">Period end</span><span class="font-semibold">{{ subscription.current_period_end|date:"M j, Y" }}</span></div>
+          {% endif %}
+          <div class="pt-3">
+            <a href="{% url 'billing:portal' %}" class="inline-flex items-center justify-center w-full px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition">Manage in Stripe</a>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Right main: quotas + plans -->
+    <div class="xl:col-span-8 space-y-6">
+
+      <!-- Quota usage cards -->
+      <div class="premium-surface card-elevate section-card">
+        <div class="section-head">
+          <h2 class="section-title">Monthly Usage</h2>
+          <p class="section-subtitle">How much of your plan limits you've used this month</p>
+        </div>
+
+        <div class="space-y-5">
+          <!-- Emails quota -->
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="font-medium text-slate-700">Emails Sent</span>
+              <span class="text-slate-500">
+                {% if plan_limits.emails_per_month %}
+                  {{ quota.emails_sent_this_month }} / {{ plan_limits.emails_per_month }}
+                {% else %}
+                  {{ quota.emails_sent_this_month }} / Unlimited
+                {% endif %}
+              </span>
+            </div>
+            <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-500 {% if quota_percentages.emails >= 90 %}bg-red-500{% elif quota_percentages.emails >= 75 %}bg-amber-500{% else %}bg-emerald-500{% endif %}" style="width: {{ quota_percentages.emails }}%"></div>
+            </div>
+          </div>
+
+          <!-- AI credits quota -->
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="font-medium text-slate-700">AI Credits</span>
+              <span class="text-slate-500">
+                {% if plan_limits.ai_credits %}
+                  {{ quota.ai_credits_used }} / {{ plan_limits.ai_credits }}
+                {% else %}
+                  {{ quota.ai_credits_used }} / Unlimited
+                {% endif %}
+              </span>
+            </div>
+            <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-500 {% if quota_percentages.ai_credits >= 90 %}bg-red-500{% elif quota_percentages.ai_credits >= 75 %}bg-amber-500{% else %}bg-blue-500{% endif %}" style="width: {{ quota_percentages.ai_credits }}%"></div>
+            </div>
+          </div>
+
+          <!-- Storage quota -->
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="font-medium text-slate-700">Storage</span>
+              <span class="text-slate-500">
+                {% if plan_limits.storage_gb %}
+                  {{ storage_gb }} GB / {{ plan_limits.storage_gb }} GB
+                {% else %}
+                  {{ storage_gb }} GB / Unlimited
+                {% endif %}
+              </span>
+            </div>
+            <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-500 {% if quota_percentages.storage >= 90 %}bg-red-500{% elif quota_percentages.storage >= 75 %}bg-amber-500{% else %}bg-purple-500{% endif %}" style="width: {{ quota_percentages.storage }}%"></div>
+            </div>
+          </div>
+
+          <!-- Team seats quota -->
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="font-medium text-slate-700">Team Seats</span>
+              <span class="text-slate-500">
+                {% if plan_limits.team_seats %}
+                  {{ user_workspaces|length }} / {{ plan_limits.team_seats }}
+                {% else %}
+                  {{ user_workspaces|length }} / Unlimited
+                {% endif %}
+              </span>
+            </div>
+            <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-500 bg-indigo-500" style="width: {% if plan_limits.team_seats %}{% widthratio user_workspaces|length plan_limits.team_seats 100 %}{% else %}0{% endif %}%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% if quota_percentages.emails >= 90 or quota_percentages.ai_credits >= 90 or quota_percentages.storage >= 90 %}
+      <div class="rounded-xl bg-amber-50 border border-amber-200 px-5 py-4 text-sm">
+        <p class="font-bold text-amber-800">You're nearing your plan limits</p>
+        <p class="mt-1 text-amber-700 leading-relaxed">
+          Upgrade your plan to increase your limits and keep your workflows running smoothly.
+        </p>
+      </div>
+      {% endif %}
+
+      <!-- Plan comparison / upgrade -->
+      <div class="premium-surface card-elevate section-card">
+        <div class="section-head">
+          <h2 class="section-title">Plans</h2>
+          <p class="section-subtitle">Choose the plan that fits your needs</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {% for plan in plans %}
+          <div class="rounded-2xl border-2 {% if plan.plan_id == workspace.plan %}border-indigo-400 bg-indigo-50/40{% else %}border-slate-200 bg-white{% endif %} px-5 py-5 flex flex-col">
+            <div class="text-center">
+              <h3 class="text-lg font-extrabold text-slate-900">{{ plan.name }}</h3>
+              <p class="text-xs text-slate-500 mt-1">{{ plan.description }}</p>
+              <p class="mt-3">
+                <span class="text-3xl font-extrabold text-slate-900">Rs {{ plan.price_monthly|floatformat:0 }}</span>
+                <span class="text-sm text-slate-500">/mo</span>
+              </p>
+            </div>
+
+            <ul class="mt-4 space-y-2 text-sm flex-1">
+              {% for feature in plan.features %}
+              <li class="flex items-start gap-2">
+                <svg class="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>{{ feature }}</span>
+              </li>
+              {% endfor %}
+            </ul>
+
+            <div class="mt-5">
+              {% if plan.plan_id == workspace.plan %}
+                <span class="block text-center px-4 py-2 rounded-xl bg-indigo-100 text-indigo-700 text-sm font-semibold">Current Plan</span>
+              {% elif not STRIPE_PUBLISHABLE_KEY %}
+                <span class="block text-center px-4 py-2 rounded-xl bg-slate-100 text-slate-400 text-sm font-semibold">Not available</span>
+              {% else %}
+                <a href="{% url 'billing:subscribe' plan.id 'month' %}" class="block text-center px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition">Upgrade</a>
+              {% endif %}
+            </div>
+          </div>
+          {% empty %}
+          <p class="text-sm text-slate-500 col-span-3">No plans configured yet.</p>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Current usage (legacy storage details) -->
+      <div class="premium-surface card-elevate section-card">
+        <div class="section-head">
+          <h2 class="section-title">Storage Usage</h2>
+          <p class="section-subtitle">Storage consumption across all backends</p>
+        </div>
+
+        {% if config %}
+        <div class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="rounded-xl bg-indigo-50/60 border border-indigo-100 px-4 py-4 text-center">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Used</p>
+              <p class="text-2xl font-extrabold text-slate-900 mt-1">{{ storage_gb }} <span class="text-sm font-normal text-slate-500">GB</span></p>
+              <p class="text-xs text-slate-500">({{ storage_used_mb }} MB)</p>
+            </div>
+            <div class="rounded-xl {% if is_using_server_storage %}bg-amber-50/60 border border-amber-100{% else %}bg-emerald-50/60 border border-emerald-100{% endif %} px-4 py-4 text-center">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Active Backend</p>
+              <p class="text-lg font-extrabold text-slate-900 mt-1">{{ config.get_backend_display }}</p>
+              <p class="text-xs {% if is_using_server_storage %}text-amber-600{% else %}text-emerald-600{% endif %} font-semibold">
+                {% if is_using_server_storage %}Billed{% else %}Free{% endif %}
+              </p>
+            </div>
+            <div class="rounded-xl bg-slate-50 border border-slate-200 px-4 py-4 text-center">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Est. Monthly Cost</p>
+              <p class="text-2xl font-extrabold {% if monthly_cost > 0 %}text-amber-600{% else %}text-emerald-600{% endif %} mt-1">
+                Rs {{ monthly_cost|floatformat:2 }}
+              </p>
+              <p class="text-xs text-slate-500">
+                {% if is_using_server_storage %}{{ storage_gb }} GB × Rs {{ SERVER_STORAGE_PRICE|floatformat:0 }}{% else %}Free (own storage){% endif %}
+              </p>
+            </div>
+          </div>
+
+          {% if is_using_server_storage %}
+          <div class="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm">
+            <p class="font-semibold text-amber-800">You're using server storage</p>
+            <p class="mt-1 text-amber-700 leading-relaxed">
+              Switch to Google Drive or S3-Compatible storage to reduce your monthly cost to <strong>Rs 0</strong>.
+              <a href="{% url 'workspaces:storage_settings' %}" class="underline font-semibold">Manage storage backends</a>
+            </p>
+          </div>
+          {% else %}
+          <div class="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm">
+            <p class="font-semibold text-emerald-800">You're using your own storage</p>
+            <p class="mt-1 text-emerald-700 leading-relaxed">
+              Your files are stored on your own {{ config.get_backend_display }}. No storage fees.
+            </p>
+          </div>
+          {% endif %}
+        </div>
+        {% else %}
+        <p class="text-sm text-slate-500">No storage backend configured yet.</p>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

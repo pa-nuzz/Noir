@@ -1,0 +1,16 @@
+<ul class="space-y-1">
+  {% for folder in folders %}
+  <li>
+    <a href="{% url 'media_assets:folder_detail' folder.id %}" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 transition-colors group">
+      <svg class="w-4 h-4 text-amber-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
+      <span class="text-sm font-semibold text-slate-700 group-hover:text-primary transition-colors">{{ folder.name }}</span>
+      <span class="text-xs text-gray-400 ml-auto">{{ folder.asset_count }}</span>
+    </a>
+    {% if folder.children %}
+    <div class="ml-4 pl-4 border-l border-slate-100">
+      {% include 'media_assets/_folder_tree.html' with folders=folder.children %}
+    </div>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>

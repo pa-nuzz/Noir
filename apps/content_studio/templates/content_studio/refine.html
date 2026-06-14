@@ -1,0 +1,41 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Refine {{ item.title }} — Content Studio{% endblock %}
+{% block page_title %}Refine Content{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none mx-auto">
+  <div class="flex items-center gap-3 mb-6">
+    <a href="{% url 'content_studio:detail' item.id %}" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
+      <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    </a>
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Refine Content</h1>
+      <p class="text-sm text-slate-500">Provide feedback to improve the generated content</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="premium-surface rounded-2xl p-6">
+      <h2 class="text-sm font-bold text-slate-800 mb-3">Current Version</h2>
+      <pre class="font-sans text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{{ item.body|truncatechars:500 }}</pre>
+    </div>
+
+    <div>
+      <form method="post" class="premium-surface rounded-2xl p-6 space-y-5">
+        {% csrf_token %}
+        <h2 class="text-sm font-bold text-slate-800">Feedback</h2>
+        <p class="text-xs text-gray-500">Describe what you'd like changed — tone, length, structure, etc.</p>
+        <div>
+          <label for="feedback" class="block text-sm font-semibold text-slate-700 mb-1.5">Refinement Instructions *</label>
+          <textarea name="feedback" id="feedback" rows="8" class="auth-input w-full resize-y" placeholder="Make it more casual, shorten to 100 characters, add more emojis..." required></textarea>
+        </div>
+        <div class="flex items-center justify-end gap-3">
+          {% url 'content_studio:detail' item.id as content_studio_detail_url %}
+          {% include "components/button.html" with label="Cancel" variant="secondary" href=content_studio_detail_url %}
+          <button type="submit" class="btn-action btn-action-primary">Refine</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

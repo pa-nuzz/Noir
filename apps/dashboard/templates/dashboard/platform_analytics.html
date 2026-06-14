@@ -1,0 +1,320 @@
+{% extends "base_dashboard.html" %}
+{% load static dashboard_tags %}
+{% block title %}Analytics — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Platform Analytics{% endblock %}
+{% block extra_head %}
+<style>
+  .analytics-card {
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .analytics-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px -18px rgba(15, 23, 42, 0.28);
+  }
+</style>
+{% endblock %}
+{% block content %}
+
+<div class="page-shell max-w-none space-y-8">
+
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h2 class="page-title">Platform Analytics</h2>
+      <p class="page-subtitle">How Intelligent Digital Automation grows your business — revenue, reach, and leads</p>
+    </div>
+    <div class="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700">
+      <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+      {{ total_sent }} emails sent · {{ contacts_new_30d }} new leads
+    </div>
+  </div>
+
+  {% if total_campaigns == 0 and total_contacts == 0 and total_social_posts == 0 %}
+  {% include "components/empty_state.html" with title="No data yet" description="Start sending campaigns, connecting social accounts, and building your audience to see your analytics here." icon="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" %}
+  {% else %}
+
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+
+    <div class="xl:col-span-4 space-y-6">
+
+      <div class="premium-surface card-elevate section-card">
+        <div class="section-head">
+          <h2 class="section-title">Revenue Impact</h2>
+          <p class="section-subtitle">Estimated business value generated</p>
+        </div>
+        <div class="space-y-4">
+          <div class="rounded-2xl border-2 border-emerald-200 bg-emerald-50/40 px-4 py-4 text-center">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Estimated Value</p>
+            <p class="text-3xl font-extrabold text-emerald-600 mt-1">Rs {{ total_estimated_value|floatformat:0 }}</p>
+            <p class="text-xs text-slate-500 mt-1">Email campaigns + social reach + new leads</p>
+          </div>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 text-sm">
+              <span class="text-slate-600">Email Campaigns</span>
+              <span class="font-bold text-slate-800">Rs {{ estimated_email_value|floatformat:0 }}</span>
+            </div>
+            <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 text-sm">
+              <span class="text-slate-600">Click Value</span>
+              <span class="font-bold text-slate-800">Rs {{ estimated_click_value|floatformat:0 }}</span>
+            </div>
+            <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 text-sm">
+              <span class="text-slate-600">New Lead Value</span>
+              <span class="font-bold text-slate-800">Rs {{ estimated_lead_value|floatformat:0 }}</span>
+            </div>
+            <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 text-sm">
+              <span class="text-slate-600">Social Media Value</span>
+              <span class="font-bold text-slate-800">Rs {{ social_media_value|floatformat:0 }}</span>
+            </div>
+          </div>
+          {% if total_cost_savings > 0 %}
+          <div class="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm">
+            <p class="font-semibold text-emerald-800">Cost Savings: Rs {{ total_cost_savings|floatformat:2 }}/mo</p>
+            <p class="text-emerald-700 mt-0.5">You save by using your own storage backend instead of DIA server storage.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="premium-surface card-elevate section-card">
+        <div class="section-head">
+          <h2 class="section-title">Platform Health</h2>
+          <p class="section-subtitle">Deliverability & quality scores</p>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="font-semibold text-slate-700">Email Deliverability</span>
+              <span class="font-bold {% if total_deliverability >= 95 %}text-emerald-600{% elif total_deliverability >= 85 %}text-amber-600{% else %}text-red-600{% endif %}">{{ total_deliverability }}%</span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-2">
+              <div class="h-2 rounded-full {% if total_deliverability >= 95 %}bg-emerald-500{% elif total_deliverability >= 85 %}bg-amber-500{% else %}bg-red-500{% endif %}" style="width: {{ total_deliverability }}%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="font-semibold text-slate-700">Avg Spam Score</span>
+              <span class="font-bold {% if avg_spam_score < 30 %}text-emerald-600{% elif avg_spam_score < 60 %}text-amber-600{% else %}text-red-600{% endif %}">{{ avg_spam_score }}</span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-2">
+              <div class="h-2 rounded-full {% if avg_spam_score < 30 %}bg-emerald-500{% elif avg_spam_score < 60 %}bg-amber-500{% else %}bg-red-500{% endif %}" style="width: {% widthratio avg_spam_score 100 100 %}%"></div>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3 pt-2">
+            <div class="rounded-xl bg-slate-50 px-3 py-2 text-center">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Open Rate</p>
+              <p class="text-lg font-extrabold text-indigo-600">{{ total_open_rate }}%</p>
+            </div>
+            <div class="rounded-xl bg-slate-50 px-3 py-2 text-center">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Click Rate</p>
+              <p class="text-lg font-extrabold text-indigo-600">{{ total_click_rate }}%</p>
+            </div>
+            <div class="rounded-xl bg-slate-50 px-3 py-2 text-center">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Bounce Rate</p>
+              <p class="text-lg font-extrabold {% if total_bounce_rate < 3 %}text-emerald-600{% else %}text-red-600{% endif %}">{{ total_bounce_rate }}%</p>
+            </div>
+            <div class="rounded-xl bg-slate-50 px-3 py-2 text-center">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Unsubscribes</p>
+              <p class="text-lg font-extrabold text-slate-700">{{ total_unsubscribes }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="xl:col-span-8 space-y-6">
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="premium-surface card-elevate section-card p-4 analytics-card">
+          <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Emails Sent</p>
+          <p class="text-2xl font-extrabold text-slate-900 mt-1">{{ total_sent }}</p>
+          <p class="text-xs {% if sent_trend >= 0 %}text-emerald-600{% else %}text-red-600{% endif %}">{{ sent_trend|floatformat:0 }}% vs last week</p>
+        </div>
+        <div class="premium-surface card-elevate section-card p-4 analytics-card">
+          <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Campaigns</p>
+          <p class="text-2xl font-extrabold text-slate-900 mt-1">{{ total_campaigns }}</p>
+          <p class="text-xs text-slate-500">{{ sent_campaigns }} sent</p>
+        </div>
+        <div class="premium-surface card-elevate section-card p-4 analytics-card">
+          <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Contacts</p>
+          <p class="text-2xl font-extrabold text-slate-900 mt-1">{{ total_contacts }}</p>
+          <p class="text-xs text-emerald-600">+{{ contacts_new_30d }} this month</p>
+        </div>
+        <div class="premium-surface card-elevate section-card p-4 analytics-card">
+          <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Social Reach</p>
+          <p class="text-2xl font-extrabold text-slate-900 mt-1">{{ total_reach }}</p>
+          <p class="text-xs text-slate-500">{{ total_social_accounts }} connected accounts</p>
+        </div>
+      </div>
+
+      <div class="premium-surface card-elevate section-card">
+        <div class="section-head">
+          <h2 class="section-title">Reach & Engagement</h2>
+          <p class="section-subtitle">How your content is performing across channels</p>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="rounded-xl border border-indigo-100 bg-indigo-50/40 px-4 py-4">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-indigo-600">Email Opens</p>
+            <p class="text-xl font-extrabold text-slate-900 mt-1">{{ total_opened }}</p>
+            <p class="text-xs text-slate-500">{{ total_open_rate }}% open rate · {{ weekly_opened }} this week</p>
+          </div>
+          <div class="rounded-xl border border-indigo-100 bg-indigo-50/40 px-4 py-4">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-indigo-600">Email Clicks</p>
+            <p class="text-xl font-extrabold text-slate-900 mt-1">{{ total_clicked }}</p>
+            <p class="text-xs text-slate-500">{{ total_click_rate }}% click rate · {{ weekly_clicked }} this week</p>
+          </div>
+          <div class="rounded-xl border border-pink-100 bg-pink-50/40 px-4 py-4">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-pink-600">Social Impressions</p>
+            <p class="text-xl font-extrabold text-slate-900 mt-1">{{ total_impressions }}</p>
+            <p class="text-xs text-slate-500">{{ avg_engagement_rate }}% engagement rate</p>
+          </div>
+          <div class="rounded-xl border border-pink-100 bg-pink-50/40 px-4 py-4">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-pink-600">Social Followers</p>
+            <p class="text-xl font-extrabold text-slate-900 mt-1">{{ total_followers_gained }}</p>
+            <p class="text-xs text-slate-500">gained · {{ total_followers_lost }} lost</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="premium-surface card-elevate section-card">
+        <div class="section-head">
+          <h2 class="section-title">Lead Generation & Audience Growth</h2>
+          <p class="section-subtitle">Your audience is growing</p>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-4 text-center">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Total Contacts</p>
+            <p class="text-2xl font-extrabold text-slate-900 mt-1">{{ total_contacts }}</p>
+            <p class="text-xs text-emerald-700 font-semibold">{{ contact_growth_rate }}% growth rate</p>
+          </div>
+          <div class="rounded-xl bg-amber-50 border border-amber-100 px-4 py-4 text-center">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-amber-700">Unsubscribed</p>
+            <p class="text-2xl font-extrabold text-slate-900 mt-1">{{ contacts_unsubscribed }}</p>
+            <p class="text-xs text-amber-700 font-semibold">{{ contacts_suppressed }} suppressed</p>
+          </div>
+          <div class="rounded-xl bg-indigo-50 border border-indigo-100 px-4 py-4 text-center">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-indigo-700">GDPR Consent</p>
+            <p class="text-2xl font-extrabold text-slate-900 mt-1">{{ contacts_gdpr_consent }}</p>
+            <p class="text-xs text-indigo-700 font-semibold">compliant contacts</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="premium-surface card-elevate section-card">
+        <div class="section-head">
+          <h2 class="section-title">Content Production</h2>
+          <p class="section-subtitle">Content generated across the platform</p>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div class="rounded-xl bg-violet-50 border border-violet-100 px-3 py-3 text-center">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-violet-600">AI Content</p>
+            <p class="text-xl font-extrabold text-slate-900 mt-1">{{ total_content }}</p>
+            <p class="text-xs text-violet-600">{{ content_published }} published</p>
+          </div>
+          <div class="rounded-xl bg-pink-50 border border-pink-100 px-3 py-3 text-center">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-pink-600">Social Posts</p>
+            <p class="text-xl font-extrabold text-slate-900 mt-1">{{ total_social_posts }}</p>
+            <p class="text-xs text-pink-600">{{ social_published }} published</p>
+          </div>
+          <div class="rounded-xl bg-rose-50 border border-rose-100 px-3 py-3 text-center">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-rose-600">Automations</p>
+            <p class="text-xl font-extrabold text-slate-900 mt-1">{{ total_workflows }}</p>
+            <p class="text-xs text-rose-600">{{ active_enrollments }} active enrollments</p>
+          </div>
+          <div class="rounded-xl bg-orange-50 border border-orange-100 px-3 py-3 text-center">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-orange-600">Media Assets</p>
+            <p class="text-xl font-extrabold text-slate-900 mt-1">{{ total_media }}</p>
+            <p class="text-xs text-orange-600">{{ total_file_size_mb }} MB stored</p>
+          </div>
+        </div>
+      </div>
+
+      {% if email_chart %}
+      <div class="premium-surface card-elevate section-card">
+        <div class="section-head">
+          <h2 class="section-title">Email Activity (30 Days)</h2>
+          <p class="section-subtitle">Daily sent vs opened</p>
+        </div>
+        {% with max_val=30 %}
+        <div class="overflow-x-auto">
+          <div class="flex items-end gap-1 h-32 pt-2" style="min-width: 600px;">
+            {% for day in email_chart %}
+            <div class="flex-1 flex flex-col items-center gap-0.5">
+              <div class="w-full flex flex-col items-center">
+                <div class="w-2.5 rounded-t bg-indigo-400" style="height: {% widthratio day.sent max_val 80 %}px; min-height: {% if day.sent > 0 %}4{% else %}0{% endif %}px;" title="Sent: {{ day.sent }}"></div>
+                <div class="w-2.5 rounded-t bg-emerald-400 mt-0.5" style="height: {% widthratio day.opened max_val 80 %}px; min-height: {% if day.opened > 0 %}4{% else %}0{% endif %}px;" title="Opened: {{ day.opened }}"></div>
+              </div>
+              <span class="text-[7px] text-slate-400 mt-1 {% if forloop.counter0|divisibleby:3 %}block{% else %}hidden sm:block{% endif %}">{{ day.date }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endwith %}
+        <div class="flex items-center gap-4 mt-3 text-xs text-slate-500">
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-indigo-400"></span> Sent</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-emerald-400"></span> Opened</span>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if platform_breakdown %}
+      <div class="premium-surface card-elevate section-card">
+        <div class="section-head">
+          <h2 class="section-title">Social Platform Breakdown</h2>
+          <p class="section-subtitle">Performance by platform</p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-200">
+                <th class="text-left py-3 px-2 font-bold text-slate-700">Platform</th>
+                <th class="text-right py-3 px-2 font-bold text-slate-700">Impressions</th>
+                <th class="text-right py-3 px-2 font-bold text-slate-700">Reach</th>
+                <th class="text-right py-3 px-2 font-bold text-slate-700">Engagement</th>
+                <th class="text-right py-3 px-2 font-bold text-slate-700">Eng. Rate</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {% for p in platform_breakdown %}
+              <tr>
+                <td class="py-3 px-2 font-semibold text-slate-800 capitalize">{{ p.platform }}</td>
+                <td class="py-3 px-2 text-right font-medium text-slate-700">{{ p.impressions }}</td>
+                <td class="py-3 px-2 text-right font-medium text-slate-700">{{ p.reach }}</td>
+                <td class="py-3 px-2 text-right font-medium text-slate-700">{{ p.engagement }}</td>
+                <td class="py-3 px-2 text-right font-medium {% if p.engagement_rate >= 3 %}text-emerald-600{% else %}text-slate-500{% endif %}">{{ p.engagement_rate }}%</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="premium-surface card-elevate section-card">
+        <div class="section-head">
+          <h2 class="section-title">AI & Automation Efficiency</h2>
+          <p class="section-subtitle">Time saved by automation</p>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="rounded-xl bg-violet-50 border border-violet-100 px-4 py-3 text-center">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-violet-600">AI Drafts</p>
+            <p class="text-xl font-extrabold text-slate-900 mt-1">{{ pending_drafts }}</p>
+            <p class="text-xs text-violet-600">pending review</p>
+          </div>
+          <div class="rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-center">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Approved</p>
+            <p class="text-xl font-extrabold text-slate-900 mt-1">{{ approved_drafts }}</p>
+            <p class="text-xs text-emerald-600">AI drafts approved</p>
+          </div>
+          <div class="rounded-xl bg-indigo-50 border border-indigo-100 px-4 py-3 text-center">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-indigo-600">Inboxes</p>
+            <p class="text-xl font-extrabold text-slate-900 mt-1">{{ total_inboxes }}</p>
+            <p class="text-xs text-indigo-600">connected</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

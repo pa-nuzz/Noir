@@ -1,0 +1,231 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Email — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Email{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+
+  <div class="flex items-center justify-between gap-3 mb-4">
+    <a href="{% url 'inbox:dashboard' %}?inbox_id={{ msg.thread.inbox_id }}&folder={% if msg.is_incoming %}inbox{% else %}sent{% endif %}" class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-primary transition-colors group">
+      <svg class="w-4 h-4 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 12H5m7 7l-7-7 7-7"/></svg>
+      Back to {{ msg.is_incoming|yesno:'Inbox,Sent' }}
+    </a>
+    <div class="flex items-center gap-2">
+      {% if msg.is_incoming %}
+      <a href="{% url 'inbox:message_summarize' msg.id %}" data-loading="Summarizing..." class="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-primary hover:bg-primary-hover transition-colors px-3 py-1.5 rounded-lg shadow-sm">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"/></svg>
+        Summarize
+      </a>
+      <a href="{% url 'inbox:generate_draft' msg.id %}" data-loading="Generating reply..." class="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-primary hover:bg-primary-hover transition-colors px-3 py-1.5 rounded-lg shadow-sm">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        AI Reply
+      </a>
+      {% endif %}
+  <form method="post" action="{% url 'inbox:message_delete' msg.id %}?inbox_id={{ msg.thread.inbox_id }}&folder={% if msg.is_incoming %}inbox{% else %}sent{% endif %}" class="inline" data-confirm="Move this message to trash?">
+    {% csrf_token %}
+    <button type="submit" data-loading="Moving..." class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors px-3 py-1.5 rounded-lg cursor-pointer border border-slate-200">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+      </svg>
+      Move to Trash
+    </button>
+  </form>
+    </div>
+  </div>
+
+  <div class="glass-card overflow-hidden">
+    <div class="px-6 py-5 border-b border-slate-100 flex items-start gap-4">
+      <div class="w-12 h-12 rounded-full bg-primary-light text-primary flex items-center justify-center text-lg font-bold shrink-0 shadow-sm">
+        {{ msg.from_name|default:msg.from_email|first|upper }}
+      </div>
+      <div class="flex-1 min-w-0">
+        <h1 class="text-xl font-bold text-slate-900 truncate">{{ msg.subject|default:'(No subject)' }}</h1>
+        <p class="text-sm text-slate-700 font-medium mt-0.5 truncate">{{ msg.from_name|default:msg.from_email }}</p>
+        <p class="text-xs text-slate-400">
+          {% if msg.is_incoming %}
+            to {{ msg.to_emails|join:', ' }}
+          {% else %}
+            To: {{ msg.to_emails|join:', ' }}
+          {% endif %}
+          · via {{ msg.thread.inbox.email_address|default:'connected inbox' }}
+        </p>
+      </div>
+      <span class="text-xs text-slate-400 shrink-0 whitespace-nowrap mt-1">{{ msg.received_at|date:'M d, Y g:i A' }}</span>
+    </div>
+
+    {% if summarized %}
+    <div class="px-6 py-4 bg-slate-50 border-b border-slate-100">
+      <div class="flex items-start gap-3">
+        <div class="w-6 h-6 rounded-md bg-white border border-slate-200 flex items-center justify-center shrink-0 mt-0.5">
+          <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"/></svg>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="text-xs font-semibold text-slate-700">AI Summary</span>
+            {% include "components/badge.html" with label="Powered by AI" variant="gray" %}
+          </div>
+          <p class="text-sm text-slate-600 leading-relaxed">{{ msg.ai_summary }}</p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    <div class="px-6 py-3 bg-slate-50/50 border-b border-slate-100">
+      <details class="group">
+        <summary class="text-xs text-slate-400 font-medium cursor-pointer hover:text-slate-600 list-none flex items-center gap-1 select-none">
+          <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          Sender details
+        </summary>
+        <div class="mt-2 text-xs text-slate-500 space-y-1">
+          <div><span class="font-medium text-slate-400">From:</span> {{ msg.from_name|default:msg.from_email }} &lt;{{ msg.from_email }}&gt;</div>
+          <div><span class="font-medium text-slate-400">To:</span> {{ msg.to_emails|join:', ' }}</div>
+          {% if msg.cc_emails %}<div><span class="font-medium text-slate-400">Cc:</span> {{ msg.cc_emails|join:', ' }}</div>{% endif %}
+          <div><span class="font-medium text-slate-400">Via:</span> {{ msg.thread.inbox.email_address|default:'Unknown' }}</div>
+        </div>
+      </details>
+    </div>
+
+    <div class="email-body">
+      {% if email_html %}
+        {{ email_html|safe }}
+      {% elif msg.body_text %}
+        <div style="padding:24px; font-size:14px; line-height:1.7; color:#1e293b; white-space:pre-wrap; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">{{ msg.body_text }}</div>
+      {% elif msg.body_html %}
+        <div class="p-12 text-center text-sm text-slate-400">
+          <svg class="w-10 h-10 mx-auto text-slate-200 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <p>This message contains HTML content that could not be displayed.</p>
+          <p class="mt-2 text-xs">Raw HTML length: {{ msg.body_html|length }} characters</p>
+        </div>
+      {% else %}
+        <div class="p-12 text-center text-sm text-slate-400">
+          <svg class="w-10 h-10 mx-auto text-slate-200 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          <p>No content available for this message.</p>
+          {% if msg.is_incoming %}
+            <p class="mt-2 text-xs">This incoming message may have been sent with an unsupported format.</p>
+          {% else %}
+            <p class="mt-2 text-xs">This sent message may not have been fully synced.</p>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if drafts %}
+  <div class="mt-4">
+    <button type="button" data-toggle="drafts-section" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-primary transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+      AI Drafts ({{ drafts|length }})
+    </button>
+    <div id="drafts-section" class="hidden mt-2 glass-card overflow-hidden">
+      <div class="divide-y divide-slate-50">
+        {% for d in drafts %}
+        <a href="{% url 'inbox:draft_detail' d.id %}" class="flex items-center justify-between px-5 py-3 hover:bg-slate-50/60 transition-colors">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold
+              {% if d.status == 'pending_review' %}bg-amber-50 text-amber-600
+              {% elif d.status == 'approved' %}bg-emerald-50 text-emerald-600
+              {% elif d.status == 'sent' %}bg-blue-50 text-blue-600
+              {% else %}bg-slate-100 text-slate-500{% endif %}">
+              {{ d.status|first|upper }}
+            </div>
+            <div class="min-w-0">
+              <p class="text-sm text-slate-700 truncate">{{ d.ai_generated_body|truncatechars:60 }}</p>
+              <p class="text-[10px] text-slate-400">{{ d.created_at|timesince }} ago</p>
+            </div>
+          </div>
+          <span class="shrink-0">
+            {% if d.status == 'pending_review' %}
+              {% include "components/badge.html" with label=d.get_status_display variant="yellow" %}
+            {% elif d.status == 'approved' %}
+              {% include "components/badge.html" with label=d.get_status_display variant="green" %}
+            {% elif d.status == 'sent' %}
+              {% include "components/badge.html" with label=d.get_status_display variant="blue" %}
+            {% else %}
+              {% include "components/badge.html" with label=d.get_status_display variant="gray" %}
+            {% endif %}
+          </span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+.email-body {
+  padding: 0;
+  background: #fff;
+  color: #1e293b;
+  font-size: 14px;
+  line-height: 1.6;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+.email-body img {
+  max-width: 100% !important;
+  height: auto !important;
+}
+.email-body table {
+  max-width: 100% !important;
+  word-break: break-word;
+}
+.email-body a {
+  color: #6D28D9 !important;
+  text-decoration: underline !important;
+}
+.email-body a[href^="tel"] {
+  color: inherit !important;
+  text-decoration: none !important;
+}
+.email-body h1, .email-body h2, .email-body h3, .email-body h4 {
+  margin: 1em 0 0.5em;
+  line-height: 1.3;
+  color: #0f172a;
+}
+.email-body p {
+  margin: 0 0 1em 0;
+  line-height: 1.6;
+}
+.email-body blockquote {
+  margin: 1em 0;
+  padding: 0.5em 1em;
+  border-left: 3px solid #d1d5db;
+  color: #64748b;
+}
+.email-body ul, .email-body ol {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+.email-body li {
+  margin: 0.25em 0;
+}
+.email-body pre {
+  margin: 1em 0;
+  padding: 1em;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.email-body code {
+  font-size: 0.9em;
+  padding: 0.15em 0.3em;
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+.email-body pre code {
+  padding: 0;
+  background: none;
+}
+.email-body hr {
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  margin: 1.5em 0;
+}
+.email-body div[style*="background"] {
+  max-width: 100% !important;
+}
+</style>
+{% endblock %}

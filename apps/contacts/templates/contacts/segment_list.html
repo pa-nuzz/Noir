@@ -1,0 +1,409 @@
+{% extends 'base_dashboard.html' %}
+{% load workspace_tags %}
+{% can_create 'contacts' as can_create_contacts %}
+{% can_delete 'contacts' as can_delete_contacts %}
+{% block title %}Segments — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Segments{% endblock %}
+
+{% block content %}
+<style>
+  .sch-tabs {
+    display: flex; align-items: center; gap: 0;
+    border-bottom: 1px solid #E2E8F0; margin-top: 4px;
+  }
+  .sch-tab {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 20px; height: 44px;
+    font-size: 0.875rem; font-weight: 600;
+    color: #64748B; background: transparent;
+    border: none; border-bottom: 2px solid transparent;
+    cursor: pointer; transition: all 0.15s ease;
+    text-decoration: none; white-space: nowrap;
+  }
+  .sch-tab:hover { color: #0A2540; background: #F8FAFC; }
+  .sch-tab.active { color: #0A2540; border-bottom-color: #06B6D4; font-weight: 700; }
+  .sch-tab svg { width: 18px; height: 18px; }
+  .sch-tab-panel { display: none; }
+  .sch-tab-panel.active { display: block; }
+</style>
+
+<div class="page-shell max-w-none space-y-6 overflow-x-hidden">
+
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Segments</h1>
+      <p class="text-sm text-slate-500 mt-1">Rule-based contact groups that update automatically</p>
+    </div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div>
+    <div class="sch-tabs" role="tablist">
+      <button class="sch-tab active" role="tab" aria-selected="true" onclick="switchTab('overview')" id="tab-overview">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Overview
+      </button>
+      <button class="sch-tab" role="tab" aria-selected="false" onclick="switchTab('generate')" id="tab-generate">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        Add New
+      </button>
+      <button class="sch-tab" role="tab" aria-selected="false" onclick="switchTab('history')" id="tab-history">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        History
+      </button>
+    </div>
+
+    <!-- Panel: Overview -->
+    <div class="sch-tab-panel active" id="panel-overview">
+      {% if segments %}
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
+        <div class="premium-surface card-elevate surface-hover-clean section-card py-4 px-5">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
+              <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Segments</p>
+              <p class="text-xl font-black text-slate-900">{{ total_segments }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="premium-surface card-elevate surface-hover-clean section-card py-4 px-5">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+              <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Dynamic</p>
+              <p class="text-xl font-black text-slate-900">{{ dynamic_count }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="premium-surface card-elevate surface-hover-clean section-card py-4 px-5">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+              <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Static</p>
+              <p class="text-xl font-black text-slate-900">{{ static_count }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="premium-surface card-elevate surface-hover-clean section-card py-4 px-5">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+              <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Avg. Size</p>
+              <p class="text-xl font-black text-slate-900">{{ avg_size }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 border-b border-gray-100 pb-3">
+        <a href="{% url 'contacts:segment_list' %}" class="px-4 py-1.5 rounded-full text-xs font-semibold transition-all {% if segment_type == 'all' %}bg-primary text-white shadow-sm{% else %}bg-gray-100 text-slate-600 hover:bg-gray-200{% endif %}">All</a>
+        <a href="{% url 'contacts:segment_list' %}?filter=dynamic" class="px-4 py-1.5 rounded-full text-xs font-semibold transition-all {% if segment_type == 'dynamic' %}bg-primary text-white shadow-sm{% else %}bg-gray-100 text-slate-600 hover:bg-gray-200{% endif %}">Dynamic</a>
+        <a href="{% url 'contacts:segment_list' %}?filter=static" class="px-4 py-1.5 rounded-full text-xs font-semibold transition-all {% if segment_type == 'static' %}bg-primary text-white shadow-sm{% else %}bg-gray-100 text-slate-600 hover:bg-gray-200{% endif %}">Static</a>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        {% for seg in segments %}
+        <div class="premium-surface rounded-2xl p-5 hover:shadow-md transition-all group border border-transparent hover:border-indigo-100">
+          <div class="flex items-start justify-between mb-3">
+            <div class="min-w-0 flex-1">
+              <a href="{% url 'contacts:segment_detail' seg.pk %}" class="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors hover:underline">{{ seg.name }}</a>
+              <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase {% if seg.match_type == 'any' %}bg-emerald-100 text-emerald-700{% else %}bg-slate-100 text-slate-600{% endif %}">
+                {% if seg.match_type == 'any' %}Dynamic{% else %}Static{% endif %}
+              </span>
+            </div>
+            <span class="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full flex-shrink-0 ml-2">{{ seg.matched_count }} contacts</span>
+          </div>
+          {% if seg.description %}
+          <p class="text-xs text-gray-500 mb-3 line-clamp-2">{{ seg.description }}</p>
+          {% endif %}
+          {% if seg.rules %}
+          <div class="flex flex-wrap gap-1.5 mb-3">
+            {% for rule in seg.rules|slice:":3" %}
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[10px] font-medium border border-indigo-100/50">
+              {{ rule.field }}
+              <span class="text-indigo-400">{{ rule.operator }}</span>
+              {{ rule.value|truncatechars:15 }}
+            </span>
+            {% endfor %}
+            {% if seg.rules|length > 3 %}
+            <span class="text-[10px] text-gray-400 self-center">+{{ seg.rules|length|add:"-3" }} more</span>
+            {% endif %}
+          </div>
+          {% endif %}
+          <div class="flex items-center justify-between pt-2 border-t border-gray-50">
+            <span class="text-[10px] text-gray-400">{{ seg.rules|length }} condition{{ seg.rules|length|pluralize }}</span>
+{% if can_delete_contacts %}
+            <form method="post" action="{% url 'contacts:segment_delete' seg.pk %}" onsubmit="return confirm('Delete segment \'{{ seg.name }}\'?')">
+              {% csrf_token %}
+              <button type="submit" class="text-[10px] text-gray-300 hover:text-red-500 transition-colors font-semibold">Delete</button>
+            </form>
+{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="premium-surface rounded-2xl p-16 text-center mt-6">
+        <div class="flex flex-col items-center gap-4 max-w-sm mx-auto">
+          <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+            <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-slate-800">No segments yet</h3>
+          <p class="text-sm text-slate-500 leading-relaxed">Segments are smart, rule-based groups that automatically update as your contacts change. Unlike static lists, segments let you target contacts based on conditions like email activity, tags, or custom fields.</p>
+          <button onclick="switchTab('generate'); setTimeout(function(){ document.getElementById('builder-name').focus(); }, 100);" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-colors shadow-lg shadow-indigo-500/20">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Create your first segment
+          </button>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Panel: Generate -->
+    <div class="sch-tab-panel" id="panel-generate">
+      <div class="mt-6">
+        <div id="segment-builder" class="premium-surface rounded-2xl p-6 border border-indigo-100/50">
+          <form method="post" action="{% url 'contacts:segment_create' %}" id="segment-builder-form" class="space-y-5">
+            {% csrf_token %}
+            <input type="hidden" name="rules" id="builder-rules-input" value="[]">
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Segment Name</label>
+                <input type="text" name="name" id="builder-name" required class="input-field w-full" placeholder="e.g. VIP Customers">
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Match Type</label>
+                <select name="match_type" id="builder-match-type" class="input-field w-full">
+                  <option value="all">Match ALL conditions</option>
+                  <option value="any">Match ANY condition</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1.5">Description (optional)</label>
+              <input type="text" name="description" class="input-field w-full" placeholder="Describe what this segment targets">
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <label class="block text-sm font-semibold text-slate-700">Conditions</label>
+{% if can_create_contacts %}
+                <button type="button" onclick="addBuilderRule()" class="text-xs font-semibold text-primary hover:text-primary-hover flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                  Add condition
+                </button>
+{% endif %}
+              </div>
+
+              <div id="builder-rules-list" class="space-y-2">
+                <div class="builder-rule-row flex items-center gap-2 p-3 bg-slate-50 rounded-xl">
+                  <select class="rule-field input-field text-sm flex-1 min-w-0">
+                    <option value="email">Email</option>
+                    <option value="first_name">First Name</option>
+                    <option value="last_name">Last Name</option>
+                    <option value="is_active">Active</option>
+                    <option value="unsubscribed">Unsubscribed</option>
+                    <option value="bounce_count">Bounce Count</option>
+                    <option value="created_at">Created Date</option>
+                    <option value="tag">Has Tag</option>
+                    <option value="contact_list">Contact List</option>
+                  </select>
+                  <select class="rule-operator input-field text-sm">
+                    <option value="contains">contains</option>
+                    <option value="equals">equals</option>
+                    <option value="starts_with">starts with</option>
+                    <option value="ends_with">ends with</option>
+                    <option value="gt">greater than</option>
+                    <option value="gte">greater or equal</option>
+                    <option value="lt">less than</option>
+                    <option value="lte">less or equal</option>
+                    <option value="before">before</option>
+                    <option value="after">after</option>
+                    <option value="has">has</option>
+                    <option value="not_has">does not have</option>
+                    <option value="is">is</option>
+                    <option value="is_not">is not</option>
+                  </select>
+                  <input type="text" class="rule-value input-field text-sm flex-1 min-w-0" placeholder="Value">
+                  <button type="button" class="remove-rule p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" onclick="this.closest('.builder-rule-row').remove(); updateLiveCount();">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-2">
+              <div id="live-count-display" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-50 text-indigo-700 text-sm font-semibold">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <span id="live-count-text">0 contacts match</span>
+              </div>
+              <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-colors shadow-lg shadow-indigo-500/20">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+                Save as Segment
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel: History -->
+    <div class="sch-tab-panel" id="panel-history">
+      <div class="mt-6">
+        <div class="premium-surface rounded-2xl overflow-hidden">
+          {% if segments %}
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-slate-100 bg-slate-50/50">
+                  <th class="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Name</th>
+                  <th class="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Type</th>
+                  <th class="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Conditions</th>
+                  <th class="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Matched</th>
+                  <th class="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Created</th>
+                  <th class="text-right px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-50">
+                {% for seg in segments %}
+                <tr class="hover:bg-slate-50/50 transition-colors">
+                  <td class="px-6 py-4">
+                    <a href="{% url 'contacts:segment_detail' seg.pk %}" class="font-semibold text-slate-900 hover:text-primary transition-colors">{{ seg.name }}</a>
+                    {% if seg.description %}
+                    <p class="text-xs text-gray-400 mt-0.5 truncate max-w-[200px]">{{ seg.description }}</p>
+                    {% endif %}
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold {% if seg.match_type == 'any' %}bg-emerald-50 text-emerald-700{% else %}bg-slate-100 text-slate-600{% endif %}">
+                      {% if seg.match_type == 'any' %}Dynamic{% else %}Static{% endif %}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-slate-600">{{ seg.rules|length }} condition{{ seg.rules|length|pluralize }}</td>
+                  <td class="px-6 py-4 font-semibold text-slate-700">{{ seg.matched_count }}</td>
+                  <td class="px-6 py-4 text-slate-600">{{ seg.created_at|date:'M d, Y' }}</td>
+                  <td class="px-6 py-4 text-right">
+                    <a href="{% url 'contacts:segment_detail' seg.pk %}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors">View</a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="px-6 py-12 text-center">
+            <div class="flex flex-col items-center gap-4 max-w-sm mx-auto">
+              <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
+                <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <p class="text-sm text-slate-500">No segment history available. Create your first segment to see it here.</p>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function switchTab(tabId) {
+  document.querySelectorAll('.sch-tab').forEach(function(t) {
+    t.classList.remove('active');
+    t.setAttribute('aria-selected', 'false');
+  });
+  document.querySelectorAll('.sch-tab-panel').forEach(function(p) {
+    p.classList.remove('active');
+  });
+  document.getElementById('tab-' + tabId).classList.add('active');
+  document.getElementById('tab-' + tabId).setAttribute('aria-selected', 'true');
+  document.getElementById('panel-' + tabId).classList.add('active');
+}
+
+function addBuilderRule() {
+  const list = document.getElementById('builder-rules-list');
+  const row = document.querySelector('.builder-rule-row').cloneNode(true);
+  row.querySelectorAll('input').forEach(i => i.value = '');
+  row.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+  list.appendChild(row);
+  row.querySelector('.rule-value')?.addEventListener('input', scheduleLiveCount);
+  row.querySelector('.rule-field')?.addEventListener('change', scheduleLiveCount);
+  row.querySelector('.rule-operator')?.addEventListener('change', scheduleLiveCount);
+  scheduleLiveCount();
+}
+
+function getBuilderRules() {
+  const rules = [];
+  document.querySelectorAll('#builder-rules-list .builder-rule-row').forEach(function(row) {
+    const field = row.querySelector('.rule-field').value;
+    const operator = row.querySelector('.rule-operator').value;
+    const value = row.querySelector('.rule-value').value.trim();
+    if (value) {
+      rules.push({ field: field, operator: operator, value: value });
+    }
+  });
+  return rules;
+}
+
+function updateLiveCount() {
+  const rules = getBuilderRules();
+  const matchType = document.getElementById('builder-match-type').value;
+
+  if (rules.length === 0) {
+    document.getElementById('live-count-text').textContent = '0 contacts match';
+    return;
+  }
+
+  fetch('{% url "contacts:segment_count_preview" %}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    },
+    body: JSON.stringify({ rules: rules, match_type: matchType })
+  })
+  .then(r => r.json())
+  .then(data => {
+    document.getElementById('live-count-text').textContent = data.count + ' contact' + (data.count !== 1 ? 's' : '') + ' match';
+  })
+  .catch(() => {
+    document.getElementById('live-count-text').textContent = 'Could not calculate';
+  });
+}
+
+function scheduleLiveCount() {
+  clearTimeout(liveCountTimeout);
+  liveCountTimeout = setTimeout(updateLiveCount, 400);
+}
+
+let liveCountTimeout = null;
+
+document.getElementById('segment-builder-form').addEventListener('submit', function() {
+  const rules = getBuilderRules();
+  document.getElementById('builder-rules-input').value = JSON.stringify(rules);
+});
+
+document.getElementById('builder-match-type').addEventListener('change', scheduleLiveCount);
+
+document.querySelectorAll('#builder-rules-list .builder-rule-row .rule-value').forEach(function(el) {
+  el.addEventListener('input', scheduleLiveCount);
+});
+document.querySelectorAll('#builder-rules-list .builder-rule-row .rule-field').forEach(function(el) {
+  el.addEventListener('change', scheduleLiveCount);
+});
+document.querySelectorAll('#builder-rules-list .builder-rule-row .rule-operator').forEach(function(el) {
+  el.addEventListener('change', scheduleLiveCount);
+});
+</script>
+{% endblock %}

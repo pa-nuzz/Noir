@@ -1,0 +1,44 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Search Media — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Search Media{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none space-y-6">
+  <h1 class="text-2xl font-bold text-slate-900">Search Media</h1>
+
+  <form method="get" class="max-w-xl">
+    <div class="flex gap-3">
+      <input type="text" name="q" value="{{ query }}" placeholder="Search by filename, tags, or AI description..." class="input-field flex-1" autofocus>
+      <button type="submit" class="btn-action btn-action-primary">Search</button>
+    </div>
+  </form>
+
+  {% if query %}
+  <p class="text-sm text-gray-500">{{ results|length }} result{% if results|length != 1 %}s{% endif %} for "{{ query }}"</p>
+
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-4">
+    {% for a in results %}
+    <a href="{% url 'media:detail' a.pk %}" class="premium-surface rounded-xl overflow-hidden hover:shadow-md transition-all group">
+      {% if a.file_type == 'image' and a.file %}
+      <div class="aspect-square bg-slate-100 overflow-hidden">
+        <img src="{{ a.file.url }}" alt="{{ a.alt_text|default:a.filename }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform">
+      </div>
+      {% else %}
+      <div class="aspect-square bg-slate-100 flex items-center justify-center">
+        <svg class="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+      </div>
+      {% endif %}
+      <div class="p-2.5">
+        <p class="text-xs font-medium text-slate-800 truncate">{{ a.filename }}</p>
+        <p class="text-[10px] text-gray-500">{{ a.size_display }}</p>
+      </div>
+    </a>
+    {% empty %}
+    <div class="col-span-full">
+      {% include "components/empty_state.html" with title="No results found." class="premium-surface rounded-2xl p-12 text-center" %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

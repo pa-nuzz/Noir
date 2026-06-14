@@ -1,0 +1,5 @@
+<!-- Usage: include "components/badge.html" with label="Active" variant="green" -->
+<span class="badge badge-{{ variant|default:'gray' }} {{ class }}">
+  {% if dot %}<span class="w-1.5 h-1.5 rounded-full bg-current mr-1 inline-block"></span>{% endif %}
+  {{ label }}
+</span>

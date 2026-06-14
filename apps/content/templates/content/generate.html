@@ -1,0 +1,60 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Generate Content — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Generate Content{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-2xl mx-auto">
+  <div class="premium-surface rounded-2xl p-8">
+    <div class="mb-6">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">AI Content Studio</p>
+      <h2 class="text-lg font-bold text-slate-900 mt-1">Generate New Content</h2>
+    </div>
+
+    <form method="post" class="space-y-5">
+      {% csrf_token %}
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">{{ form.generation_type.label }}</label>
+          {{ form.generation_type }}
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">{{ form.platform.label }}</label>
+          {{ form.platform }}
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">{{ form.topic.label }}</label>
+        {{ form.topic }}
+        <p class="text-xs text-gray-500 mt-1">{{ form.topic.help_text }}</p>
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">{{ form.keywords.label }}</label>
+        {{ form.keywords }}
+        <p class="text-xs text-gray-500 mt-1">{{ form.keywords.help_text }}</p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">{{ form.tone.label }}</label>
+          {{ form.tone }}
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">{{ form.length.label }}</label>
+          {{ form.length }}
+          <p class="text-xs text-gray-500 mt-1">{{ form.length.help_text }}</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        {{ form.include_hashtags }}
+        <label for="{{ form.include_hashtags.id_for_label }}" class="text-sm text-slate-700">{{ form.include_hashtags.label }}</label>
+      </div>
+
+      {% include "components/button.html" with label="Generate with AI" variant="primary" type="submit" class="w-full justify-center" icon="zap" %}
+    </form>
+  </div>
+</div>
+{% endblock %}

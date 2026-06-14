@@ -1,0 +1,120 @@
+{% extends 'base_dashboard.html' %}
+{% load workspace_tags %}
+{% can_edit 'contacts' as can_edit_contacts %}
+{% can_delete 'contacts' as can_delete_contacts %}
+{% block title %}{{ contact.email }} — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Contact Detail{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-3xl mx-auto space-y-6">
+  <a href="{% url 'contacts:list' %}" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-primary transition-colors">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 12H5m7 7l-7-7 7-7"/></svg>
+    Back to Contacts
+  </a>
+
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+    <div class="xl:col-span-2 space-y-6">
+      <div class="premium-surface rounded-2xl p-6">
+        <div class="flex items-center gap-4 mb-6">
+          <div class="w-14 h-14 rounded-2xl bg-primary-light text-primary flex items-center justify-center text-xl font-bold">
+            {{ contact.email|first|upper }}
+          </div>
+          <div>
+            <h1 class="text-lg font-bold text-slate-900">{{ contact.first_name }} {{ contact.last_name }}</h1>
+            <p class="text-sm text-gray-500">{{ contact.email }}</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <p class="text-xs text-gray-500">List</p>
+            <p class="font-medium text-slate-800">{{ contact.contact_list.name }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500">Status</p>
+            <p class="font-medium">
+              {% if contact.is_suppressed %}
+              <span class="text-red-600">Suppressed ({{ contact.bounce_count }} bounces)</span>
+              {% elif not contact.is_active %}
+              <span class="text-amber-600">Inactive</span>
+              {% elif contact.unsubscribed %}
+              <span class="text-red-600">Unsubscribed</span>
+              {% else %}
+              <span class="text-emerald-600">Active</span>
+              {% endif %}
+            </p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500">GDPR Consent</p>
+            <p class="font-medium">{% if contact.gdpr_consent %}<span class="text-emerald-600">Yes{% if contact.gdpr_consent_at %} ({{ contact.gdpr_consent_at|date:'M d, Y' }}){% endif %}</span>{% else %}<span class="text-amber-600">No</span>{% endif %}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500">Bounces</p>
+            <p class="font-medium">{{ contact.bounce_count }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500">Added</p>
+            <p class="font-medium text-slate-800">{{ contact.created_at|date:'M d, Y' }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500">Last Activity</p>
+            <p class="font-medium text-slate-800">{{ contact.last_activity_at|date:'M d, Y'|default:'—' }}</p>
+          </div>
+        </div>
+
+        {% if contact.tags.all %}
+        <div class="mt-4">
+          <p class="text-xs text-gray-500 mb-2">Tags</p>
+          <div class="flex flex-wrap gap-1.5">
+            {% for tag in contact.tags.all %}
+            <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">{{ tag.name }}</span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if contact.notes %}
+        <div class="mt-4">
+          <p class="text-xs text-gray-500 mb-1">Notes</p>
+          <p class="text-sm text-slate-700 bg-slate-50 rounded-xl p-3">{{ contact.notes }}</p>
+        </div>
+        {% endif %}
+      </div>
+
+      {% if custom_fields %}
+      <div class="premium-surface rounded-2xl p-6">
+        <h2 class="text-sm font-bold text-slate-800 mb-4">Custom Fields</h2>
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          {% for field in custom_fields %}
+          <div>
+            <p class="text-xs text-gray-500">{{ field.name }}</p>
+            <p class="font-medium text-slate-800">{{ field_values|dictget:field.id|default:'—' }}</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="space-y-3">
+{% if can_edit_contacts %}
+      <a href="{% url 'contacts:contact_edit' contact.id %}" class="w-full btn-action btn-action-primary justify-center">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+        Edit Contact
+      </a>
+{% endif %}
+{% if can_delete_contacts %}
+      <a href="{% url 'contacts:gdpr_anonymize' contact.id %}" class="w-full px-4 py-2.5 rounded-xl border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors text-center inline-flex items-center justify-center gap-2">
+        GDPR Anonymize
+      </a>
+{% endif %}
+{% if can_delete_contacts %}
+      <form method="post" action="{% url 'contacts:delete_contact' contact.id %}" onsubmit="return confirm('Delete {{ contact.email }}?')">
+        {% csrf_token %}
+        <button type="submit" class="w-full px-4 py-2.5 rounded-xl border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors">Delete Contact</button>
+      </form>
+{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,206 @@
+{% extends 'base_dashboard.html' %}
+{% load workspace_tags %}
+{% can_edit 'social' as can_edit_social %}
+{% can_delete 'social' as can_delete_social %}
+{% block title %}Post Detail — Social Media — Intelligent Digital Automation (IDA){% endblock %}
+{% block content %}
+<div class="page-shell max-w-none mx-auto space-y-6">
+  <div class="flex items-center gap-3">
+    <a href="{% url 'social_accounts:post_list' %}" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
+      <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    </a>
+    <div class="flex-1">
+      <h1 class="text-2xl font-bold text-slate-900">Post Detail</h1>
+      <p class="text-sm text-slate-500 mt-1">View post details and analytics</p>
+    </div>
+    <div class="flex items-center gap-2">
+      {% if post.platform_post_url %}
+      {% include "components/button.html" with label="View on Platform" variant="secondary" href=post.platform_post_url icon="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" %}
+      {% endif %}
+      {% if post.status == 'draft' or post.status == 'scheduled' %}
+      {% if can_edit_social %}
+      {% url 'social_accounts:publish_post' post.id as publish_url %}
+      {% include "components/button.html" with label="Publish Now" variant="primary" href=publish_url icon="M12 19V5m0 0l-7 7m7-7l7 7" onclick="return confirm('Publish this post now?')" %}
+      {% endif %}
+      {% endif %}
+      {% if can_delete_social %}
+      <a href="{% url 'social_accounts:post_delete' post.id %}" class="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors" onclick="return confirm('Delete this post permanently?')">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 space-y-6">
+      <div class="premium-surface rounded-2xl p-6">
+        <h2 class="text-base font-bold text-slate-800 mb-4">Content</h2>
+        <div class="prose prose-slate max-w-none">
+          <p class="text-slate-700 whitespace-pre-wrap">{{ post.content|default:'<em class="text-gray-400">No text content</em>' }}</p>
+        </div>
+        {% if post.hashtags %}
+        <div class="flex flex-wrap gap-2 mt-4">
+          {% for tag in post.hashtags %}
+          <span class="px-3 py-1 rounded-full bg-primary-light text-primary text-xs font-semibold">#{{ tag }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if post.media_urls %}
+        <div class="mt-5 pt-5 border-t border-slate-100">
+          <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">Media</h3>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {% for url in post.media_urls %}
+            <a href="{{ url }}" target="_blank" class="block aspect-video rounded-xl bg-slate-100 overflow-hidden border border-slate-200 hover:border-primary/40 transition-colors">
+              <img src="{{ url }}" alt="Media" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\'flex items-center justify-center h-full text-slate-400\'><svg class=\'w-6 h-6\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z\'/></svg></div>'">
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        {% if post.link_url %}
+        <div class="mt-5 pt-5 border-t border-slate-100">
+          <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">Link</h3>
+          <a href="{{ post.link_url }}" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 text-sm font-medium text-primary hover:bg-primary-light transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+            {{ post.link_url|truncatechars:50 }}
+          </a>
+        </div>
+        {% endif %}
+      </div>
+
+      {% if post.error_message %}
+      <div class="rounded-2xl bg-red-50 border border-red-200 p-5">
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-red-800">Publishing Error</h3>
+            <p class="text-sm text-red-700 mt-1">{{ post.error_message }}</p>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="space-y-6">
+      <div class="premium-surface rounded-2xl p-5">
+        <h2 class="text-sm font-bold text-slate-800 mb-4">Details</h2>
+        <dl class="space-y-3">
+          <div class="flex justify-between items-center">
+            <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</dt>
+            <dd>
+              {% if post.status == 'draft' %}
+              {% include "components/badge.html" with label=post.status variant="gray" %}
+              {% elif post.status == 'scheduled' %}
+              {% include "components/badge.html" with label=post.status variant="blue" %}
+              {% elif post.status == 'publishing' %}
+              {% include "components/badge.html" with label=post.status variant="yellow" %}
+              {% elif post.status == 'published' %}
+              {% include "components/badge.html" with label=post.status variant="green" %}
+              {% elif post.status == 'failed' %}
+              {% include "components/badge.html" with label=post.status variant="red" %}
+              {% else %}
+              {% include "components/badge.html" with label=post.status variant="gray" %}
+              {% endif %}
+            </dd>
+          </div>
+          <div class="flex justify-between items-center">
+            <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Platform</dt>
+            <dd>
+              {% if post.platform == 'facebook' %}
+              {% include "components/badge.html" with label=post.get_platform_display variant="blue" %}
+              {% elif post.platform == 'instagram' %}
+              {% include "components/badge.html" with label=post.get_platform_display variant="purple" %}
+              {% elif post.platform == 'twitter' %}
+              {% include "components/badge.html" with label=post.get_platform_display variant="blue" %}
+              {% elif post.platform == 'linkedin' %}
+              {% include "components/badge.html" with label=post.get_platform_display variant="blue" %}
+              {% elif post.platform == 'tiktok' %}
+              {% include "components/badge.html" with label=post.get_platform_display variant="gray" %}
+              {% elif post.platform == 'youtube' %}
+              {% include "components/badge.html" with label=post.get_platform_display variant="red" %}
+              {% else %}
+              {% include "components/badge.html" with label=post.get_platform_display variant="gray" %}
+              {% endif %}
+            </dd>
+          </div>
+          <div class="flex justify-between items-center">
+            <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Account</dt>
+            <dd class="text-sm font-medium text-slate-700">{{ post.account.account_name }}</dd>
+          </div>
+          <div class="flex justify-between items-center">
+            <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Created</dt>
+            <dd class="text-sm text-slate-600">{{ post.created_at|date:'M d, Y H:i' }}</dd>
+          </div>
+          {% if post.scheduled_at %}
+          <div class="flex justify-between items-center">
+            <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Scheduled</dt>
+            <dd class="text-sm text-slate-600">{{ post.scheduled_at|date:'M d, Y H:i' }}</dd>
+          </div>
+          {% endif %}
+          {% if post.published_at %}
+          <div class="flex justify-between items-center">
+            <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Published</dt>
+            <dd class="text-sm text-slate-600">{{ post.published_at|date:'M d, Y H:i' }}</dd>
+          </div>
+          {% endif %}
+          {% if post.platform_post_id %}
+          <div class="flex justify-between items-center">
+            <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Post ID</dt>
+            <dd class="text-sm text-slate-600 font-mono text-xs">{{ post.platform_post_id|truncatechars:20 }}</dd>
+          </div>
+          {% endif %}
+        </dl>
+      </div>
+
+      <div class="premium-surface rounded-2xl p-5">
+        <h2 class="text-sm font-bold text-slate-800 mb-4">Analytics</h2>
+        {% if analytics %}
+        <div class="grid grid-cols-2 gap-3">
+          <div class="rounded-xl bg-slate-50 p-3 text-center">
+            <p class="text-lg font-bold text-slate-900">{{ analytics.impressions }}</p>
+            <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mt-0.5">Impressions</p>
+          </div>
+          <div class="rounded-xl bg-slate-50 p-3 text-center">
+            <p class="text-lg font-bold text-slate-900">{{ analytics.reach }}</p>
+            <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mt-0.5">Reach</p>
+          </div>
+          <div class="rounded-xl bg-slate-50 p-3 text-center">
+            <p class="text-lg font-bold text-slate-900">{{ analytics.likes }}</p>
+            <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mt-0.5">Likes</p>
+          </div>
+          <div class="rounded-xl bg-slate-50 p-3 text-center">
+            <p class="text-lg font-bold text-slate-900">{{ analytics.comments }}</p>
+            <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mt-0.5">Comments</p>
+          </div>
+          <div class="rounded-xl bg-slate-50 p-3 text-center">
+            <p class="text-lg font-bold text-slate-900">{{ analytics.shares }}</p>
+            <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mt-0.5">Shares</p>
+          </div>
+          <div class="rounded-xl bg-slate-50 p-3 text-center">
+            <p class="text-lg font-bold text-slate-900">{{ analytics.clicks }}</p>
+            <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mt-0.5">Clicks</p>
+          </div>
+        </div>
+        <div class="mt-3 pt-3 border-t border-slate-100">
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Engagement Rate</span>
+            <span class="text-sm font-bold text-slate-900">{{ analytics.engagement_rate|floatformat:2 }}%</span>
+          </div>
+        </div>
+        <p class="text-[10px] text-gray-400 mt-3">Last updated: {{ analytics.fetched_at|date:'M d, Y H:i' }}</p>
+        {% else %}
+        <div class="text-center py-6">
+          <div class="w-10 h-10 mx-auto rounded-xl bg-slate-100 flex items-center justify-center mb-2">
+            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          </div>
+          <p class="text-sm text-gray-500">No analytics yet.</p>
+          <p class="text-xs text-gray-400 mt-1">Analytics appear after publishing.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

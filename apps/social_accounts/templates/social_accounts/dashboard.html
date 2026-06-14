@@ -1,0 +1,241 @@
+{% extends 'base_dashboard.html' %}
+{% load dashboard_tags workspace_tags %}
+{% can_create 'social' as can_create_social %}
+{% can_delete 'social' as can_delete_social %}
+{% block title %}Social Media — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Social Media{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none space-y-6">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Social Media</h1>
+      <p class="text-sm text-slate-500 mt-1">Connect, publish, and analyze across all platforms</p>
+    </div>
+    <div class="flex gap-3">
+      {% url 'social_accounts:post_list' as all_posts_url %}
+      {% include "components/button.html" with label="All Posts" variant="secondary" href=all_posts_url icon="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" %}
+      {% if can_create_social %}
+      {% url 'social_accounts:post_create' as new_post_url %}
+      {% include "components/button.html" with label="New Post" variant="primary" href=new_post_url icon="M12 4v16m8-8H4" %}
+      {% endif %}
+    </div>
+  </div>
+
+  {% if not accounts %}
+  <div class="onboarding-card" id="onboardingWizard">
+    <button type="button" onclick="dismissOnboarding()" class="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full bg-white/60 hover:bg-white text-slate-400 hover:text-slate-600 transition-all" aria-label="Dismiss onboarding">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+    <div class="flex items-start gap-5">
+      <div class="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center shrink-0">
+        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      </div>
+      <div class="flex-1 min-w-0">
+        <h2 class="text-lg font-extrabold text-slate-900">IDA Social!</h2>
+        <p class="text-sm text-slate-600 mt-1">Get started in 2 quick steps to publish across all your platforms from one place.</p>
+      </div>
+    </div>
+    <div class="onboarding-steps">
+      <div class="onboarding-step active" id="onbStep1"></div>
+      <div class="onboarding-step" id="onbStep2"></div>
+      <div class="onboarding-step" id="onbStep3"></div>
+    </div>
+    <div id="onbContent" class="space-y-4">
+      <div class="onb-panel" data-step="1">
+        <p class="text-sm font-bold text-slate-800">1. Connect a social account</p>
+        <p class="text-xs text-slate-500">Link your first platform to start publishing. Choose one below:</p>
+        <div class="flex flex-wrap gap-2 mt-3">
+          {% for p in platforms|slice:":4" %}
+          <a href="{% url 'social_accounts:connect_platform' p.key %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-indigo-200 hover:border-indigo-400 bg-white hover:bg-indigo-50 text-sm font-semibold text-slate-700 hover:text-indigo-700 transition-all shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            {{ p.name }}
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="onb-panel hidden" data-step="2">
+        <p class="text-sm font-bold text-slate-800">2. Create your first post</p>
+        <p class="text-xs text-slate-500">Write content, add hashtags, and publish across all your connected accounts at once.</p>
+        <a href="{% url 'social_accounts:post_create' %}" class="inline-flex items-center gap-2 mt-3 px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 transition-all shadow-sm hover:shadow-md">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+          Create post
+        </a>
+      </div>
+      <div class="onb-panel hidden" data-step="3">
+        <p class="text-sm font-bold text-slate-800">You're all set!</p>
+        <p class="text-xs text-slate-500">Explore analytics, use the content calendar to plan ahead, or create more posts.</p>
+        <div class="flex flex-wrap gap-2 mt-3">
+          {% if can_create_social %}
+          <a href="{% url 'social_accounts:post_create' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 transition-all">New post</a>
+          {% endif %}
+          <a href="{% url 'social_accounts:calendar' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-100 transition-all">View calendar</a>
+        </div>
+      </div>
+    </div>
+    <div class="flex items-center justify-between mt-4 pt-3 border-t border-indigo-200/50">
+      <button type="button" onclick="prevOnbStep()" id="onbPrevBtn" class="text-xs font-semibold text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-lg hover:bg-white/60 transition-all">Back</button>
+      <div class="flex gap-2">
+        <button type="button" onclick="nextOnbStep()" id="onbNextBtn" class="px-5 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-all shadow-sm">Next</button>
+        <button type="button" onclick="completeOnboarding()" id="onbDoneBtn" class="px-5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-all shadow-sm hidden">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    if (localStorage.getItem('ida_onboarding_dismissed') === 'true') {
+      var el = document.getElementById('onboardingWizard');
+      if (el) el.style.display = 'none';
+    }
+  })();
+  var onbStep = 1;
+  function showOnbStep(step) {
+    document.querySelectorAll('.onb-panel').forEach(function(p) { p.classList.add('hidden'); });
+    var panel = document.querySelector('.onb-panel[data-step="' + step + '"]');
+    if (panel) panel.classList.remove('hidden');
+    for (var i = 1; i <= 3; i++) {
+      var dot = document.getElementById('onbStep' + i);
+      if (!dot) continue;
+      dot.className = 'onboarding-step';
+      if (i < step) dot.classList.add('done');
+      else if (i === step) dot.classList.add('active');
+    }
+    document.getElementById('onbPrevBtn').style.visibility = step > 1 ? 'visible' : 'hidden';
+    document.getElementById('onbNextBtn').classList.toggle('hidden', step >= 3);
+    document.getElementById('onbDoneBtn').classList.toggle('hidden', step < 3);
+  }
+  function nextOnbStep() { if (onbStep < 3) { onbStep++; showOnbStep(onbStep); } }
+  function prevOnbStep() { if (onbStep > 1) { onbStep--; showOnbStep(onbStep); } }
+  function completeOnboarding() { dismissOnboarding(); }
+  function dismissOnboarding() {
+    var el = document.getElementById('onboardingWizard');
+    if (el) el.style.display = 'none';
+    localStorage.setItem('ida_onboarding_dismissed', 'true');
+  }
+  </script>
+  {% endif %}
+
+  <div class="skeleton-wrap grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+    <div class="skeleton-only grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5" style="grid-column:1/-1">
+      {% include "components/skeleton.html" with type="card" count=4 %}
+    </div>
+    <div class="content-only grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5" style="grid-column:1/-1">
+      <div class="premium-surface rounded-2xl p-5">
+        <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Connected Accounts</p>
+        <p class="text-2xl font-bold text-slate-900 mt-1">{{ summary.active }}<span class="text-sm font-normal text-gray-400">/{{ summary.total }}</span></p>
+      </div>
+      <div class="premium-surface rounded-2xl p-5">
+        <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Platforms Available</p>
+        <p class="text-2xl font-bold text-slate-900 mt-1">{{ platforms|length }}</p>
+      </div>
+      <div class="premium-surface rounded-2xl p-5">
+        <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Recent Posts</p>
+        <p class="text-2xl font-bold text-slate-900 mt-1">{{ recent_posts|length }}</p>
+      </div>
+      <div class="premium-surface rounded-2xl p-5">
+        <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Posts Published</p>
+        <p class="text-2xl font-bold text-slate-900 mt-1">{{ summary.published|default:'0' }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 space-y-6">
+      <div class="premium-surface rounded-2xl overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h2 class="text-sm font-bold text-slate-800">Recent Posts</h2>
+          <a href="{% url 'social_accounts:post_list' %}" class="text-xs font-semibold text-primary hover:underline">View all</a>
+        </div>
+        {% if recent_posts %}
+        <div class="divide-y divide-slate-100">
+          {% for post in recent_posts %}
+          <a href="{% url 'social_accounts:post_detail' post.id %}" class="flex items-center gap-4 px-6 py-4 hover:bg-slate-50/70 transition-colors">
+            <div class="w-8 h-8 rounded-lg bg-primary-light text-primary flex items-center justify-center text-xs font-bold uppercase">
+              {% if post.platform == 'facebook' %}Fb{% elif post.platform == 'instagram' %}Ig{% elif post.platform == 'twitter' %}X{% elif post.platform == 'linkedin' %}In{% elif post.platform == 'tiktok' %}Tk{% elif post.platform == 'youtube' %}Yt{% else %}{{ post.platform|first }}{% endif %}
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-slate-900 truncate">{{ post.content|truncatechars:60 }}</p>
+              <p class="text-xs text-gray-500 mt-0.5">{{ post.account.account_name }}</p>
+            </div>
+            <div class="text-right flex-shrink-0">
+              {% if post.scheduled_at %}
+              <span class="text-xs font-semibold text-slate-700 block">{{ post.scheduled_at|date:'M d, H:i' }}</span>
+              {% endif %}
+              {% if post.status == 'draft' %}
+              {% include "components/badge.html" with label=post.status variant="gray" %}
+              {% elif post.status == 'scheduled' %}
+              {% include "components/badge.html" with label=post.status variant="blue" %}
+              {% elif post.status == 'publishing' %}
+              {% include "components/badge.html" with label=post.status variant="yellow" %}
+              {% elif post.status == 'published' %}
+              {% include "components/badge.html" with label=post.status variant="green" %}
+              {% elif post.status == 'failed' %}
+              {% include "components/badge.html" with label=post.status variant="red" %}
+              {% else %}
+              {% include "components/badge.html" with label=post.status variant="gray" %}
+              {% endif %}
+            </div>
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        {% url 'social_accounts:post_create' as first_post_url %}
+        {% include "components/empty_state.html" with title="No posts yet" description="Start building your social presence. Create a post and publish it across multiple platforms at once." class="py-14" cta_url=first_post_url cta_label="Create your first post" %}
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="space-y-6">
+      <div class="premium-surface rounded-2xl p-5">
+        <h2 class="text-sm font-bold text-slate-800 mb-4">Connected Accounts</h2>
+        {% if accounts %}
+        <div class="space-y-3">
+          {% for account in accounts %}
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm
+                {% if account.platform == 'facebook' %}bg-blue-50 text-blue-600
+                {% elif account.platform == 'instagram' %}bg-pink-50 text-pink-600
+                {% elif account.platform == 'twitter' %}bg-sky-50 text-sky-600
+                {% elif account.platform == 'linkedin' %}bg-blue-50 text-blue-700
+                {% elif account.platform == 'tiktok' %}bg-gray-50 text-gray-800
+                {% elif account.platform == 'youtube' %}bg-red-50 text-red-600
+                {% else %}bg-slate-50 text-slate-600{% endif %}">
+                {% if account.platform == 'facebook' %}Fb{% elif account.platform == 'instagram' %}Ig{% elif account.platform == 'twitter' %}X{% elif account.platform == 'linkedin' %}In{% elif account.platform == 'tiktok' %}Tk{% elif account.platform == 'youtube' %}Yt{% endif %}
+              </div>
+              <div>
+                <p class="text-sm font-semibold text-slate-800">{{ account.account_name }}</p>
+                <p class="text-xs text-gray-400">{{ account.get_platform_display }}</p>
+              </div>
+            </div>
+            {% if can_delete_social %}
+            <a href="{% url 'social_accounts:disconnect_account' account.id %}" class="text-xs text-red-500 hover:text-red-700 font-semibold" onclick="return confirm('Disconnect {{ account.account_name }}?')">Remove</a>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="flex flex-col items-center justify-center px-6 py-5 text-center">
+          <div class="mb-2 w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+          </div>
+          <h3 class="text-sm font-bold text-slate-700">No accounts connected</h3>
+          <p class="text-xs text-slate-400 mt-1">Connect a platform below to get started</p>
+        </div>
+        {% endif %}
+        <div class="mt-4 pt-4 border-t border-slate-100">
+          <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">Available Platforms</h3>
+          <div class="grid grid-cols-2 gap-2">
+            {% for p in platforms %}
+            <a href="{% url 'social_accounts:connect_platform' p.key %}" class="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 hover:border-primary/30 hover:bg-primary-light/30 transition-all text-sm font-medium text-slate-700 hover:text-primary">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              {{ p.name }}
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

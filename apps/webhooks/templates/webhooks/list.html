@@ -1,0 +1,40 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Webhooks — Intelligent Digital Automation{% endblock %}
+{% block page_title %}Webhooks{% endblock %}
+{% block content %}
+<div class="page-shell max-w-none">
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h2 class="page-title">Webhook Endpoints</h2>
+      <p class="page-subtitle">Send real-time events to your own services</p>
+    </div>
+    <a href="{% url 'webhooks:create' %}" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition">+ Add Endpoint</a>
+  </div>
+
+  {% if endpoints %}
+  <div class="space-y-3">
+    {% for ep in endpoints %}
+    <div class="premium-surface card-elevate px-5 py-4 flex items-center justify-between">
+      <div class="flex-1">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full {% if ep.is_active %}bg-emerald-500{% else %}bg-slate-300{% endif %}"></span>
+          <strong class="text-slate-900">{{ ep.name }}</strong>
+        </div>
+        <p class="text-xs text-slate-500 mt-1">{{ ep.url }}</p>
+        <p class="text-xs text-slate-400 mt-0.5">Events: {{ ep.events|join:", "|default:"all" }}</p>
+      </div>
+      <div class="flex items-center gap-3 text-sm">
+        <span class="text-slate-500">{% if ep.last_triggered_at %}{{ ep.last_triggered_at|timesince }} ago{% else %}Never{% endif %}</span>
+        <a href="{% url 'webhooks:toggle' ep.id %}" class="px-3 py-1.5 rounded-lg border text-xs font-semibold {% if ep.is_active %}border-amber-200 text-amber-700 hover:bg-amber-50{% else %}border-emerald-200 text-emerald-700 hover:bg-emerald-50{% endif %} transition">
+          {% if ep.is_active %}Deactivate{% else %}Activate{% endif %}
+        </a>
+        <a href="{% url 'webhooks:test' ep.id %}" class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 transition">Test</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  {% include "components/empty_state.html" with title="No webhook endpoints yet" description="Create one to receive campaign, contact, and social post events in real time." %}
+  {% endif %}
+</div>
+{% endblock %}

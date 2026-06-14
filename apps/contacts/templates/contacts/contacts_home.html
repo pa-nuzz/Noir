@@ -1,0 +1,874 @@
+{% extends 'base_dashboard.html' %}
+{% load workspace_tags %}
+{% can_create 'contacts' as can_create_contacts %}
+{% can_delete 'contacts' as can_delete_contacts %}
+
+{% block title %}Contacts - Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Contacts{% endblock %}
+
+{% block content %}
+<style>
+  .sch-tabs { display: flex; align-items: center; gap: 0; border-bottom: 1px solid #E2E8F0; margin-top: 4px; }
+  .sch-tab {
+    display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; height: 44px;
+    font-size: 0.875rem; font-weight: 600; color: #64748B; background: transparent;
+    border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.15s ease;
+    text-decoration: none; white-space: nowrap;
+  }
+  .sch-tab:hover { color: #0A2540; background: #F8FAFC; }
+  .sch-tab.active { color: #0A2540; border-bottom-color: #06B6D4; font-weight: 700; }
+  .sch-tab svg { width: 18px; height: 18px; }
+  .sch-tab-panel { display: none; }
+  .sch-tab-panel.active { display: block; }
+</style>
+
+<div class="page-shell max-w-none space-y-6 overflow-x-hidden">
+
+  <!-- Page Header -->
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Contacts</h1>
+      <p class="text-sm text-slate-500 mt-1">Manage your contacts, lists, and tags</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      {% include 'components/button.html' with label='New List' icon='M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z' class='btn-secondary' onclick="switchTab('overview'); setTimeout(openNewListModal, 150);" %}
+      {% include 'components/button.html' with label='Import CSV' icon='M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12' class='btn-secondary' onclick="switchTab('import')" %}
+      {% include 'components/button.html' with label='Add Contact' icon='M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z' onclick='openAddContactModal()' %}
+    </div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div>
+    <div class="sch-tabs" role="tablist">
+      <button class="sch-tab active" role="tab" aria-selected="true" onclick="switchTab('overview')" id="tab-overview">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Overview
+      </button>
+      <button class="sch-tab" role="tab" aria-selected="false" onclick="switchTab('import')" id="tab-import">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+        Import
+      </button>
+      <button class="sch-tab" role="tab" aria-selected="false" onclick="switchTab('segments')" id="tab-segments">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        Segments
+      </button>
+    </div>
+
+    <!-- Panel: Overview -->
+    <div class="sch-tab-panel active" id="panel-overview">
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
+        <div class="premium-surface card-elevate surface-hover-clean section-card py-4 px-5">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
+              <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Contacts</p>
+              <p class="text-xl font-black text-slate-900">{{ total }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="premium-surface card-elevate surface-hover-clean section-card py-4 px-5">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+              <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Lists</p>
+              <p class="text-xl font-black text-slate-900">{{ contact_lists.count }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="premium-surface card-elevate surface-hover-clean section-card py-4 px-5">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+              <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5.586a1 1 0 01.707.293l7.414 7.414a2 2 0 010 2.828l-7.172 7.172a2 2 0 01-2.828 0L3.293 13.293A1 1 0 013 12.586V7a4 4 0 014-4z"/></svg>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Tags</p>
+              <p class="text-xl font-black text-slate-900">{{ available_tags.count }}</p>
+            </div>
+          </div>
+        </div>
+        <a href="{% url 'contacts:tags_manager' %}" class="premium-surface card-elevate surface-hover-clean section-card py-4 px-5 hover:bg-indigo-50/50 transition-colors group">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+              <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Manage</p>
+              <p class="text-sm font-semibold text-primary group-hover:text-indigo-700">Tags & Settings →</p>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <!-- Active Filters Display -->
+      {% if selected_list or selected_tag or search %}
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="text-sm text-slate-500">Active filters:</span>
+        {% if selected_list %}
+        <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+          List: {{ selected_list.name }}
+          <a href="?{% if selected_tag %}tag_id={{ selected_tag.id }}&{% endif %}{% if search %}q={{ search }}{% endif %}" class="ml-1 hover:text-indigo-900">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </a>
+        </span>
+        {% endif %}
+        {% if selected_tag %}
+        <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5.586a1 1 0 01.707.293l7.414 7.414a2 2 0 010 2.828l-7.172 7.172a2 2 0 01-2.828 0L3.293 13.293A1 1 0 013 12.586V7a4 4 0 014-4z"/></svg>
+          Tag: {{ selected_tag.name }}
+          <a href="?{% if selected_list %}list_id={{ selected_list.id }}&{% endif %}{% if search %}q={{ search }}{% endif %}" class="ml-1 hover:text-emerald-900">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </a>
+        </span>
+        {% endif %}
+        {% if search %}
+        <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          Search: "{{ search }}"
+          <a href="?{% if selected_list %}list_id={{ selected_list.id }}&{% endif %}{% if selected_tag %}tag_id={{ selected_tag.id }}{% endif %}" class="ml-1 hover:text-gray-900">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </a>
+        </span>
+        {% endif %}
+        <a href="{% url 'contacts:list' %}" class="text-xs text-red-500 hover:text-red-700 font-semibold ml-2">Clear all</a>
+      </div>
+      {% endif %}
+
+      <!-- Your Lists -->
+      <div class="premium-surface card-elevate surface-hover-clean section-card">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
+            <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+            Your Lists
+            <span class="text-xs text-gray-400 normal-case">(Click to filter)</span>
+          </h3>
+          {% include 'components/button.html' with label='Create List' icon='M12 4v16m8-8H4' size='sm' onclick='openNewListModal()' %}
+        </div>
+        {% if contact_lists %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {% for cl in contact_lists %}
+          <a href="{% url 'contacts:list' %}?list_id={{ cl.id }}{% if selected_tag %}&tag_id={{ selected_tag.id }}{% endif %}{% if search %}&q={{ search }}{% endif %}"
+            class="group relative flex items-start justify-between gap-2 p-4 rounded-xl border-2 transition-all {% if selected_list and selected_list.id == cl.id %}border-primary bg-indigo-50/50 ring-2 ring-primary/20{% else %}border-gray-100 bg-gray-50/60 hover:border-indigo-200 hover:bg-indigo-50/30{% endif %}">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 mb-1">
+                <div class="w-6 h-6 rounded-md {% if selected_list and selected_list.id == cl.id %}bg-primary{% else %}bg-primary/80 group-hover:bg-primary{% endif %} flex items-center justify-center flex-shrink-0 transition-colors">
+                  <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </div>
+                <p class="text-sm font-bold text-slate-800 truncate">{{ cl.name }}</p>
+                {% if selected_list and selected_list.id == cl.id %}
+                <svg class="w-4 h-4 text-primary flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                {% endif %}
+              </div>
+              <p class="text-xs text-gray-500">{{ cl.contact_count }} contact{{ cl.contact_count|pluralize }}</p>
+              {% if cl.description %}
+              <p class="text-xs text-gray-400 truncate mt-0.5">{{ cl.description }}</p>
+              {% endif %}
+            </div>
+            <form method="post" action="{% url 'contacts:delete_list' cl.id %}" class="opacity-0 group-hover:opacity-100 transition-opacity"
+              onsubmit="return confirm('Delete list \'{{ cl.name }}\' and all its contacts? This cannot be undone.')">
+              {% csrf_token %}
+              <button type="submit"
+                class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all flex-shrink-0">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+            </form>
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        {% include 'components/empty_state.html' with icon='M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z' title='No lists yet' description='Create your first list to organize contacts' action_url='contacts:create_list' action_label='Create your first list' %}
+        {% endif %}
+      </div>
+
+      <!-- Tags Quick Filter -->
+      {% if available_tags %}
+      <div class="flex items-center gap-3 flex-wrap">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5.586a1 1 0 01.707.293l7.414 7.414a2 2 0 010 2.828l-7.172 7.172a2 2 0 01-2.828 0L3.293 13.293A1 1 0 013 12.586V7a4 4 0 014-4z"/></svg>
+          Filter by Tag:
+        </span>
+        {% for tag in available_tags %}
+        <a href="{% url 'contacts:list' %}?{% if selected_list %}list_id={{ selected_list.id }}&{% endif %}tag_id={{ tag.id }}{% if search %}&q={{ search }}{% endif %}"
+          class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold border transition-all {% if selected_tag and selected_tag.id == tag.id %}bg-emerald-100 text-emerald-700 border-emerald-300{% else %}bg-white text-slate-600 border-gray-200 hover:border-emerald-200 hover:bg-emerald-50/50{% endif %}">
+          {{ tag.name }}
+          {% if selected_tag and selected_tag.id == tag.id %}
+          <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          {% endif %}
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Contacts Table -->
+      <div class="premium-surface card-elevate surface-hover-clean section-card overflow-hidden p-0">
+        <div class="px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+          <p class="text-sm font-bold text-slate-900">All Contacts
+            <span class="ml-2 text-xs font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{{ all_contacts.count }}</span>
+          </p>
+          <form method="get" class="w-full sm:w-72">
+            {% if selected_list %}<input type="hidden" name="list_id" value="{{ selected_list.id }}">{% endif %}
+            {% if selected_tag %}<input type="hidden" name="tag_id" value="{{ selected_tag.id }}">{% endif %}
+            <div class="relative">
+              <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              <input type="text" name="q" value="{{ search }}" placeholder="Search contacts by email..."
+                class="auth-input pl-10 py-2.5 text-sm w-full" />
+              {% if search %}
+              <a href="?{% if selected_list %}list_id={{ selected_list.id }}&{% endif %}{% if selected_tag %}tag_id={{ selected_tag.id }}{% endif %}" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </a>
+              {% endif %}
+            </div>
+          </form>
+        </div>
+
+        <form method="post" action="{% url 'contacts:bulk_update_contact_tags' %}" id="bulk-tag-form" class="px-6 py-4 border-b border-gray-100 bg-slate-50/40 space-y-3">
+          {% csrf_token %}
+          <input type="hidden" name="selected_contact_ids" id="selected-contact-ids" value="">
+          <div class="flex flex-col lg:flex-row lg:items-center gap-3 lg:justify-between">
+            <div class="flex items-center gap-3 flex-wrap">
+              <span class="text-xs font-semibold text-slate-500">Selected: <span id="selected-contact-count">0</span></span>
+              <select name="operation" id="bulk-operation" class="auth-input py-2 text-sm min-w-[220px]">
+                <option value="add">Add selected tags</option>
+                <option value="replace">Replace all tags with selected tags</option>
+                <option value="remove">Remove selected tags</option>
+                <option value="clear">Clear all tags</option>
+              </select>
+            </div>
+            {% include 'components/button.html' with label='Apply Tag Action' type='submit' %}
+          </div>
+          {% if available_tags %}
+          <div id="bulk-tags-wrap" class="flex flex-wrap gap-2">
+            {% for tag in available_tags %}
+            <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-200 bg-white text-xs font-semibold text-emerald-700 cursor-pointer hover:bg-emerald-50">
+              <input type="checkbox" name="tag_ids" value="{{ tag.id }}" class="accent-emerald-600 bulk-tag-checkbox" />
+              {{ tag.name }}
+            </label>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-xs text-slate-500">No tags available yet. <a href="{% url 'contacts:tags_manager' %}" class="text-primary font-semibold hover:underline">Create tags first</a>.</p>
+          {% endif %}
+          <p class="text-[11px] text-slate-400">Use this to add contacts into tags, transfer them to another tag set, or remove tags from existing contacts.</p>
+        </form>
+
+        <div class="overflow-x-auto">
+          <div class="px-6 py-3 border-b border-gray-100 bg-gray-50/30 flex items-center justify-between">
+            <p class="text-xs text-slate-500">
+              Showing <span class="font-semibold text-slate-700">{{ all_contacts|length }}</span> of <span class="font-semibold text-slate-700">{{ total }}</span> contacts
+              {% if page_obj %}
+                <span class="text-slate-400">• Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+              {% endif %}
+            </p>
+            {% if page_obj and page_obj.paginator.num_pages > 1 %}
+            <div class="flex items-center gap-1">
+              {% if page_obj.has_previous %}
+                <a href="?{% if selected_list %}list_id={{ selected_list.id }}&{% endif %}{% if selected_tag %}tag_id={{ selected_tag.id }}&{% endif %}{% if search %}q={{ search }}&{% endif %}page={{ page_obj.previous_page_number }}" class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-slate-600 hover:bg-gray-50 text-xs font-semibold transition-colors">← Prev</a>
+              {% else %}
+                <span class="px-3 py-1.5 rounded-lg border border-gray-100 bg-gray-50 text-gray-300 text-xs font-semibold cursor-not-allowed">← Prev</span>
+              {% endif %}
+              {% for page_num in page_obj.paginator.page_range %}
+                {% if page_num == page_obj.number %}
+                  <span class="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold">{{ page_num }}</span>
+                {% elif page_num >= page_obj.number|add:-2 and page_num <= page_obj.number|add:2 %}
+                  <a href="?{% if selected_list %}list_id={{ selected_list.id }}&{% endif %}{% if selected_tag %}tag_id={{ selected_tag.id }}&{% endif %}{% if search %}q={{ search }}&{% endif %}page={{ page_num }}" class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-slate-600 hover:bg-gray-50 text-xs font-semibold transition-colors">{{ page_num }}</a>
+                {% endif %}
+              {% endfor %}
+              {% if page_obj.has_next %}
+                <a href="?{% if selected_list %}list_id={{ selected_list.id }}&{% endif %}{% if selected_tag %}tag_id={{ selected_tag.id }}&{% endif %}{% if search %}q={{ search }}&{% endif %}page={{ page_obj.next_page_number }}" class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-slate-600 hover:bg-gray-50 text-xs font-semibold transition-colors">Next →</a>
+              {% else %}
+                <span class="px-3 py-1.5 rounded-lg border border-gray-100 bg-gray-50 text-gray-300 text-xs font-semibold cursor-not-allowed">Next →</span>
+              {% endif %}
+            </div>
+            {% endif %}
+          </div>
+
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-gray-100 bg-gray-50/50">
+                <th class="px-6 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                  <input type="checkbox" id="select-all-contacts" class="accent-indigo-600" title="Select all visible contacts" />
+                </th>
+                <th class="px-6 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Name</th>
+                <th class="px-6 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Email</th>
+                <th class="px-6 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">List</th>
+                <th class="px-6 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tags</th>
+                <th class="px-6 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Added</th>
+                <th class="px-6 py-3"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+              {% for contact in all_contacts %}
+              <tr class="surface-hover-clean hover:bg-gray-50/50 transition-colors">
+                <td class="px-6 py-3.5">
+                  <input type="checkbox" class="contact-selector accent-indigo-600" value="{{ contact.id }}" aria-label="Select {{ contact.email }}" />
+                </td>
+                <td class="px-6 py-3.5">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-primary-light text-primary flex items-center justify-center text-xs font-bold flex-shrink-0">
+                      {% if contact.first_name %}{{ contact.first_name|first|upper }}{% endif %}{% if contact.last_name %}{{ contact.last_name|first|upper }}{% endif %}{% if not contact.first_name and not contact.last_name %}{{ contact.email|first|upper }}{% endif %}
+                    </div>
+                    <span class="text-sm font-semibold text-slate-800">
+                      {% if contact.first_name or contact.last_name %}
+                        {{ contact.first_name }} {{ contact.last_name }}
+                      {% else %}
+                        <span class="text-gray-400">—</span>
+                      {% endif %}
+                    </span>
+                  </div>
+                </td>
+                <td class="px-6 py-3.5 text-sm text-gray-500 font-mono">{{ contact.email }}</td>
+                <td class="px-6 py-3.5">
+                  <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-semibold">
+                    {{ contact.contact_list.name }}
+                  </span>
+                </td>
+                <td class="px-6 py-3.5">
+                  <div class="flex flex-wrap gap-1.5">
+                    {% for tag in contact.tags.all %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-semibold border border-emerald-100">{{ tag.name }}</span>
+                    {% empty %}
+                    <span class="text-xs text-gray-400">—</span>
+                    {% endfor %}
+                  </div>
+                </td>
+                <td class="px-6 py-3.5 text-xs text-gray-400">{{ contact.created_at|date:"M d, Y" }}</td>
+                <td class="px-6 py-3.5 text-right">
+                  <form method="post" action="{% url 'contacts:delete_contact' contact.id %}"
+                    onsubmit="return confirm('Delete {{ contact.email }}?')">
+                    {% csrf_token %}
+                    <button type="submit"
+                      class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="7" class="px-6 py-16 text-center">
+                  <div class="flex flex-col items-center gap-2">
+                    <svg class="w-10 h-10 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <p class="text-sm text-gray-400 font-medium">No contacts found.</p>
+                    <a href="{% url 'contacts:import_csv' %}" class="text-xs text-primary font-semibold hover:underline">Import your first list →</a>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+          {% if page_obj and page_obj.paginator.num_pages > 1 %}
+          <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between">
+            <p class="text-xs text-slate-500">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</p>
+            <div class="flex items-center gap-2">
+              {% if page_obj.has_previous %}
+                <a href="?{% if selected_list %}list_id={{ selected_list.id }}&{% endif %}{% if selected_tag %}tag_id={{ selected_tag.id }}&{% endif %}{% if search %}q={{ search }}&{% endif %}page=1" class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-slate-600 hover:bg-gray-50 text-xs font-semibold transition-colors">First</a>
+                <a href="?{% if selected_list %}list_id={{ selected_list.id }}&{% endif %}{% if selected_tag %}tag_id={{ selected_tag.id }}&{% endif %}{% if search %}q={{ search }}&{% endif %}page={{ page_obj.previous_page_number }}" class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-slate-600 hover:bg-gray-50 text-xs font-semibold transition-colors">← Previous</a>
+              {% endif %}
+              <span class="px-3 py-1.5 text-xs text-slate-500">{{ page_obj.start_index }} - {{ page_obj.end_index }} of {{ page_obj.paginator.count }}</span>
+              {% if page_obj.has_next %}
+                <a href="?{% if selected_list %}list_id={{ selected_list.id }}&{% endif %}{% if selected_tag %}tag_id={{ selected_tag.id }}&{% endif %}{% if search %}q={{ search }}&{% endif %}page={{ page_obj.next_page_number }}" class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-slate-600 hover:bg-gray-50 text-xs font-semibold transition-colors">Next →</a>
+                <a href="?{% if selected_list %}list_id={{ selected_list.id }}&{% endif %}{% if selected_tag %}tag_id={{ selected_tag.id }}&{% endif %}{% if search %}q={{ search }}&{% endif %}page={{ page_obj.paginator.num_pages }}" class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-slate-600 hover:bg-gray-50 text-xs font-semibold transition-colors">Last</a>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel: Import -->
+    <div class="sch-tab-panel" id="panel-import">
+      <div class="mt-6 space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Import CSV Card -->
+          <div class="premium-surface rounded-2xl p-6">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-slate-900">Import from CSV</h3>
+                <p class="text-xs text-slate-500">Upload a CSV file to bulk-import contacts</p>
+              </div>
+            </div>
+            <form method="post" action="{% url 'contacts:import_csv' %}" enctype="multipart/form-data" class="space-y-4">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{% url 'contacts:list' %}">
+              <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Target List</label>
+                <select name="list_id" class="input-field w-full">
+                  <option value="">Default List</option>
+                  {% for cl in contact_lists %}
+                  <option value="{{ cl.id }}">{{ cl.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">CSV File <span class="text-red-500">*</span></label>
+                <div class="border-2 border-dashed border-gray-200 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary/50 transition-all" onclick="document.getElementById('csv-file').click()">
+                  <svg class="w-10 h-10 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                  <p class="text-sm font-semibold text-slate-700">Drop your CSV here or <span class="text-primary">browse</span></p>
+                  <p class="text-xs text-gray-400 mt-1">Must have an <span class="font-mono bg-gray-100 px-1 rounded">email</span> column.</p>
+                  <input type="file" id="csv-file" name="csv_file" accept=".csv" class="hidden" required onchange="document.getElementById('csv-file-name').textContent = '✓ ' + this.files[0].name; document.getElementById('csv-file-name').classList.remove('hidden');" />
+                </div>
+                <p id="csv-file-name" class="mt-2 text-xs text-primary font-semibold hidden"></p>
+              </div>
+              {% include 'components/button.html' with label='Import & Save' type='submit' icon='M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12' class='w-full' %}
+            </form>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="premium-surface rounded-2xl p-6">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+                <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-slate-900">Quick Actions</h3>
+                <p class="text-xs text-slate-500">Tools to manage your contact ecosystem</p>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <a href="{% url 'contacts:tags_manager' %}" class="flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all">
+                <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5.586a1 1 0 01.707.293l7.414 7.414a2 2 0 010 2.828l-7.172 7.172a2 2 0 01-2.828 0L3.293 13.293A1 1 0 013 12.586V7a4 4 0 014-4z"/></svg>
+                </div>
+                <div>
+                  <p class="text-sm font-bold text-slate-800">Tags Manager</p>
+                  <p class="text-xs text-slate-500">Create, edit, and organize contact tags</p>
+                </div>
+                <svg class="w-5 h-5 text-gray-300 ml-auto flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              </a>
+              <a href="{% url 'contacts:custom_fields' %}" class="flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all">
+                <div class="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-5 h-5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                </div>
+                <div>
+                  <p class="text-sm font-bold text-slate-800">Custom Fields</p>
+                  <p class="text-xs text-slate-500">Define custom data fields for contacts</p>
+                </div>
+                <svg class="w-5 h-5 text-gray-300 ml-auto flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              </a>
+              <a href="{% url 'contacts:gdpr' %}" class="flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all">
+                <div class="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                </div>
+                <div>
+                  <p class="text-sm font-bold text-slate-800">GDPR Tools</p>
+                  <p class="text-xs text-slate-500">Manage data privacy and consent</p>
+                </div>
+                <svg class="w-5 h-5 text-gray-300 ml-auto flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              </a>
+              <a href="{% url 'contacts:unsubscribe_list' %}" class="flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all">
+                <div class="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                </div>
+                <div>
+                  <p class="text-sm font-bold text-slate-800">Unsubscribes</p>
+                  <p class="text-xs text-slate-500">View and manage unsubscribed contacts</p>
+                </div>
+                <svg class="w-5 h-5 text-gray-300 ml-auto flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel: Segments -->
+    <div class="sch-tab-panel" id="panel-segments">
+      <div class="mt-6 space-y-6">
+        <div class="premium-surface rounded-2xl p-8 text-center">
+          <div class="flex flex-col items-center gap-4 max-w-sm mx-auto">
+            <div class="w-16 h-16 rounded-2xl bg-indigo-100 flex items-center justify-center">
+              <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </div>
+            <h3 class="text-lg font-bold text-slate-800">Segment Builder</h3>
+            <p class="text-sm text-slate-500 leading-relaxed">Segments are smart, rule-based groups that automatically update as your contacts change. Create dynamic segments to target specific groups based on conditions.</p>
+            <a href="{% url 'contacts:segment_list' %}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-colors shadow-lg shadow-indigo-500/20">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              Go to Segments
+            </a>
+          </div>
+        </div>
+
+        {% if segments %}
+        <div class="premium-surface rounded-2xl overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-100">
+            <h3 class="text-sm font-bold text-slate-800">Your Segments</h3>
+          </div>
+          <div class="divide-y divide-slate-100">
+            {% for seg in segments %}
+            <a href="{% url 'contacts:segment_detail' seg.pk %}" class="flex items-center justify-between px-6 py-4 hover:bg-slate-50/50 transition-colors">
+              <div>
+                <p class="text-sm font-semibold text-slate-900">{{ seg.name }}</p>
+                <p class="text-xs text-gray-500">{{ seg.rules|length }} condition{{ seg.rules|length|pluralize }}</p>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full">{{ seg.matched_count }} contacts</span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase {% if seg.match_type == 'any' %}bg-emerald-100 text-emerald-700{% else %}bg-slate-100 text-slate-600{% endif %}">
+                  {% if seg.match_type == 'any' %}Dynamic{% else %}Static{% endif %}
+                </span>
+              </div>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Contact Modal - Improved -->
+<div id="add-contact-modal" class="hidden fixed inset-0 z-50 flex items-start justify-center bg-slate-900/50 backdrop-blur-sm p-4 overflow-hidden pt-8" onclick="if(event.target===this) closeAddContactModal()">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden transform transition-all" onclick="event.stopPropagation()">
+    <div class="px-6 py-5 border-b border-slate-100 bg-white">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Add New Contact</h3>
+          <p class="text-xs text-slate-500">Create a single contact and add to a list</p>
+        </div>
+      </div>
+    </div>
+    <form method="post" action="{% url 'contacts:add_contact' %}" class="p-6 space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{% if selected_list %}?list_id={{ selected_list.id }}{% endif %}{% if selected_tag %}{% if selected_list %}&{% else %}?{% endif %}tag_id={{ selected_tag.id }}{% endif %}">
+
+      <!-- Email (Required) -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+          Email Address <span class="text-red-500">*</span>
+        </label>
+        <div class="relative">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          <input type="email" name="email" required class="auth-input pl-10 py-2.5 text-sm w-full" placeholder="john@example.com" />
+        </div>
+      </div>
+
+      <!-- Name Fields -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">First Name</label>
+          <input type="text" name="first_name" class="auth-input py-2.5 text-sm w-full" placeholder="John" />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">Last Name</label>
+          <input type="text" name="last_name" class="auth-input py-2.5 text-sm w-full" placeholder="Doe" />
+        </div>
+      </div>
+
+      <!-- List Selection -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Add to List</label>
+        <div class="relative">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+          <select name="list_id" class="auth-input pl-10 py-2.5 text-sm w-full appearance-none bg-white">
+            <option value="">📁 Default List</option>
+            {% for cl in contact_lists %}
+            <option value="{{ cl.id }}" {% if selected_list and selected_list.id == cl.id %}selected{% endif %}>📁 {{ cl.name }}</option>
+            {% endfor %}
+          </select>
+          <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+      </div>
+
+      <!-- Tags -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Tags</label>
+        <div class="relative">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5.586a1 1 0 01.707.293l7.414 7.414a2 2 0 010 2.828l-7.172 7.172a2 2 0 01-2.828 0L3.293 13.293A1 1 0 013 12.586V7a4 4 0 014-4z"/></svg>
+          <input type="text" name="tags" class="auth-input pl-10 py-2.5 text-sm w-full" placeholder="vip, leads, newsletter (comma separated)" />
+        </div>
+        <p class="mt-1.5 text-[11px] text-slate-400 flex items-center gap-1">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Separate multiple tags with commas. New tags will be created automatically.
+        </p>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex gap-3 pt-2">
+        {% include 'components/button.html' with label='Cancel' type='button' class='btn-secondary' onclick='closeAddContactModal()' %}
+        {% include 'components/button.html' with label='Add Contact' type='submit' icon='M12 4v16m8-8H4' class='flex-1' %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- New List Modal -->
+<div id="new-list-modal" class="hidden fixed inset-0 z-50 flex items-start justify-center bg-slate-900/50 backdrop-blur-sm p-4 overflow-hidden pt-8" onclick="if(event.target===this) closeNewListModal()">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden transform transition-all max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+    <div class="px-6 py-5 border-b border-slate-100 bg-white sticky top-0">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Create New List</h3>
+          <p class="text-xs text-slate-500">Create a contact list to organize your subscribers</p>
+        </div>
+      </div>
+    </div>
+    <form method="post" action="{% url 'contacts:create_list' %}" class="p-6 space-y-4">
+      {% csrf_token %}
+
+      <!-- List Name -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+          List Name <span class="text-red-500">*</span>
+        </label>
+        <input type="text" name="name" required class="auth-input py-2.5 text-sm w-full" placeholder="e.g., Newsletter Subscribers, VIP Customers..." />
+      </div>
+
+      <!-- Description -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+          Description <span class="text-slate-400 font-normal text-xs">(optional)</span>
+        </label>
+        <textarea name="description" rows="3" class="auth-input py-2.5 text-sm w-full resize-none" placeholder="Briefly describe the purpose of this list..."></textarea>
+      </div>
+
+
+      <!-- Actions -->
+      <div class="flex gap-3 pt-2">
+        {% include 'components/button.html' with label='Cancel' type='button' class='btn-secondary' onclick='closeNewListModal()' %}
+        {% include 'components/button.html' with label='Create List' type='submit' icon='M12 4v16m8-8H4' class='flex-1' %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Import CSV Modal -->
+<div id="import-csv-modal" class="hidden fixed inset-0 z-50 flex items-start justify-center bg-slate-900/50 backdrop-blur-sm p-4 overflow-hidden pt-8" onclick="if(event.target===this) closeImportCsvModal()">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden transform transition-all max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+    <div class="px-6 py-5 border-b border-slate-100 bg-white sticky top-0">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Import from CSV</h3>
+          <p class="text-xs text-slate-500">Upload a CSV to create a new saved contact list</p>
+        </div>
+      </div>
+    </div>
+    <form method="post" action="{% url 'contacts:import_csv' %}" enctype="multipart/form-data" class="p-6 space-y-4">
+      {% csrf_token %}
+
+      <!-- List Name -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Add to List</label>
+        <div class="relative">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+          <select name="list_id" class="auth-input pl-10 py-2.5 text-sm w-full appearance-none bg-white">
+            <option value="">📁 Default List</option>
+            {% for cl in contact_lists %}
+            <option value="{{ cl.id }}" {% if selected_list and selected_list.id == cl.id %}selected{% endif %}>📁 {{ cl.name }}</option>
+            {% endfor %}
+          </select>
+          <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+      </div>
+
+      <!-- CSV File -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">CSV File <span class="text-red-500">*</span></label>
+        <div id="drop-zone-modal" class="border-2 border-dashed border-gray-200 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary/50 transition-all" onclick="document.getElementById('csv-file-modal').click()">
+          <svg class="w-10 h-10 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+          <p class="text-sm font-semibold text-slate-700">Drop your CSV here or <span class="text-primary">browse</span></p>
+          <p class="text-xs text-gray-400 mt-1">Must have an <span class="font-mono bg-gray-100 px-1 rounded">email</span> column.</p>
+          <input type="file" id="csv-file-modal" name="csv_file" accept=".csv" class="hidden" onchange="showFileNameModal(this)" />
+        </div>
+        <p id="file-name-modal" class="mt-2 text-xs text-primary font-semibold hidden"></p>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex gap-3 pt-2">
+        {% include 'components/button.html' with label='Cancel' type='button' class='btn-secondary' onclick='closeImportCsvModal()' %}
+        {% include 'components/button.html' with label='Import & Save List' type='submit' icon='M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12' class='flex-1' %}
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function switchTab(tabId) {
+  document.querySelectorAll('.sch-tab').forEach(function(t) {
+    t.classList.remove('active');
+    t.setAttribute('aria-selected', 'false');
+  });
+  document.querySelectorAll('.sch-tab-panel').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById('tab-' + tabId).classList.add('active');
+  document.getElementById('tab-' + tabId).setAttribute('aria-selected', 'true');
+  document.getElementById('panel-' + tabId).classList.add('active');
+  var url = new URL(window.location);
+  url.searchParams.set('tab', tabId);
+  history.replaceState(null, '', url);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var params = new URLSearchParams(window.location.search);
+  var tab = params.get('tab');
+  if (tab && document.getElementById('tab-' + tab)) switchTab(tab);
+});
+
+document.addEventListener('keydown', function (event) {
+    // Close modals on Escape key
+    if (event.key === 'Escape') {
+      closeAddContactModal();
+      closeNewListModal();
+      closeImportCsvModal();
+    }
+  });
+
+  const selectAllContacts = document.getElementById('select-all-contacts');
+  const contactSelectors = document.querySelectorAll('.contact-selector');
+  const selectedContactIdsInput = document.getElementById('selected-contact-ids');
+  const selectedContactCount = document.getElementById('selected-contact-count');
+  const bulkTagForm = document.getElementById('bulk-tag-form');
+  const bulkOperation = document.getElementById('bulk-operation');
+  const bulkTagsWrap = document.getElementById('bulk-tags-wrap');
+
+  function openAddContactModal() {
+    const el = document.getElementById('add-contact-modal');
+    if (!el) return;
+    el.classList.remove('hidden');
+  }
+
+  function closeAddContactModal() {
+    const el = document.getElementById('add-contact-modal');
+    if (!el) return;
+    el.classList.add('hidden');
+  }
+
+  function openNewListModal() {
+    const el = document.getElementById('new-list-modal');
+    if (!el) return;
+    el.classList.remove('hidden');
+  }
+
+  function closeNewListModal() {
+    const el = document.getElementById('new-list-modal');
+    if (!el) return;
+    el.classList.add('hidden');
+  }
+
+  function openImportCsvModal() {
+    const el = document.getElementById('import-csv-modal');
+    if (!el) return;
+    el.classList.remove('hidden');
+  }
+
+  function closeImportCsvModal() {
+    const el = document.getElementById('import-csv-modal');
+    if (!el) return;
+    el.classList.add('hidden');
+  }
+
+  // CSV file upload handlers
+  function showFileNameModal(input) {
+    const label = document.getElementById('file-name-modal');
+    if (input.files[0]) {
+      label.textContent = '✓ ' + input.files[0].name;
+      label.classList.remove('hidden');
+    }
+  }
+
+  const dzModal = document.getElementById('drop-zone-modal');
+  if (dzModal) {
+    dzModal.addEventListener('dragover', e => { e.preventDefault(); dzModal.classList.add('border-primary','bg-primary/5'); });
+    dzModal.addEventListener('dragleave', () => dzModal.classList.remove('border-primary','bg-primary/5'));
+    dzModal.addEventListener('drop', e => {
+      e.preventDefault();
+      dzModal.classList.remove('border-primary','bg-primary/5');
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        document.getElementById('csv-file-modal').files = e.dataTransfer.files;
+        showFileNameModal(document.getElementById('csv-file-modal'));
+      }
+    });
+  }
+
+  if (new URLSearchParams(window.location.search).get('open_add_contact') === '1') {
+    document.getElementById('add-contact-modal')?.classList.remove('hidden');
+  }
+
+  function refreshSelectedContacts() {
+    const selectedIds = Array.from(contactSelectors)
+      .filter((checkbox) => checkbox.checked)
+      .map((checkbox) => checkbox.value);
+
+    if (selectedContactIdsInput) {
+      selectedContactIdsInput.value = selectedIds.join(',');
+    }
+    if (selectedContactCount) {
+      selectedContactCount.textContent = String(selectedIds.length);
+    }
+
+    if (selectAllContacts) {
+      const allChecked = contactSelectors.length > 0 && selectedIds.length === contactSelectors.length;
+      selectAllContacts.checked = allChecked;
+    }
+  }
+
+  if (selectAllContacts) {
+    selectAllContacts.addEventListener('change', function () {
+      contactSelectors.forEach((checkbox) => {
+        checkbox.checked = selectAllContacts.checked;
+      });
+      refreshSelectedContacts();
+    });
+  }
+
+  contactSelectors.forEach((checkbox) => {
+    checkbox.addEventListener('change', refreshSelectedContacts);
+  });
+
+  if (bulkOperation && bulkTagsWrap) {
+    const syncTagInputsForOperation = () => {
+      const requiresTags = bulkOperation.value !== 'clear';
+      bulkTagsWrap.style.opacity = requiresTags ? '1' : '0.5';
+      bulkTagsWrap.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+        checkbox.disabled = !requiresTags;
+      });
+    };
+    bulkOperation.addEventListener('change', syncTagInputsForOperation);
+    syncTagInputsForOperation();
+  }
+
+  if (bulkTagForm) {
+    bulkTagForm.addEventListener('submit', function (event) {
+      refreshSelectedContacts();
+      if (!selectedContactIdsInput || !selectedContactIdsInput.value) {
+        event.preventDefault();
+        alert('Please select at least one contact.');
+        return;
+      }
+
+      if (bulkOperation && bulkOperation.value !== 'clear') {
+        const anyTagSelected = Array.from(document.querySelectorAll('.bulk-tag-checkbox')).some((checkbox) => checkbox.checked);
+        if (!anyTagSelected) {
+          event.preventDefault();
+          alert('Please select at least one tag.');
+        }
+      }
+    });
+  }
+
+  refreshSelectedContacts();
+</script>
+{% endblock %}

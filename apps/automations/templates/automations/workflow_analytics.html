@@ -1,0 +1,77 @@
+{% extends 'base_dashboard.html' %}
+{% load workspace_tags %}
+{% block title %}Automation Analytics — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Automation Analytics{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none space-y-6">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <p class="eyebrow">Performance</p>
+      <h1 class="page-title mt-2">{{ workflow.name }}</h1>
+      <p class="page-lead">Workflow enrollment and performance analytics</p>
+    </div>
+    {% can_edit 'workflows' as can_edit_workflows %}
+    {% if can_edit_workflows %}
+    {% url 'automations:workflow_edit' workflow.id as workflow_edit_url %}
+    {% include "components/button.html" with label="Edit Workflow" variant="secondary" href=workflow_edit_url %}
+    {% endif %}
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+    <div class="premium-surface card-elevate rounded-2xl p-5">
+      <p class="text-xs text-gray-500">Total Enrollments</p>
+      <p class="text-2xl font-bold text-slate-900">{{ total_count }}</p>
+    </div>
+    <div class="premium-surface card-elevate rounded-2xl p-5">
+      <p class="text-xs text-gray-500">Active</p>
+      <p class="text-2xl font-bold text-emerald-600">{{ active_count }}</p>
+    </div>
+    <div class="premium-surface card-elevate rounded-2xl p-5">
+      <p class="text-xs text-gray-500">Completed</p>
+      <p class="text-2xl font-bold text-indigo-600">{{ completed_count }}</p>
+    </div>
+    <div class="premium-surface card-elevate rounded-2xl p-5">
+      <p class="text-xs text-gray-500">Paused</p>
+      <p class="text-2xl font-bold text-amber-600">{{ paused_count }}</p>
+    </div>
+    <div class="premium-surface card-elevate rounded-2xl p-5">
+      <p class="text-xs text-gray-500">Completion Rate</p>
+      <p class="text-2xl font-bold text-slate-900">{{ completion_rate }}%</p>
+    </div>
+  </div>
+
+  {% if node_stats %}
+  <div class="premium-surface card-elevate rounded-2xl p-6">
+    <h3 class="text-sm font-bold text-slate-900 uppercase tracking-widest mb-4">Per-Node Funnel</h3>
+    <div class="space-y-3">
+      {% for ns in node_stats %}
+      <div class="flex items-center gap-4">
+        <span class="w-20 text-xs font-semibold text-slate-600 uppercase">
+          {% if ns.type == 'trigger' %}⚡ Trigger{% elif ns.type == 'delay' %}⏱ Delay{% else %}▶ Action{% endif %}
+        </span>
+        <span class="text-xs text-slate-500 font-mono w-16">{{ ns.node_id|truncatechars:12 }}</span>
+        <div class="flex-1 bg-slate-100 rounded-full h-3 overflow-hidden">
+          {% if total_count %}
+          <div class="h-full rounded-full transition-all {% if ns.type == 'trigger' %}bg-indigo-500{% elif ns.type == 'delay' %}bg-amber-500{% else %}bg-emerald-500{% endif %}" style="width:{% widthratio ns.reached total_count 100 %}%"></div>
+          {% endif %}
+        </div>
+        <span class="text-xs font-semibold text-slate-700 w-16 text-right">{{ ns.reached }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if total_count == 0 %}
+  <div class="premium-surface card-elevate rounded-2xl p-12 text-center">
+    {% if can_edit_workflows %}
+    {% url 'automations:workflow_edit' workflow.id as workflow_edit_url %}
+    {% include "components/empty_state.html" with title="No data yet" description="Enrollments will appear here once contacts are added to the workflow." cta_url=workflow_edit_url cta_label="Edit Flow" %}
+    {% else %}
+    {% include "components/empty_state.html" with title="No data yet" description="Enrollments will appear here once contacts are added to the workflow." %}
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

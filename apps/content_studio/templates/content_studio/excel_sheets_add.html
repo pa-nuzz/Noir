@@ -1,0 +1,35 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Add Excel Sheet — Content Studio{% endblock %}
+{% block page_title %}Add Excel Sheet{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none space-y-6">
+  <div class="premium-surface rounded-2xl p-6">
+    <h2 class="text-lg font-bold text-slate-900 mb-1">Connect Google Sheet</h2>
+    <p class="text-sm text-slate-500 mb-6">Paste the Google Sheet ID. The sheet must have columns: S.N., Description, URL, Images, Platform, Content Link, Status</p>
+
+    <form method="POST">
+      {% csrf_token %}
+      <div class="space-y-4">
+        <div>
+          <label class="auth-label">Google Sheet ID</label>
+          <input type="text" name="spreadsheet_id" required class="auth-input" placeholder="1BXiMfB...">
+          <p class="text-xs text-gray-400 mt-1">From the URL: https://docs.google.com/spreadsheets/d/<strong>SPREADSHEET_ID</strong>/edit</p>
+        </div>
+        <div>
+          <label class="auth-label">Sheet Name (tab)</label>
+          <input type="text" name="sheet_name" class="auth-input" value="Sheet1" placeholder="Sheet1">
+        </div>
+        <div>
+          <label class="auth-label">Title (optional)</label>
+          <input type="text" name="title" class="auth-input" placeholder="My Content Sheet">
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="submit" class="btn-action btn-action-primary">Add &amp; Verify</button>
+          <a href="{% url 'content_studio:excel_sheets' %}" class="btn-action btn-action-secondary">Cancel</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

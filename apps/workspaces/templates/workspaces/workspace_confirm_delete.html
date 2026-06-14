@@ -1,0 +1,19 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Delete {{ workspace.name }} — Intelligent Digital Automation (IDA){% endblock %}
+{% block content %}
+<div class="page-shell max-w-lg mx-auto">
+  <div class="premium-surface rounded-2xl p-8 text-center">
+    <div class="w-16 h-16 mx-auto rounded-2xl bg-red-50 text-red-500 flex items-center justify-center mb-4">
+      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+    </div>
+    <h1 class="text-xl font-bold text-slate-900 mb-2">Delete "{{ workspace.name }}"</h1>
+    <p class="text-sm text-gray-500 mb-6">This action cannot be undone. All workspace data, memberships, and audit logs will be permanently deleted.</p>
+
+    <form method="post" class="flex gap-3 justify-center">
+      {% csrf_token %}
+      <a href="{% url 'workspaces:detail' workspace.id %}" class="px-6 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors">Cancel</a>
+      <button type="submit" class="px-6 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors">Delete Workspace</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

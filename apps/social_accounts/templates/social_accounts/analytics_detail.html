@@ -1,0 +1,65 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Post Analytics — IDA{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+  <div class="flex items-center gap-3">
+    <a href="{% url 'social_accounts:analytics_overview' %}" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
+      <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    </a>
+    <div>
+      <h1 class="text-xl font-bold text-slate-900">Post Analytics</h1>
+      <p class="text-sm text-slate-500">{{ post.content|truncatechars:60 }}</p>
+    </div>
+  </div>
+
+  {% if analytics %}
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="premium-surface rounded-2xl p-4 text-center">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Likes</p>
+      <p class="text-2xl font-bold text-slate-900 mt-1">{{ analytics.likes|default:0 }}</p>
+    </div>
+    <div class="premium-surface rounded-2xl p-4 text-center">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Comments</p>
+      <p class="text-2xl font-bold text-slate-900 mt-1">{{ analytics.comments|default:0 }}</p>
+    </div>
+    <div class="premium-surface rounded-2xl p-4 text-center">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Shares</p>
+      <p class="text-2xl font-bold text-slate-900 mt-1">{{ analytics.shares|default:0 }}</p>
+    </div>
+    <div class="premium-surface rounded-2xl p-4 text-center">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Reach</p>
+      <p class="text-2xl font-bold text-slate-900 mt-1">{{ analytics.reach|default:0 }}</p>
+    </div>
+  </div>
+
+  <div class="premium-surface rounded-2xl p-5">
+    <h3 class="text-sm font-bold text-slate-800 mb-4">Engagement Metrics</h3>
+    <div class="grid grid-cols-2 gap-4">
+      <div class="flex items-center justify-between py-2 border-b border-slate-100">
+        <span class="text-sm text-slate-600">Impressions</span>
+        <span class="text-sm font-bold text-slate-900">{{ analytics.impressions|default:0 }}</span>
+      </div>
+      <div class="flex items-center justify-between py-2 border-b border-slate-100">
+        <span class="text-sm text-slate-600">Engagement Rate</span>
+        <span class="text-sm font-bold text-slate-900">{{ analytics.engagement_rate|default:'0' }}%</span>
+      </div>
+      <div class="flex items-center justify-between py-2 border-b border-slate-100">
+        <span class="text-sm text-slate-600">Click-Through Rate</span>
+        <span class="text-sm font-bold text-slate-900">{{ analytics.click_through_rate|default:'0' }}%</span>
+      </div>
+      <div class="flex items-center justify-between py-2 border-b border-slate-100">
+        <span class="text-sm text-slate-600">Fetched</span>
+        <span class="text-sm font-bold text-slate-900">{{ analytics.fetched_at|date:'M d, H:i' }}</span>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  {% include "components/empty_state.html" with title="No analytics data yet" description="Analytics will appear once the platform fetches engagement data." %}
+  {% endif %}
+
+  <div class="flex justify-center">
+    <a href="{% url 'social_accounts:post_detail' post.id %}" class="text-sm font-semibold text-primary hover:underline">View post details &rarr;</a>
+  </div>
+</div>
+{% endblock %}

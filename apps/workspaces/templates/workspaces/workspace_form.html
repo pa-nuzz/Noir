@@ -1,0 +1,153 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}{% if editing %}Edit{% else %}Create{% endif %} Workspace{% endblock %}
+{% block page_title %}{% if editing %}Edit Workspace{% else %}Create Workspace{% endif %}{% endblock %}
+{% block content %}
+
+<div class="page-shell max-w-none space-y-8">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="flex items-center gap-4 min-w-0">
+      <a href="{% if editing %}{% url 'workspaces:detail' workspace.id %}{% else %}{% url 'workspaces:list' %}{% endif %}" class="p-2 rounded-xl hover:bg-slate-100 transition-colors flex-shrink-0" title="Back">
+        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      </a>
+      <div class="min-w-0">
+        <h2 class="page-title truncate">{% if editing %}Edit Workspace{% else %}Create Workspace{% endif %}</h2>
+        <p class="page-subtitle truncate">{% if editing %}Update the name and description of {{ workspace.name }}.{% else %}Set up a new workspace to organize your team, campaigns, and media.{% endif %}</p>
+      </div>
+    </div>
+  </div>
+
+  {% if messages %}
+  <div class="space-y-2">
+    {% for message in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm font-semibold
+      {% if message.tags == 'success' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+      {% elif message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200
+      {% else %}bg-indigo-50 text-indigo-700 border border-indigo-200{% endif %}">
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+
+    <div class="xl:col-span-4 space-y-6">
+      <div class="premium-surface card-elevate surface-hover-clean section-card">
+        <div class="section-head">
+          <h2 class="section-title">{% if editing %}Workspace Details{% else %}Getting Started{% endif %}</h2>
+          <p class="section-subtitle">{% if editing %}Quick overview of this workspace{% else %}What you need to know{% endif %}</p>
+        </div>
+        <ul class="text-sm text-slate-600 space-y-3 leading-relaxed">
+          <li class="flex items-start gap-2.5">
+            <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            </span>
+            <span>Workspaces group campaigns, members, and assets.</span>
+          </li>
+          <li class="flex items-start gap-2.5">
+            <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            </span>
+            <span>You become the owner and can invite teammates with admin, member roles.</span>
+          </li>
+          <li class="flex items-start gap-2.5">
+            <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            </span>
+            <span>Each workspace can connect its own storage backend (Local, Google Drive, S3).</span>
+          </li>
+          <li class="flex items-start gap-2.5">
+            <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            </span>
+            <span>You can rename or delete the workspace any time from its settings.</span>
+          </li>
+        </ul>
+      </div>
+
+      {% if editing %}
+      <div class="premium-surface card-elevate surface-hover-clean section-card">
+        <div class="section-head">
+          <h2 class="section-title">Workspace Info</h2>
+          <p class="section-subtitle">System metadata</p>
+        </div>
+        <dl class="space-y-3 text-sm">
+          <div class="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50">
+            <dt class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Owner</dt>
+            <dd class="font-semibold text-slate-800 truncate">{{ workspace.created_by.get_full_name|default:workspace.created_by.email }}</dd>
+          </div>
+          <div class="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50">
+            <dt class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Created</dt>
+            <dd class="font-semibold text-slate-800">{{ workspace.created_at|date:'M d, Y' }}</dd>
+          </div>
+          <div class="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50">
+            <dt class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Last updated</dt>
+            <dd class="font-semibold text-slate-800">{{ workspace.updated_at|date:'M d, Y' }}</dd>
+          </div>
+        </dl>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="xl:col-span-8 space-y-6">
+
+      <div class="premium-surface card-elevate section-card">
+        <div class="section-head">
+          <h2 class="section-title">{% if editing %}Workspace Information{% else %}New Workspace{% endif %}</h2>
+          <p class="section-subtitle">{% if editing %}Edit the basic details below{% else %}Give your workspace a name and an optional description{% endif %}</p>
+        </div>
+        <form method="post" class="space-y-5">
+          {% csrf_token %}
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-2">Workspace Name</label>
+            <input type="text" name="name" value="{{ workspace.name|default:'' }}" class="auth-input" placeholder="e.g. Marketing Team" required maxlength="120">
+            <p class="text-[10px] text-slate-400 mt-2 font-medium">A short, clear name your team will recognize.</p>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-2">Description <span class="text-slate-400 font-normal">(optional)</span></label>
+            <textarea name="description" rows="5" class="auth-input" placeholder="What is this workspace for? Who is it for?">{{ workspace.description|default:'' }}</textarea>
+            <p class="text-[10px] text-slate-400 mt-2 font-medium">Helps teammates understand the workspace's purpose at a glance.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-3 pt-2">
+            <button type="submit" class="btn-primary inline-flex items-center gap-2 shadow-lg shadow-indigo-500/20">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {% if editing %}
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                {% else %}
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                {% endif %}
+              </svg>
+              {% if editing %}Save Changes{% else %}Create Workspace{% endif %}
+            </button>
+            <a href="{% if editing %}{% url 'workspaces:detail' workspace.id %}{% else %}{% url 'workspaces:list' %}{% endif %}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors">
+              Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+
+      {% if editing %}
+      <div class="premium-surface card-elevate section-card border border-red-100">
+        <div class="section-head flex items-start justify-between gap-4">
+          <div>
+            <h2 class="section-title text-red-600">Danger Zone</h2>
+            <p class="section-subtitle">Irreversible and destructive actions</p>
+          </div>
+          {% include "components/badge.html" with label="Caution" variant="red" dot=True %}
+        </div>
+        <div class="rounded-xl border border-red-200 bg-red-50/60 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p class="font-bold text-slate-800 text-sm">Delete this workspace</p>
+            <p class="text-xs text-slate-600 mt-1">Once deleted, this workspace and all of its campaigns, members, and assets will be permanently removed. This cannot be undone.</p>
+          </div>
+          <a href="{% url 'workspaces:delete' workspace.id %}" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors shadow-sm flex-shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            Delete Workspace
+          </a>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

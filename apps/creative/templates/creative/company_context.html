@@ -1,0 +1,115 @@
+{% extends 'base_dashboard.html' %}
+{% load workspace_tags %}
+{% block title %}Company Context — Creative Suite{% endblock %}
+{% block page_title %}Company Context{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none space-y-6">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Company Context</h1>
+      <p class="text-sm text-slate-500 mt-1">Define your brand's market position, cultural context, and visual identity — this context is fed into every AI strategy generation for Nepal-market relevance.</p>
+    </div>
+    <div class="flex gap-2">
+      {% include "components/button.html" with label="Back to Strategies" href="/creative/strategy/" class="!bg-slate-100 !text-slate-700 hover:!bg-slate-200 !bg-none" %}
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+    <!-- Left: Form -->
+    <form method="post" class="premium-surface rounded-2xl p-6 space-y-5">
+      {% csrf_token %}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="id_company_name" class="block text-sm font-semibold text-slate-700 mb-1.5">Company Name</label>
+          <input type="text" id="id_company_name" name="company_name" value="{{ context.company_name|default:'' }}" class="input-field w-full" placeholder="Your brand or organization name">
+        </div>
+        <div>
+          <label for="id_industry" class="block text-sm font-semibold text-slate-700 mb-1.5">Industry</label>
+          <select id="id_industry" name="industry" class="input-field w-full">
+            <option value="">Select industry...</option>
+            {% for industry in industries %}
+            <option value="{{ industry.0 }}" {% if context.industry == industry.0 %}selected{% endif %}>{{ industry.1 }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="id_country" class="block text-sm font-semibold text-slate-700 mb-1.5">Primary Market</label>
+          <select id="id_country" name="country" class="input-field w-full">
+            <option value="">Select market...</option>
+            {% for country in countries %}
+            <option value="{{ country.0 }}" {% if context.country == country.0 %}selected{% endif %}>{{ country.1 }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">Brand Voice</label>
+          <input type="text" name="brand_voice" value="{{ context.brand_voice|default:'' }}" class="input-field w-full" placeholder="e.g., Professional, friendly, aspirational">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">Target Audience</label>
+          <input type="text" name="target_audience" value="{{ context.target_audience|default:'' }}" class="input-field w-full" placeholder="e.g., Urban millennials, SME owners">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">Mission Statement</label>
+          <input type="text" name="mission_statement" value="{{ context.mission_statement|default:'' }}" class="input-field w-full" placeholder="Our mission is...">
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">Goals &amp; Objectives</label>
+          <textarea name="goals" rows="3" class="input-field w-full" placeholder="Company goals, marketing objectives, key results...">{{ context.goals|default:'' }}</textarea>
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">Cultural Context &amp; Market Notes</label>
+          <textarea name="cultural_context" rows="4" class="input-field w-full" placeholder="Describe cultural nuances, local festivals, mobile-first consumption, language preferences, etc.">{{ context.cultural_context|default:'' }}</textarea>
+          <p class="text-xs text-slate-400 mt-1.5">This context is included in every AI prompt for strategy generation.</p>
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">Brand Theme &amp; Visual Style</label>
+          <textarea name="brand_theme" rows="3" class="input-field w-full" placeholder="Color palette, typography, design direction, brand guidelines...">{{ context.brand_theme|default:'' }}</textarea>
+          <p class="text-xs text-slate-400 mt-1.5">Describes visual identity for image/logo generation prompts.</p>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        {% include "components/button.html" with label="Save Context" type="submit" icon="M5 13l4 4L19 7" %}
+      </div>
+    </form>
+
+    <!-- Right: Prompt Preview -->
+    <div class="premium-surface rounded-2xl p-6 flex flex-col">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm font-bold text-slate-800">AI Prompt Preview</h2>
+        <button onclick="copyPrompt()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors flex items-center gap-1">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+          Copy
+        </button>
+      </div>
+      <div class="bg-slate-50 rounded-xl p-4 text-xs text-slate-600 leading-relaxed font-mono whitespace-pre-wrap flex-1 overflow-y-auto max-h-none" id="prompt-preview">{% if context.company_name or context.industry or context.country or context.cultural_context %}{% spaceless %}
+--- Company Context ---
+Company: {{ context.company_name|default:"—" }}
+Industry: {{ context.industry|default:"—" }}
+Market: {% if context.country %}{{ context.get_country_display }}{% else %}—{% endif %}
+Target Audience: {{ context.target_audience|default:"—" }}
+Brand Voice: {{ context.brand_voice|default:"—" }}
+Mission: {{ context.mission_statement|default:"—" }}
+Goals: {{ context.goals|default:"—" }}
+Cultural Context: {{ context.cultural_context|default:"—" }}
+Brand Theme: {{ context.brand_theme|default:"—" }}
+{% endspaceless %}{% else %}<span class="text-slate-400 italic">Fill in the fields above to see how your context will be injected into AI prompts for strategy generation.</span>{% endif %}</div>
+      <p class="text-[10px] text-slate-400 mt-3">This context is automatically prepended to every AI prompt when generating strategies.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+function copyPrompt() {
+  var el = document.getElementById('prompt-preview');
+  var text = el.innerText || el.textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = event.target.closest('button') || document.querySelector('[onclick="copyPrompt()"]');
+    var orig = btn.innerHTML;
+    btn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Copied!';
+    setTimeout(function() { btn.innerHTML = orig; }, 2000);
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Create Webhook — Intelligent Digital Automation{% endblock %}
+{% block page_title %}Create Webhook{% endblock %}
+{% block content %}
+<div class="page-shell max-w-2xl">
+  <form method="post" class="premium-surface card-elevate px-6 py-6 space-y-5">
+    {% csrf_token %}
+    <div>
+      <label class="block text-sm font-semibold text-slate-700 mb-1">Name</label>
+      <input type="text" name="name" required class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g. Slack notifications">
+    </div>
+    <div>
+      <label class="block text-sm font-semibold text-slate-700 mb-1">Endpoint URL</label>
+      <input type="url" name="url" required class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="https://hooks.example.com/events">
+      <p class="text-xs text-slate-400 mt-1">Must be HTTPS. We'll POST JSON events to this URL.</p>
+    </div>
+    <div>
+      <label class="block text-sm font-semibold text-slate-700 mb-2">Subscribe to events</label>
+      <div class="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+        {% for event_key, event_label in events %}
+        <label class="flex items-center gap-2 text-sm">
+          <input type="checkbox" name="events" value="{{ event_key }}" class="rounded border-slate-300">
+          <span>{{ event_label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      <p class="text-xs text-slate-400 mt-1">Leave all unchecked to receive all events.</p>
+    </div>
+    <div class="pt-3 flex items-center gap-3">
+      <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition">Create Webhook</button>
+      <a href="{% url 'webhooks:list' %}" class="text-sm text-slate-500 hover:text-slate-700">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

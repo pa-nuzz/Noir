@@ -1,0 +1,260 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}{{ workspace.name }} — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}{{ workspace.name }}{% endblock %}
+{% block content %}
+
+<div class="page-shell max-w-none space-y-8">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="flex items-center gap-4 min-w-0">
+      <div class="w-14 h-14 rounded-2xl bg-primary-light text-primary flex items-center justify-center text-2xl font-bold ring-2 ring-indigo-100 flex-shrink-0">
+        {{ workspace.name|first|upper }}
+      </div>
+      <div class="min-w-0">
+        <h2 class="page-title truncate">{{ workspace.name }}</h2>
+        <p class="page-subtitle truncate">
+          {% if workspace.description %}{{ workspace.description }}{% else %}Created {{ workspace.created_at|date:'M d, Y' }} by {{ workspace.created_by.get_full_name|default:workspace.created_by.email }}{% endif %}
+        </p>
+      </div>
+      {% if active_workspace and active_workspace.id == workspace.id %}
+      {% include "components/badge.html" with label="Active" variant="green" dot=True %}
+      {% endif %}
+    </div>
+    <div class="flex items-center gap-2 flex-shrink-0">
+      <a href="{% url 'workspaces:overview' workspace.id %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/></svg>
+        Overview
+      </a>
+      <a href="{% url 'workspaces:activate' workspace.id %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold hover:bg-emerald-100 transition-colors border border-emerald-200">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Activate
+      </a>
+      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
+        {% if membership.role == 'owner' %}bg-amber-50 text-amber-700
+        {% elif membership.role == 'admin' %}bg-indigo-50 text-indigo-700
+        {% else %}bg-slate-100 text-slate-600{% endif %}">
+        <span class="w-1.5 h-1.5 rounded-full {% if membership.role == 'owner' %}bg-amber-500{% elif membership.role == 'admin' %}bg-indigo-500{% else %}bg-slate-400{% endif %}"></span>
+        {{ membership.get_role_display }}
+      </span>
+      {% if membership.role == 'owner' or membership.role == 'admin' %}
+      <a href="{% url 'workspaces:edit' workspace.id %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:border-primary/30 hover:text-primary transition-colors">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+        Edit
+      </a>
+      {% endif %}
+      {% if membership.role == 'owner' %}
+      <button onclick="openModal('deleteModal')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50 transition-colors cursor-pointer">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        Delete
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+
+    <div class="xl:col-span-4 space-y-6">
+
+      <div class="premium-surface card-elevate surface-hover-clean section-card">
+        <div class="section-head">
+          <h2 class="section-title">Quick Actions</h2>
+          <p class="section-subtitle">Manage this workspace</p>
+        </div>
+        <div class="space-y-2">
+          <a href="{% url 'workspaces:overview' workspace.id %}" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-sm font-semibold transition-colors">
+            <span class="w-8 h-8 rounded-lg bg-primary-light text-primary flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/></svg>
+            </span>
+            <span class="flex-1">Workspace Overview</span>
+            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </a>
+          <a href="{% url 'workspaces:social_hub' workspace.id %}" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-sm font-semibold transition-colors">
+            <span class="w-8 h-8 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+            </span>
+            <span class="flex-1">Social Hub</span>
+            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </a>
+          <a href="{% url 'workspaces:member_list' workspace.id %}" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-sm font-semibold transition-colors">
+            <span class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </span>
+            <span class="flex-1">Manage Members</span>
+            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </a>
+          
+          {% if membership.role == 'owner' or membership.role == 'admin' %}
+          <a href="{% url 'workspaces:permissions' workspace.id %}" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-sm font-semibold transition-colors">
+            <span class="w-8 h-8 rounded-lg bg-violet-50 text-violet-600 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            </span>
+            <span class="flex-1">Permissions</span>
+            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </a>
+          {% endif %}
+          {% if membership.role == 'owner' or membership.role == 'admin' %}
+          <a href="{% url 'workspaces:audit_log' workspace.id %}" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-sm font-semibold transition-colors">
+            <span class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            </span>
+            <span class="flex-1">Audit Log</span>
+            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </a>
+          {% endif %}
+          {% if membership.role != 'owner' %}
+          <button onclick="openModal('leaveModal')" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-sm font-semibold transition-colors cursor-pointer w-full text-left">
+            <span class="w-8 h-8 rounded-lg bg-white text-red-600 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            </span>
+            <span class="flex-1">Leave Workspace</span>
+            <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </button>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="premium-surface card-elevate surface-hover-clean section-card">
+        <div class="section-head">
+          <h2 class="section-title">At a Glance</h2>
+          <p class="section-subtitle">Workspace stats</p>
+        </div>
+        <div class="grid grid-cols-1 gap-3">
+          <div class="rounded-xl bg-slate-50 px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              </span>
+              <span class="text-xs font-semibold text-slate-600">Members</span>
+            </div>
+            <span class="text-lg font-bold text-slate-900">{{ members|length }}</span>
+          </div>
+          <div class="rounded-xl bg-slate-50 px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+              </span>
+              <span class="text-xs font-semibold text-slate-600">Invitations</span>
+            </div>
+            <span class="text-lg font-bold text-slate-900">{{ workspace.invitations.count }}</span>
+          </div>
+          <div class="rounded-xl bg-slate-50 px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              </span>
+              <span class="text-xs font-semibold text-slate-600">Audit Events</span>
+            </div>
+            <span class="text-lg font-bold text-slate-900">{{ workspace.audit_logs.count }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="premium-surface card-elevate surface-hover-clean section-card">
+        <div class="section-head">
+          <h2 class="section-title">Workspace Info</h2>
+          <p class="section-subtitle">Details &amp; ownership</p>
+        </div>
+        <dl class="text-sm space-y-3">
+          <div class="flex justify-between items-start gap-3">
+            <dt class="text-slate-500 flex-shrink-0">Created by</dt>
+            <dd class="font-semibold text-slate-800 text-right">{{ workspace.created_by.get_full_name|default:workspace.created_by.email }}</dd>
+          </div>
+          <div class="flex justify-between items-start gap-3">
+            <dt class="text-slate-500 flex-shrink-0">Created on</dt>
+            <dd class="font-semibold text-slate-800 text-right">{{ workspace.created_at|date:'M d, Y' }}</dd>
+          </div>
+          <div class="flex justify-between items-start gap-3">
+            <dt class="text-slate-500 flex-shrink-0">Last updated</dt>
+            <dd class="font-semibold text-slate-800 text-right">{{ workspace.updated_at|date:'M d, Y' }}</dd>
+          </div>
+          {% if workspace.description %}
+          <div class="pt-2 border-t border-slate-100">
+            <dt class="text-slate-500 mb-1">Description</dt>
+            <dd class="text-slate-700 leading-relaxed">{{ workspace.description }}</dd>
+          </div>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+
+    <div class="xl:col-span-8 space-y-6">
+
+      <div class="premium-surface card-elevate section-card" id="card-members">
+        <div class="section-head flex items-start justify-between gap-4">
+          <div>
+            <h2 class="section-title">Members</h2>
+            <p class="section-subtitle">{{ members|length }} member{{ members|length|pluralize }} in this workspace</p>
+          </div>
+          {% if membership.role == 'owner' or membership.role == 'admin' %}
+          <a href="{% url 'workspaces:member_list' workspace.id %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:border-primary/30 hover:text-primary transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Invite Members
+          </a>
+          {% endif %}
+        </div>
+        <div class="divide-y divide-slate-100 -mx-6">
+          {% for m in members %}
+          <div class="px-6 py-4 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                {{ m.user.first_name|first|upper }}{{ m.user.last_name|first|upper }}
+              </div>
+              <div class="min-w-0">
+                <p class="font-bold text-slate-800 truncate">{{ m.user.get_full_name|default:m.user.email }}</p>
+                <p class="text-xs text-slate-500 mt-0.5 truncate">{{ m.user.email }}</p>
+              </div>
+            </div>
+            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex-shrink-0
+              {% if m.role == 'owner' %}bg-amber-50 text-amber-700
+              {% elif m.role == 'admin' %}bg-indigo-50 text-indigo-700
+              {% elif m.role == 'member' %}bg-emerald-50 text-emerald-700
+              {% else %}bg-slate-100 text-slate-600{% endif %}">
+              {{ m.get_role_display }}
+            </span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if recent_audit %}
+      <div class="premium-surface card-elevate section-card" id="card-audit">
+        <div class="section-head flex items-start justify-between gap-4">
+          <div>
+            <h2 class="section-title">Recent Activity</h2>
+            <p class="section-subtitle">Latest events in this workspace</p>
+          </div>
+          {% if membership.role == 'owner' or membership.role == 'admin' %}
+          <a href="{% url 'workspaces:audit_log' workspace.id %}" class="text-xs font-bold text-primary hover:underline uppercase tracking-wider">View all</a>
+          {% endif %}
+        </div>
+        <div class="space-y-2">
+          {% for log in recent_audit %}
+          <div class="flex items-start gap-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
+            <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm text-slate-800 font-semibold">{{ log.action }}</p>
+              <p class="text-xs text-slate-500 mt-0.5">{{ log.created_at|date:'M d, Y · H:i' }}{% if log.user %} · {{ log.user.get_full_name|default:log.user.email }}{% endif %}</p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% url 'workspaces:delete' workspace.id as delete_url %}
+{% url 'workspaces:leave' workspace.id as leave_url %}
+{% with delete_title='Delete "'|add:workspace.name|add:'"' %}
+{% with leave_title='Leave "'|add:workspace.name|add:'"' %}
+{% with delete_content='<div class="text-center"><div class="w-16 h-16 mx-auto rounded-2xl bg-red-50 text-red-500 flex items-center justify-center mb-4"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></div><p class="text-sm text-gray-500 mb-6">This action cannot be undone. All workspace data, memberships, and audit logs will be permanently deleted.</p><div class="flex gap-3 justify-center"><button type="button" onclick="closeModal(&#39;deleteModal&#39;)" class="px-6 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors cursor-pointer">Cancel</button><button type="submit" class="px-6 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors cursor-pointer">Delete Workspace</button></div></div>' %}
+{% with leave_content='<div class="text-center"><div class="w-16 h-16 mx-auto rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center mb-4"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg></div><p class="text-sm text-gray-500 mb-6">You will lose access to this workspace and all its data. You can rejoin if invited again.</p><div class="flex gap-3 justify-center"><button type="button" onclick="closeModal(&#39;leaveModal&#39;)" class="px-6 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors cursor-pointer">Cancel</button><button type="submit" class="px-6 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors cursor-pointer">Leave Workspace</button></div></div>' %}
+{% include "components/modal.html" with id="deleteModal" title=delete_title content=delete_content form_action=delete_url form_class="flex gap-3 justify-center" %}
+
+{% include "components/modal.html" with id="leaveModal" title=leave_title content=leave_content form_action=leave_url form_class="flex gap-3 justify-center" %}
+{% endwith %}{% endwith %}{% endwith %}{% endwith %}
+
+
+{% endblock %}

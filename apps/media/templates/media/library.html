@@ -1,0 +1,86 @@
+{% extends 'base_dashboard.html' %}
+{% load workspace_tags %}
+{% block title %}Media Library — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Media Library{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none space-y-6">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Media Library</h1>
+      <p class="text-sm text-slate-500 mt-1">Upload, organize, and search your media assets</p>
+    </div>
+    <div class="flex gap-3">
+{% can_create 'media' as can_create_media %}{% if can_create_media %}
+      {% url 'media:folder_create' as folder_create_url %}{% include "components/button.html" with label="New Folder" variant="secondary" icon="M9 13h6m-3-3v6m-5 4h10a2 2 0 002-2V7a2 2 0 00-2-2H9l-3 3H5a2 2 0 00-2 2v8a2 2 0 002 2z" href=folder_create_url %}
+{% endif %}
+{% if can_create_media %}
+      {% url 'media:upload' as upload_url %}{% include "components/button.html" with label="Upload" variant="primary" icon="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" href=upload_url %}
+{% endif %}
+    </div>
+  </div>
+
+  <div class="flex gap-2 flex-wrap">
+    <a href="{% url 'media:library' %}" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors {% if not current_type %}bg-primary text-white border-primary{% else %}bg-white text-slate-600 border-slate-300 hover:border-slate-400{% endif %}">All</a>
+    <a href="{% url 'media:library' %}?type=image" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors {% if current_type == 'image' %}bg-primary text-white border-primary{% else %}bg-white text-slate-600 border-slate-300 hover:border-slate-400{% endif %}">Images</a>
+    <a href="{% url 'media:library' %}?type=video" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors {% if current_type == 'video' %}bg-primary text-white border-primary{% else %}bg-white text-slate-600 border-slate-300 hover:border-slate-400{% endif %}">Videos</a>
+    <a href="{% url 'media:library' %}?type=document" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors {% if current_type == 'document' %}bg-primary text-white border-primary{% else %}bg-white text-slate-600 border-slate-300 hover:border-slate-400{% endif %}">Documents</a>
+  </div>
+
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-4">
+    {% for folder in folders %}
+    <a href="{% url 'media:folder_detail' folder.pk %}" class="premium-surface rounded-xl p-4 hover:shadow-md transition-all text-center group">
+      <svg class="w-10 h-10 mx-auto text-amber-500 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+      <p class="text-xs font-semibold text-slate-800 mt-2 truncate">{{ folder.name }}</p>
+    </a>
+    {% endfor %}
+
+    {% for a in root_assets %}
+    <a href="{% url 'media:detail' a.pk %}" class="premium-surface rounded-xl overflow-hidden hover:shadow-md transition-all group">
+      {% if a.file_type == 'image' and a.file %}
+      <div class="aspect-square bg-slate-100 flex items-center justify-center overflow-hidden">
+        <img src="{{ a.file.url }}" alt="{{ a.alt_text|default:a.filename }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform">
+      </div>
+      {% else %}
+      <div class="aspect-square bg-slate-100 flex items-center justify-center">
+        <svg class="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+      </div>
+      {% endif %}
+      <div class="p-2.5">
+        <p class="text-xs font-medium text-slate-800 truncate">{{ a.filename }}</p>
+        <p class="text-[10px] text-gray-500 mt-0.5">{{ a.size_display }}</p>
+      </div>
+    </a>
+    {% endfor %}
+
+    {% for a in assets %}
+    <a href="{% url 'media:detail' a.pk %}" class="premium-surface rounded-xl overflow-hidden hover:shadow-md transition-all group">
+      {% if a.file_type == 'image' and a.file %}
+      <div class="aspect-square bg-slate-100 flex items-center justify-center overflow-hidden">
+        <img src="{{ a.file.url }}" alt="{{ a.alt_text|default:a.filename }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform">
+      </div>
+      {% else %}
+      <div class="aspect-square bg-slate-100 flex items-center justify-center">
+        <svg class="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+      </div>
+      {% endif %}
+      <div class="p-2.5">
+        <p class="text-xs font-medium text-slate-800 truncate">{{ a.filename }}</p>
+        <p class="text-[10px] text-gray-500 mt-0.5">{{ a.size_display }}</p>
+      </div>
+    </a>
+    {% empty %}
+    {% if not root_assets and not folders %}
+    <div class="col-span-full premium-surface rounded-2xl p-12 text-center">
+      <p class="text-sm text-gray-500">No assets yet.</p>
+      {% if can_create_media %}
+      <a href="{% url 'media:upload' %}" class="inline-flex mt-4 items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold">Upload your first file</a>
+      {% else %}
+      <p class="text-sm text-gray-400 mt-2">Contact an administrator to upload assets.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

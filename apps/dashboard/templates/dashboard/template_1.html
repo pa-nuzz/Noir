@@ -1,0 +1,12 @@
+{% extends "base_dashboard.html" %}
+{% block title %}Welcome Email — IDA AI{% endblock %}
+{% block content %}
+<div class="page-shell max-w-xl mx-auto">
+  <div class="premium-surface card-elevate section-card">
+    <h2 class="section-title mb-2">Welcome to IDA AI!</h2>
+    <p>Hi {{ user.first_name }},</p>
+    <p>We're excited to have you on board. Get started by exploring your dashboard and sending your first campaign.</p>
+    <p>Best regards,<br>The IDA AI Team</p>
+  </div>
+</div>
+{% endblock %}

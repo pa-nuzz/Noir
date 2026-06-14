@@ -1,0 +1,847 @@
+
+{% extends "base.html" %}
+{% load static %}
+{% block title %}IDA — Intelligent Digital Automation Platform{% endblock %}
+{% block extra_head %}
+<style>
+/* ── Core design tokens matching dashboard ── */
+:root {
+  --ink:        #0A2540;
+  --ink-muted:  #445B73;
+  --ink-subtle: #8FA5BC;
+  --primary:    #6D28D9;
+  --primary-h:  #5B21B6;
+  --primary-l:  #EDE9FE;
+  --cyan:       #06B6D4;
+  --cyan-l:     #ECFEFF;
+  --surface:    #FFFFFF;
+  --surface-r:  #F8FAFC;
+  --border:     #E2E8F0;
+  --border-h:   #CBD5E1;
+}
+
+/* ── Shared surface card (mirrors premium-surface) ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  transition: border-color .15s, box-shadow .15s;
+}
+.card:hover { border-color: var(--border-h); }
+.card-raised {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(10,37,64,.05), 0 4px 16px rgba(10,37,64,.04);
+}
+
+/* ── Pill badge ── */
+.badge {
+  display: inline-flex; align-items: center; gap: .375rem;
+  background: var(--primary-l); color: var(--primary);
+  font-size: .65rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  padding: .3rem .75rem; border-radius: 9999px;
+}
+.badge-cyan { background: var(--cyan-l); color: #0891B2; }
+
+/* ── Section heading ── */
+.section-label { font-family: 'Plus Jakarta Sans', sans-serif; font-size: .65rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-subtle); margin-bottom: .75rem; }
+
+/* ── Status chips (from Social Hub) ── */
+.status-draft      { background: #F1F5F9; color: #475569; }
+.status-scheduled  { background: #EDE9FE; color: #6D28D9; }
+.status-published  { background: #ECFDF5; color: #059669; }
+.status-failed     { background: #FEF2F2; color: #DC2626; }
+
+/* ── Platform chips ── */
+.plat-facebook  { background: #EFF6FF; color: #1D4ED8; }
+.plat-instagram { background: #FDF2F8; color: #BE185D; }
+.plat-twitter   { background: #F0F9FF; color: #0369A1; }
+.plat-linkedin  { background: #EFF6FF; color: #1E40AF; }
+.plat-tiktok    { background: #F8FAFC; color: #1E293B; }
+.plat-youtube   { background: #FEF2F2; color: #B91C1C; }
+.chip { display: inline-flex; align-items: center; gap: .375rem; padding: .25rem .625rem; border-radius: .5rem; font-size: .7rem; font-weight: 600; }
+
+/* ── Queue health bar ── */
+.queue-bar { height: 6px; border-radius: 9999px; background: var(--border); overflow: hidden; }
+.queue-bar-fill { height: 100%; border-radius: 9999px; transition: width .6s ease; }
+
+/* ── Marquee ── */
+@keyframes marqueeLeft { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.trust-marquee { overflow: hidden; mask-image: linear-gradient(90deg, transparent 0, black 8%, black 92%, transparent 100%); -webkit-mask-image: linear-gradient(90deg, transparent 0, black 8%, black 92%, transparent 100%); }
+.trust-marquee-inner { display: flex; width: max-content; animation: marqueeLeft 36s linear infinite; }
+
+/* ── Float anims ── */
+@keyframes floatA { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+@keyframes floatB { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+.float-a { animation: floatA 7s ease-in-out infinite; }
+.float-b { animation: floatB 5s ease-in-out infinite; }
+
+/* ── FAQ ── */
+.faq-answer { max-height:0; overflow:hidden; transition:max-height .32s ease, padding .3s ease; }
+.faq-item.open .faq-answer { max-height:260px; }
+.faq-chevron { transition: transform .3s ease; }
+.faq-item.open .faq-chevron { transform: rotate(180deg); }
+
+/* ── Scroll reveal ── */
+.reveal { opacity:0; transform:translateY(20px); transition: opacity .55s ease, transform .55s ease; }
+.reveal.in { opacity:1; transform:none; }
+
+/* ── Bento hover lift ── */
+.bento-card { transition: border-color .2s, box-shadow .2s, transform .2s; }
+.bento-card:hover { border-color: #C4B5FD; box-shadow: 0 8px 32px -8px rgba(109,40,217,.12); transform: translateY(-2px); }
+
+/* ── Integration chip ── */
+.integ-chip { transition: border-color .18s, box-shadow .18s, transform .18s; }
+.integ-chip:hover { border-color: #A78BFA; box-shadow: 0 6px 20px -6px rgba(109,40,217,.2); transform: translateY(-2px); }
+
+/* ── Tab underline accent (from Social Hub) ── */
+.feature-tab { display:inline-flex; align-items:center; gap:8px; padding:10px 18px; font-size:.875rem; font-weight:600; color:var(--ink-subtle); border-bottom:2px solid transparent; cursor:pointer; transition:all .15s; white-space:nowrap; }
+.feature-tab.active { color:var(--ink); border-bottom-color:var(--cyan); font-weight:700; }
+.feature-tab:hover:not(.active) { color:var(--ink); }
+
+/* ── Pricing toggle ── */
+.price-display { display:inline-block; transition: opacity .15s; }
+.ptoggle { padding: .4rem 1.1rem; border-radius:9999px; font-size:.8rem; font-weight:600; border:none; cursor:pointer; transition:all .15s; }
+.ptoggle.active { background:white; color:var(--ink); box-shadow:0 1px 3px rgba(10,37,64,.1); }
+.ptoggle:not(.active) { background:transparent; color:var(--ink-muted); }
+
+/* ── Hero graph bars ── */
+.bar { border-radius: 4px 4px 0 0; min-width:10px; background: #EDE9FE; transition: background .2s; }
+.bar.accent { background: var(--primary); }
+
+@media(prefers-reduced-motion:reduce){
+  .float-a,.float-b,.trust-marquee-inner,.reveal{ animation:none!important; opacity:1; transform:none; }
+}
+</style>
+{% endblock %}
+{% block content %}
+
+<!-- ══════════════════════════════════════════
+     HERO
+══════════════════════════════════════════ -->
+<section class="relative overflow-hidden pt-14 pb-20 sm:pt-18">
+  <!-- bg glows -->
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-[700px] h-80 bg-primary/8 rounded-full blur-3xl"></div>
+    <div class="absolute top-32 right-0 w-72 h-72 bg-cyan/8 rounded-full blur-3xl"></div>
+  </div>
+  <!-- subtle dot grid -->
+  <div class="absolute inset-0 pointer-events-none opacity-40" style="background-image:radial-gradient(circle, #CBD5E1 1px, transparent 1px);background-size:28px 28px;"></div>
+
+  <div class="relative max-w-8xl mx-auto px-5 sm:px-8">
+    <!-- CENTER HEADLINE -->
+    <div class="max-w-4xl mx-auto text-center">
+
+      <h1 class="font-serif text-[2.8rem] sm:text-[3.75rem] lg:text-[4.75rem] text-ink leading-[1.05] tracking-tight">
+        One platform.<br>
+        <em class="not-italic" style="color:var(--primary)">Every channel.</em>
+      </h1>
+      <p class="mt-5 text-ink-muted text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed">
+        IDA unifies email, social, content, and AI automation into one clean workspace — so your team ships campaigns that actually convert.
+      </p>
+      <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+        <a href="{% if user.is_authenticated %}{% url 'dashboard:dashboard' %}{% else %}{% url 'accounts:register' %}{% endif %}" class="group inline-flex items-center gap-2 bg-primary hover:bg-primary-hover text-white font-semibold text-sm px-7 py-3.5 rounded-xl shadow-lg shadow-primary/20 transition-all">
+          Start for free
+          <svg class="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+        <button type="button" id="openDemoModal" class="inline-flex items-center gap-2 bg-white border border-surface-border text-ink-muted hover:text-ink hover:border-border-h font-semibold text-sm px-7 py-3.5 rounded-xl transition-all shadow-sm">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          Watch demo
+        </button>
+      </div>
+      <div class="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-xs text-ink-subtle">
+        <span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> No credit card</span>
+        <span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> 5-min setup</span>
+        <span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> Free forever plan</span>
+      </div>
+    </div>
+
+    <!-- HERO DASHBOARD PREVIEW — center-anchored -->
+    <div class="relative mt-14 max-w-5xl mx-auto hidden md:block">
+      <!-- main dashboard -->
+      <div class="card-raised rounded-2xl overflow-hidden float-a">
+        <div class="flex items-center gap-2 border-b border-border px-5 py-3 bg-surface-raised">
+          <span class="h-2.5 w-2.5 rounded-full bg-border"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-border"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-border"></span>
+          <span class="ml-3 text-[10px] font-bold uppercase tracking-[.18em] text-ink-subtle">IDA Dashboard</span>
+          <span class="ml-auto inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Live
+          </span>
+        </div>
+        <!-- KPI strip like Social Hub -->
+        <div class="grid grid-cols-4 divide-x divide-border bg-surface-raised">
+          <div class="px-6 py-4">
+            <p class="text-[9px] font-bold uppercase tracking-wider text-ink-subtle mb-1">Emails Sent</p>
+            <p class="text-xl font-bold text-ink">42.1K</p>
+            <p class="text-[10px] font-semibold text-emerald-600 mt-0.5 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>18%</p>
+          </div>
+          <div class="px-6 py-4">
+            <p class="text-[9px] font-bold uppercase tracking-wider text-ink-subtle mb-1">Social Reach</p>
+            <p class="text-xl font-bold text-ink">128K</p>
+            <p class="text-[10px] font-semibold text-emerald-600 mt-0.5 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>24%</p>
+          </div>
+          <div class="px-6 py-4">
+            <p class="text-[9px] font-bold uppercase tracking-wider text-ink-subtle mb-1">Engagement</p>
+            <p class="text-xl font-bold text-ink">48.4%</p>
+            <p class="text-[10px] font-semibold text-emerald-600 mt-0.5 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>6.2%</p>
+          </div>
+          <div class="px-6 py-4">
+            <p class="text-[9px] font-bold uppercase tracking-wider text-ink-subtle mb-1">Deliverability</p>
+            <p class="text-xl font-bold text-ink">98.4%</p>
+            <p class="text-[10px] font-semibold text-emerald-600 mt-0.5 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>Best ever</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-4 p-5">
+          <!-- Campaign performance chart -->
+          <div class="col-span-2 rounded-xl border border-border bg-surface-raised p-4">
+            <div class="flex items-center justify-between mb-3">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-ink-subtle">Campaign Performance</p>
+              <span class="text-[10px] font-semibold text-ink-subtle">Last 7 days</span>
+            </div>
+            <div class="h-24 flex items-end gap-1.5">
+              <div class="bar flex-1" style="height:32%"></div>
+              <div class="bar flex-1" style="height:50%"></div>
+              <div class="bar flex-1" style="height:41%"></div>
+              <div class="bar flex-1" style="height:68%"></div>
+              <div class="bar flex-1" style="height:55%"></div>
+              <div class="bar flex-1" style="height:48%"></div>
+              <div class="bar flex-1 accent" style="height:88%"></div>
+            </div>
+          </div>
+          <!-- Recent posts mini — mirrors Social Hub -->
+          <div class="rounded-xl border border-border overflow-hidden">
+            <div class="px-3.5 py-2.5 border-b border-border bg-surface-raised">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-ink-subtle">Recent Posts</p>
+            </div>
+            <div class="divide-y divide-border">
+              <div class="flex items-center gap-2.5 px-3.5 py-2.5">
+                <span class="chip plat-instagram text-[9px]">Ig</span>
+                <p class="text-[10px] text-ink flex-1 truncate">Q2 Launch campaign</p>
+                <span class="chip status-published text-[9px]">Live</span>
+              </div>
+              <div class="flex items-center gap-2.5 px-3.5 py-2.5">
+                <span class="chip plat-twitter text-[9px]">X</span>
+                <p class="text-[10px] text-ink flex-1 truncate">Product update thread</p>
+                <span class="chip status-scheduled text-[9px]">Sched</span>
+              </div>
+              <div class="flex items-center gap-2.5 px-3.5 py-2.5">
+                <span class="chip plat-linkedin text-[9px]">Li</span>
+                <p class="text-[10px] text-ink flex-1 truncate">Industry insights post</p>
+                <span class="chip status-draft text-[9px]">Draft</span>
+              </div>
+              <div class="flex items-center gap-2.5 px-3.5 py-2.5">
+                <span class="chip plat-facebook text-[9px]">Fb</span>
+                <p class="text-[10px] text-ink flex-1 truncate">Weekend promotion</p>
+                <span class="chip status-published text-[9px]">Live</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Queue health bar — straight from Social Hub design -->
+        <div class="px-5 pb-4">
+          <div class="rounded-xl border border-border bg-surface-raised p-3.5">
+            <div class="flex items-center justify-between mb-2">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-ink-subtle">Queue Health</p>
+              <span class="text-[10px] font-semibold text-emerald-600">14 published</span>
+            </div>
+            <div class="queue-bar">
+              <div class="flex h-full">
+                <div class="h-full bg-slate-300 transition-all" style="width:10%"></div>
+                <div class="h-full bg-primary transition-all" style="width:25%"></div>
+                <div class="h-full bg-amber-400 transition-all" style="width:5%"></div>
+                <div class="h-full bg-emerald-500 transition-all" style="width:55%"></div>
+                <div class="h-full bg-red-400 transition-all" style="width:5%"></div>
+              </div>
+            </div>
+            <div class="flex gap-4 mt-2 text-[9px] font-semibold text-ink-subtle flex-wrap">
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span>Drafts 3</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-primary inline-block"></span>Scheduled 8</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>Publishing 2</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>Published 14</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-400 inline-block"></span>Failed 1</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      
+    </div>
+
+    <!-- Mobile fallback -->
+    <div class="md:hidden mt-10 max-w-sm mx-auto">
+      <div class="card-raised rounded-2xl overflow-hidden">
+        <div class="flex items-center gap-2 border-b border-border bg-surface-raised px-4 py-3">
+          <span class="h-2 w-2 rounded-full bg-border"></span><span class="h-2 w-2 rounded-full bg-border"></span><span class="h-2 w-2 rounded-full bg-border"></span>
+          <span class="ml-2 text-[9px] font-bold uppercase tracking-widest text-ink-subtle">IDA Dashboard</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2 p-4">
+          <div class="rounded-xl bg-primary-light p-2.5"><p class="text-[8px] font-bold text-primary">Emails</p><p class="text-sm font-bold text-ink">42.1K</p></div>
+          <div class="rounded-xl bg-cyan-light p-2.5"><p class="text-[8px] font-bold" style="color:#0891B2">Social</p><p class="text-sm font-bold text-ink">128K</p></div>
+          <div class="rounded-xl bg-emerald-50 p-2.5"><p class="text-[8px] font-bold text-emerald-600">Engage</p><p class="text-sm font-bold text-ink">48.4%</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     TRUST BAR
+══════════════════════════════════════════ -->
+<section class="py-10 border-y border-border bg-white">
+  <p class="text-center section-label mb-6">Trusted by 12,000+ teams shipping campaigns every day</p>
+  <div class="trust-marquee">
+    <div class="trust-marquee-inner gap-8">
+      {% for i in "12345678" %}
+      <span class="flex items-center gap-2.5 px-5 text-ink-subtle hover:text-ink-muted transition-colors whitespace-nowrap">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" opacity=".3"/></svg>
+        <span class="text-sm font-black tracking-tight">FORMA LABS</span>
+      </span>
+      <span class="flex items-center gap-2.5 px-5 text-ink-subtle hover:text-ink-muted transition-colors whitespace-nowrap">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4" opacity=".3"/></svg>
+        <span class="text-sm font-black tracking-tight">STACKPATH</span>
+      </span>
+      <span class="flex items-center gap-2.5 px-5 text-ink-subtle hover:text-ink-muted transition-colors whitespace-nowrap">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><polygon points="12,2 22,22 2,22" opacity=".3"/></svg>
+        <span class="text-sm font-black tracking-tight">NEON DIGITAL</span>
+      </span>
+      <span class="flex items-center gap-2.5 px-5 text-ink-subtle hover:text-ink-muted transition-colors whitespace-nowrap">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z" opacity=".3"/></svg>
+        <span class="text-sm font-black tracking-tight">ORBIT COMMERCE</span>
+      </span>
+      <span class="flex items-center gap-2.5 px-5 text-ink-subtle hover:text-ink-muted transition-colors whitespace-nowrap">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" opacity=".5"><circle cx="12" cy="12" r="10"/></svg>
+        <span class="text-sm font-black tracking-tight">NORTHFIELD</span>
+      </span>
+      <span class="flex items-center gap-2.5 px-5 text-ink-subtle hover:text-ink-muted transition-colors whitespace-nowrap">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9-9 9-9-9z" opacity=".3"/></svg>
+        <span class="text-sm font-black tracking-tight">SUMMIT FINSERVE</span>
+      </span>
+      <span class="flex items-center gap-2.5 px-5 text-ink-subtle hover:text-ink-muted transition-colors whitespace-nowrap">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="8" opacity=".3"/></svg>
+        <span class="text-sm font-black tracking-tight">ASTER MOBILITY</span>
+      </span>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     PRODUCT MODULES
+══════════════════════════════════════════ -->
+<section id="platform" class="py-24 bg-surface-raised">
+  <div class="max-w-8xl mx-auto px-5 sm:px-8 lg:px-12">
+    <!-- Section header — centered -->
+    <div class="max-w-2xl mx-auto text-center mb-14 reveal">
+      <span class="badge mb-4 inline-flex">The platform</span>
+      <h2 class="font-serif text-3xl sm:text-4xl lg:text-5xl text-ink leading-tight">Five powerful products.<br><em style="color:var(--primary);font-style:normal;">One unified platform.</em></h2>
+      <p class="mt-4 text-ink-muted">Stop juggling tools. IDA brings your entire digital operation under one login, one bill, one source of truth.</p>
+    </div>
+
+    <div class="max-w-7xl mx-auto space-y-5">
+      {% for m in product_modules %}
+      <div class="card reveal hover:border-indigo-200 transition-colors overflow-hidden">
+        <div class="grid lg:grid-cols-2">
+          {% if forloop.counter0|divisibleby:2 %}
+          <!-- Text left -->
+          <div class="p-8 sm:p-10 flex flex-col justify-center">
+            <span class="badge mb-4 inline-flex">{{ m.label }}</span>
+            <h3 class="font-sans text-2xl sm:text-3xl font-bold text-ink leading-tight">{{ m.title }}</h3>
+            <p class="mt-3 text-ink-muted text-sm leading-relaxed">{{ m.description }}</p>
+            <ul class="mt-5 space-y-2.5">
+              {% for f in m.features %}
+              <li class="flex items-start gap-3">
+                <span class="flex-shrink-0 mt-0.5 w-5 h-5 rounded-md bg-primary-light flex items-center justify-center">
+                  <svg class="w-3 h-3 text-primary" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                </span>
+                <span class="text-sm text-ink-muted">{{ f }}</span>
+              </li>
+              {% endfor %}
+            </ul>
+            <a href="{% if user.is_authenticated %}{% url 'dashboard:dashboard' %}{% else %}{% url 'accounts:register' %}{% endif %}" class="mt-6 group inline-flex items-center gap-1.5 text-primary font-bold text-sm hover:gap-2.5 transition-all w-fit">
+              {{ m.cta }}<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </a>
+          </div>
+          <!-- Preview right -->
+          <div class="bg-surface-raised border-l border-border p-6 flex items-center justify-center min-h-[260px]">
+            <div class="w-full max-w-sm rounded-xl border border-border bg-white shadow-sm overflow-hidden">
+              <div class="flex items-center gap-1.5 border-b border-border bg-surface-raised px-4 py-2.5">
+                <span class="h-1.5 w-1.5 rounded-full bg-border"></span><span class="h-1.5 w-1.5 rounded-full bg-border"></span><span class="h-1.5 w-1.5 rounded-full bg-border"></span>
+                <span class="ml-2 text-[9px] font-bold uppercase tracking-widest text-ink-subtle">{{ m.label }} preview</span>
+              </div>
+              <div class="p-4">{% include "landing/includes/_module_preview_content.html" %}</div>
+            </div>
+          </div>
+          {% else %}
+          <!-- Preview left -->
+          <div class="order-2 lg:order-1 bg-surface-raised border-r border-border p-6 flex items-center justify-center min-h-[260px]">
+            <div class="w-full max-w-sm rounded-xl border border-border bg-white shadow-sm overflow-hidden">
+              <div class="flex items-center gap-1.5 border-b border-border bg-surface-raised px-4 py-2.5">
+                <span class="h-1.5 w-1.5 rounded-full bg-border"></span><span class="h-1.5 w-1.5 rounded-full bg-border"></span><span class="h-1.5 w-1.5 rounded-full bg-border"></span>
+                <span class="ml-2 text-[9px] font-bold uppercase tracking-widest text-ink-subtle">{{ m.label }} preview</span>
+              </div>
+              <div class="p-4">{% include "landing/includes/_module_preview_content.html" %}</div>
+            </div>
+          </div>
+          <!-- Text right -->
+          <div class="order-1 lg:order-2 p-8 sm:p-10 flex flex-col justify-center">
+            <span class="badge mb-4 inline-flex">{{ m.label }}</span>
+            <h3 class="font-sans text-2xl sm:text-3xl font-bold text-ink leading-tight">{{ m.title }}</h3>
+            <p class="mt-3 text-ink-muted text-sm leading-relaxed">{{ m.description }}</p>
+            <ul class="mt-5 space-y-2.5">
+              {% for f in m.features %}
+              <li class="flex items-start gap-3">
+                <span class="flex-shrink-0 mt-0.5 w-5 h-5 rounded-md bg-primary-light flex items-center justify-center">
+                  <svg class="w-3 h-3 text-primary" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                </span>
+                <span class="text-sm text-ink-muted">{{ f }}</span>
+              </li>
+              {% endfor %}
+            </ul>
+            <a href="{% if user.is_authenticated %}{% url 'dashboard:dashboard' %}{% else %}{% url 'accounts:register' %}{% endif %}" class="mt-6 group inline-flex items-center gap-1.5 text-primary font-bold text-sm hover:gap-2.5 transition-all w-fit">
+              {{ m.cta }}<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     FEATURES — Bento grid, centered
+══════════════════════════════════════════ -->
+<section id="features" class="py-24 bg-white border-y border-border">
+  <div class="max-w-8xl mx-auto px-5 sm:px-8 lg:px-12">
+    <div class="max-w-2xl mx-auto text-center mb-12 reveal">
+      <span class="badge mb-4 inline-flex">Features</span>
+      <h2 class="font-serif text-3xl sm:text-4xl lg:text-5xl text-ink leading-tight">Everything you need<br>to scale digital.</h2>
+      <p class="mt-4 text-ink-muted">Built for deliverability. Designed for speed. Packed with power.</p>
+    </div>
+    <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {% for cat in feature_categories %}
+      <div class="bento-card reveal card p-6">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-10 h-10 rounded-xl bg-primary-light flex items-center justify-center text-primary flex-shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+              {% if cat.category == 'Email Campaigns' %}<path d="M3 8l9 6 9-6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>{% elif cat.category == 'AI & Intelligence' %}<path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>{% elif cat.category == 'Contacts & Senders' %}<path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>{% elif cat.category == 'Social Media' %}<path d="M13 19l-4-4 4-4m6-4l-4 4 4 4M3 12h18"/>{% else %}<path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>{% endif %}
+            </svg>
+          </div>
+          <div>
+            <h3 class="font-bold text-ink text-base">{{ cat.category }}</h3>
+            <p class="section-label mt-0 mb-0">4 capabilities</p>
+          </div>
+        </div>
+        <p class="text-ink-muted text-sm leading-relaxed mb-4">{{ cat.subtitle }}</p>
+        <div class="space-y-3">
+          {% for feature in cat.features %}
+          <div class="flex items-start gap-2.5">
+            <span class="flex-shrink-0 mt-0.5 w-4 h-4 rounded bg-cyan-light flex items-center justify-center">
+              <svg class="w-2.5 h-2.5" style="color:var(--cyan)" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+            </span>
+            <div>
+              <p class="text-sm font-semibold text-ink">{{ feature.title }}</p>
+              <p class="text-xs text-ink-subtle leading-relaxed">{{ feature.description }}</p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     STATS — dark strip
+══════════════════════════════════════════ -->
+<section class="py-20 bg-ink relative overflow-hidden">
+  <div class="absolute inset-0 pointer-events-none opacity-[.04]" style="background-image:radial-gradient(circle,#fff 1px,transparent 1px);background-size:28px 28px;"></div>
+  <div class="relative max-w-8xl mx-auto px-5 sm:px-8 lg:px-12">
+    <div class="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {% for stat in stats %}
+      <div class="reveal rounded-2xl border border-white/8 bg-white/5 p-7">
+        <div class="w-10 h-10 rounded-xl border border-white/10 bg-white/8 flex items-center justify-center text-white mb-5">{{ stat.icon_svg|safe }}</div>
+        <p class="text-4xl sm:text-5xl font-bold text-white tracking-tight font-sans stat-count" data-target="{{ stat.value }}">0</p>
+        <p class="text-white/70 font-semibold text-sm mt-2">{{ stat.label }}</p>
+        <p class="text-white/35 text-xs mt-0.5">{{ stat.description }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     HOW IT WORKS — centered
+══════════════════════════════════════════ -->
+<section class="py-24 bg-surface-raised">
+  <div class="max-w-8xl mx-auto px-5 sm:px-8 lg:px-12">
+    <div class="max-w-2xl mx-auto text-center mb-14 reveal">
+      <span class="badge mb-4 inline-flex">How it works</span>
+      <h2 class="font-serif text-3xl sm:text-4xl lg:text-5xl text-ink leading-tight">From signup to send<br>in 3 steps.</h2>
+      <p class="mt-4 text-ink-muted">No migration headaches. No long onboarding. No PhD required.</p>
+    </div>
+    <div class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-5">
+      {% for step in workflow_steps %}
+      <div class="reveal card p-7 relative text-center">
+        <div class="w-12 h-12 mx-auto rounded-xl bg-primary-light flex items-center justify-center text-primary mb-4">{{ step.icon_svg|safe }}</div>
+        <span class="text-5xl font-bold text-border block mb-3 font-sans">{{ step.number }}</span>
+        <h3 class="font-bold text-ink text-lg mb-2">{{ step.title }}</h3>
+        <p class="text-ink-muted text-sm leading-relaxed">{{ step.description }}</p>
+        {% if not forloop.last %}
+        <div class="hidden md:flex absolute top-1/2 -right-3 z-10 w-6 h-6 rounded-full bg-white border border-border items-center justify-center text-primary">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     TESTIMONIALS — centered
+══════════════════════════════════════════ -->
+<section class="py-24 bg-white border-y border-border">
+  <div class="max-w-8xl mx-auto px-5 sm:px-8 lg:px-12">
+    <div class="max-w-2xl mx-auto text-center mb-10 reveal">
+      <span class="badge mb-4 inline-flex">What teams say</span>
+      <h2 class="font-serif text-3xl sm:text-4xl lg:text-5xl text-ink leading-tight">Loved by teams that ship.</h2>
+    </div>
+    <!-- Featured -->
+    <div class="max-w-3xl mx-auto mb-10 reveal">
+      <div class="card p-8 sm:p-10 border-l-4" style="border-left-color:var(--cyan)">
+        <div class="text-amber-400 text-lg mb-4">★★★★★</div>
+        <p class="text-ink text-lg font-medium leading-relaxed">"We switched from Mailchimp and our inbox delivery rate jumped from 71% to 98.4% in the first two weeks. The AI optimization alone paid for itself in the first campaign — and IDA's social tools saved us another subscription."</p>
+        <div class="mt-6 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-primary-light text-primary flex items-center justify-center text-sm font-bold">AM</div>
+          <div>
+            <p class="font-semibold text-ink text-sm">Aakriti Maharjan</p>
+            <p class="text-xs text-ink-subtle">Head of Growth · Forma Labs</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Marquee -->
+    <div class="trust-marquee">
+      <div class="trust-marquee-inner gap-4 py-1">
+        {% for t in testimonials %}
+        <article class="flex-shrink-0 w-72 card p-5">
+          <div class="text-amber-400 text-xs">★★★★★</div>
+          <p class="text-ink-muted text-xs leading-relaxed mt-3 line-clamp-4">"{{ t.quote }}"</p>
+          <div class="mt-4 flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold {{ t.color }}">{{ t.initials }}</div>
+            <div>
+              <p class="font-semibold text-ink text-xs">{{ t.author }}</p>
+              <p class="text-[9px] text-ink-subtle">{{ t.role }} · {{ t.company }}</p>
+            </div>
+          </div>
+        </article>
+        {% endfor %}
+        {% for t in testimonials %}
+        <article class="flex-shrink-0 w-72 card p-5">
+          <div class="text-amber-400 text-xs">★★★★★</div>
+          <p class="text-ink-muted text-xs leading-relaxed mt-3 line-clamp-4">"{{ t.quote }}"</p>
+          <div class="mt-4 flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold {{ t.color }}">{{ t.initials }}</div>
+            <div>
+              <p class="font-semibold text-ink text-xs">{{ t.author }}</p>
+              <p class="text-[9px] text-ink-subtle">{{ t.role }} · {{ t.company }}</p>
+            </div>
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section class="py-24 bg-surface-raised">
+  <div class="max-w-8xl mx-auto px-5 sm:px-8 lg:px-12">
+    <div class="max-w-2xl mx-auto text-center mb-10 reveal">
+      <span class="badge mb-4 inline-flex">Integrations</span>
+      <h2 class="font-serif text-3xl sm:text-4xl lg:text-5xl text-ink leading-tight">Connects to your stack.</h2>
+      <p class="mt-4 text-ink-muted">Native integrations with the tools your team already uses. Plus webhooks and Zapier for everything else.</p>
+    </div>
+    <div class="max-w-5xl mx-auto grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+      {% for integ in integrations %}
+      <div class="integ-chip reveal card p-4 text-center cursor-pointer">
+        <div class="w-10 h-10 mx-auto rounded-xl bg-primary-light flex items-center justify-center text-primary font-bold text-sm mb-2">{{ integ.name|slice:":2"|upper }}</div>
+        <p class="text-[9px] font-bold text-ink-muted">{{ integ.name }}</p>
+      </div>
+      {% endfor %}
+    </div>
+    <p class="text-center text-sm text-ink-subtle mt-7">Don't see what you need? <a href="#" class="text-primary font-semibold hover:underline">Build a custom integration →</a></p>
+  </div>
+</section>
+
+
+<section id="pricing" class="py-24 bg-white border-y border-border">
+  <div class="max-w-8xl mx-auto px-5 sm:px-8 lg:px-12">
+    <div class="max-w-2xl mx-auto text-center mb-10 reveal">
+      <span class="badge mb-4 inline-flex">Pricing</span>
+      <h2 class="font-serif text-3xl sm:text-4xl lg:text-5xl text-ink leading-tight">Simple pricing that scales.</h2>
+      <p class="mt-4 text-ink-muted">Monthly flexibility or save with annual billing. Same powerful stack on every plan.</p>
+      <div class="mt-7">
+        <div class="inline-flex items-center bg-surface-raised border border-border rounded-xl p-1 gap-1">
+          <button id="toggle-monthly-btn" type="button" class="ptoggle active">Monthly</button>
+          <button id="toggle-yearly-btn" type="button" class="ptoggle">Yearly <span class="ml-1.5 bg-emerald-100 text-emerald-700 text-[9px] font-bold px-2 py-0.5 rounded-full">Save 20%</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
+      {% for plan in plans %}
+      <div class="reveal relative card flex flex-col transition-all hover:-translate-y-1 {% if plan.highlighted %}border-primary shadow-lg shadow-primary/10{% endif %}" style="{% if plan.highlighted %}border-width:1.5px;{% endif %}">
+        {% if plan.badge %}
+        <span class="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-primary text-white text-[9px] font-bold px-4 py-1 rounded-full uppercase tracking-wider shadow-md shadow-primary/20">{{ plan.badge }}</span>
+        {% endif %}
+        <div class="p-7 flex-1 flex flex-col">
+          <p class="section-label mb-3">{{ plan.name }}</p>
+          <div class="text-3xl font-bold text-ink tracking-tight leading-none">
+            <span class="price-display" data-monthly="{{ plan.price }}" data-yearly="{{ plan.yearly_price }}">{{ plan.price }}</span>
+          </div>
+          <p class="billing-period text-ink-subtle text-xs mt-1" data-monthly="/month" data-yearly="/year">/month</p>
+          <p class="text-ink-muted text-sm mt-2 mb-5">{{ plan.description }}</p>
+          <div class="border-t border-border"></div>
+          <ul class="mt-5 space-y-3 flex-1">
+            {% for feature in plan.features %}
+            <li class="flex items-center gap-2.5">
+              <svg class="w-4 h-4 flex-shrink-0 {% if plan.highlighted %}text-primary{% else %}text-emerald-500{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+              <span class="text-sm text-ink-muted">{{ feature }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+          <div class="pt-6">
+            <button class="w-full text-sm font-semibold py-3 rounded-xl transition-all {% if plan.highlighted %}bg-primary hover:bg-primary-hover text-white shadow-md shadow-primary/20{% else %}border border-border text-ink hover:border-primary hover:text-primary{% endif %}">{{ plan.cta }}</button>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <p class="text-xs text-ink-subtle text-center mt-6">All prices in Nepalese Rupees (NPR). Annual billing saves 20%. VAT may apply.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     FAQ — centered
+══════════════════════════════════════════ -->
+<section class="py-24 bg-surface-raised">
+  <div class="max-w-3xl mx-auto px-5 sm:px-8">
+    <div class="text-center mb-10 reveal">
+      <span class="badge mb-4 inline-flex">FAQ</span>
+      <h2 class="font-serif text-3xl sm:text-4xl lg:text-5xl text-ink leading-tight">Questions? Answered.</h2>
+      <p class="mt-4 text-ink-muted">Everything you need to know. Can't find an answer? <a href="#" class="text-primary font-semibold hover:underline">Talk to us →</a></p>
+    </div>
+    <div class="space-y-2">
+      {% for faq in faqs %}
+      <div class="faq-item reveal card overflow-hidden hover:border-indigo-200 transition-colors">
+        <button type="button" class="faq-trigger w-full flex items-center justify-between gap-4 px-6 py-4 text-left">
+          <span class="font-semibold text-ink text-sm">{{ faq.question }}</span>
+          <span class="flex-shrink-0 w-7 h-7 rounded-lg border border-border flex items-center justify-center faq-chevron">
+            <svg class="w-3.5 h-3.5 text-ink-muted" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </span>
+        </button>
+        <div class="faq-answer px-6">
+          <p class="text-ink-muted text-sm leading-relaxed pb-5">{{ faq.answer }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════ -->
+<footer class="bg-ink border-t border-white/5">
+  <div class="max-w-8xl mx-auto px-5 sm:px-8 lg:px-12 pt-14 pb-10">
+    <div class="flex flex-col lg:flex-row items-start gap-12 lg:gap-16">
+      <div class="flex-shrink-0 max-w-xs">
+        <a href="{% if user.is_authenticated %}{% url 'dashboard:dashboard' %}{% else %}{% url 'home' %}{% endif %}">
+          <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="IDA" class="h-24 w-auto brightness-0 invert opacity-80 hover:opacity-100 transition-opacity"/>
+        </a>
+        <p class="mt-4 text-ink-subtle text-sm leading-relaxed">Unify email, social, content, and AI into one intelligent platform.</p>
+        <div class="mt-5 flex items-center gap-2">
+          <a href="#" class="w-8 h-8 rounded-lg border border-white/8 hover:border-white/20 text-ink-subtle hover:text-white flex items-center justify-center transition-all" aria-label="Twitter"><svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+          <a href="#" class="w-8 h-8 rounded-lg border border-white/8 hover:border-white/20 text-ink-subtle hover:text-white flex items-center justify-center transition-all" aria-label="LinkedIn"><svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452z"/></svg></a>
+          <a href="#" class="w-8 h-8 rounded-lg border border-white/8 hover:border-white/20 text-ink-subtle hover:text-white flex items-center justify-center transition-all" aria-label="GitHub"><svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg></a>
+        </div>
+      </div>
+      <div class="flex-1 grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div>
+          <h4 class="section-label mb-3">Product</h4>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Email Campaigns</a></li>
+            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Social Media</a></li>
+            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">AI Copilot</a></li>
+            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Analytics</a></li>
+            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Integrations</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="section-label mb-3">Solutions</h4>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Growth Teams</a></li>
+            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Enterprise</a></li>
+            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Agencies</a></li>
+            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">E-commerce</a></li>
+            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Nonprofits</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="section-label mb-3">Resources</h4>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Documentation</a></li>
+            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">API Reference</a></li>
+            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Blog</a></li>
+            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Community</a></li>
+            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Status</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="section-label mb-3">Company</h4>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">About</a></li>
+            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Careers</a></li>
+            <li><a href="{% url 'privacy' %}" class="text-xs text-ink-subtle hover:text-white transition-colors">Privacy</a></li>
+            <li><a href="{% url 'terms' %}" class="text-xs text-ink-subtle hover:text-white transition-colors">Terms</a></li>
+            <li><a href="{% url 'cookies' %}" class="text-xs text-ink-subtle hover:text-white transition-colors">Contact</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="border-t border-white/5">
+    <div class="max-w-8xl mx-auto px-5 sm:px-8 lg:px-12 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <p class="text-[10px] text-ink-subtle/50">&copy; {% now "Y" %} IDA — Intelligent Digital Automation. All rights reserved.</p>
+      <div class="flex items-center gap-5">
+        <a href="{% url 'privacy' %}" class="text-[10px] text-ink-subtle/50 hover:text-ink-subtle transition-colors">Privacy Policy</a>
+        <a href="{% url 'terms' %}" class="text-[10px] text-ink-subtle/50 hover:text-ink-subtle transition-colors">Terms of Service</a>
+        <a href="{% url 'cookies' %}" class="text-[10px] text-ink-subtle/50 hover:text-ink-subtle transition-colors">Cookie Policy</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- DEMO MODAL -->
+<div id="demoModal" class="fixed inset-0 z-[80] opacity-0 pointer-events-none transition-opacity duration-150" aria-hidden="true">
+  <div id="demoBackdrop" class="absolute inset-0 bg-ink/60 backdrop-blur-sm"></div>
+  <div class="relative min-h-full flex items-center justify-center p-4">
+    <div class="w-full max-w-4xl card-raised rounded-2xl overflow-hidden">
+      <div class="flex items-center justify-between border-b border-border px-5 py-4 bg-surface-raised">
+        <div>
+          <p class="section-label mb-0.5">Product demo</p>
+          <h3 class="text-base font-bold text-ink">How IDA works</h3>
+        </div>
+        <button type="button" id="closeDemoModal" class="w-8 h-8 rounded-lg border border-border text-ink-muted hover:text-ink flex items-center justify-center transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="p-5">
+        <div class="rounded-xl border border-border bg-surface-raised p-5">
+          <div class="grid lg:grid-cols-2 gap-4">
+            <div class="space-y-3">
+              <div class="card p-4">
+                <p class="section-label mb-1">Live campaign</p>
+                <p class="text-sm font-bold text-ink">Q2 Product Launch</p>
+                <p class="text-xs text-ink-muted mt-0.5">14,820 recipients · Scheduled</p>
+              </div>
+              <div class="card p-4">
+                <div class="flex items-center justify-between mb-2">
+                  <p class="section-label mb-0">Spam risk</p>
+                  <span class="chip status-published">Low</span>
+                </div>
+                <div class="queue-bar"><div class="queue-bar-fill bg-emerald-500" style="width:92%"></div></div>
+              </div>
+              <div class="card p-4">
+                <p class="section-label mb-1">AI suggestion</p>
+                <p class="text-xs text-ink-muted">Best send window: <strong class="text-ink">10:30 AM – 11:15 AM</strong></p>
+              </div>
+            </div>
+            <div class="card p-4">
+              <div class="flex items-center justify-between mb-3">
+                <p class="text-sm font-semibold text-ink">Dashboard</p>
+                <span class="chip status-published">Live</span>
+              </div>
+              <div class="grid grid-cols-3 gap-2 mb-3">
+                <div class="bg-surface-raised rounded-lg p-2"><p class="text-[8px] text-ink-subtle">Emails</p><p class="text-sm font-bold text-ink">42.1K</p></div>
+                <div class="bg-surface-raised rounded-lg p-2"><p class="text-[8px] text-ink-subtle">Social</p><p class="text-sm font-bold text-ink">128K</p></div>
+                <div class="bg-surface-raised rounded-lg p-2"><p class="text-[8px] text-ink-subtle">Engage</p><p class="text-sm font-bold text-ink">48.4%</p></div>
+              </div>
+              <div class="h-20 flex items-end gap-1.5">
+                <div class="bar flex-1" style="height:28%"></div>
+                <div class="bar flex-1" style="height:46%"></div>
+                <div class="bar flex-1" style="height:36%"></div>
+                <div class="bar flex-1" style="height:66%"></div>
+                <div class="bar flex-1" style="height:52%"></div>
+                <div class="bar flex-1" style="height:76%"></div>
+                <div class="bar flex-1 accent" style="height:94%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p class="text-xs text-ink-subtle">Interactive preview of the IDA platform across every channel.</p>
+          <a href="{% url 'accounts:register' %}" class="inline-flex items-center justify-center bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-md shadow-primary/20">Start for free</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* scroll reveal */
+(function(){
+  var els=document.querySelectorAll('.reveal');
+  if(!els.length)return;
+  var obs=new IntersectionObserver(function(e){e.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');obs.unobserve(e.target);}});},{threshold:.08,rootMargin:'0px 0px -24px 0px'});
+  els.forEach(function(el){obs.observe(el);});
+})();
+/* stat counter */
+(function(){
+  var nodes=document.querySelectorAll('.stat-count[data-target]');
+  if(!nodes.length)return;
+  var obs=new IntersectionObserver(function(entries,o){entries.forEach(function(entry){if(!entry.isIntersecting)return;var el=entry.target,target=(el.dataset.target||'').trim();var match=target.match(/^([\d,.]+)([^\d,.].*)$/)||target.match(/^([\d,.]+)([%+]?)$/);if(!match){el.textContent=target;o.unobserve(el);return;}var num=parseFloat((match[1]||'').replace(/,/g,'')),suffix=match[2]||'';var decimals=(match[1].split('.')[1]||'').length;var dur=1500,start=null;var step=function(ts){if(!start)start=ts;var p=Math.min((ts-start)/dur,1),ease=1-Math.pow(1-p,3);var cur=num*ease;el.textContent=(decimals>0?cur.toFixed(decimals):Math.round(cur).toLocaleString())+suffix;if(p<1)requestAnimationFrame(step);else el.textContent=match[1]+suffix;};requestAnimationFrame(step);o.unobserve(el);});},{threshold:.45});
+  nodes.forEach(function(n){obs.observe(n);});
+})();
+/* demo modal */
+(function(){
+  var modal=document.getElementById('demoModal');
+  var open=document.getElementById('openDemoModal');
+  var close=document.getElementById('closeDemoModal');
+  var backdrop=document.getElementById('demoBackdrop');
+  if(!modal||!open||!close||!backdrop)return;
+  var show=function(){modal.classList.remove('opacity-0','pointer-events-none');modal.classList.add('opacity-100');modal.setAttribute('aria-hidden','false');document.body.classList.add('overflow-hidden');};
+  var hide=function(){modal.classList.remove('opacity-100');modal.classList.add('opacity-0','pointer-events-none');modal.setAttribute('aria-hidden','true');document.body.classList.remove('overflow-hidden');};
+  open.addEventListener('click',show);close.addEventListener('click',hide);backdrop.addEventListener('click',hide);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&modal.classList.contains('opacity-100'))hide();});
+})();
+/* faq */
+(function(){
+  document.querySelectorAll('.faq-item').forEach(function(item){
+    var trigger=item.querySelector('.faq-trigger');
+    if(!trigger)return;
+    trigger.addEventListener('click',function(){var isOpen=item.classList.contains('open');document.querySelectorAll('.faq-item').forEach(function(i){i.classList.remove('open');});if(!isOpen)item.classList.add('open');});
+  });
+})();
+/* price toggle */
+(function(){
+  var prices=document.querySelectorAll('.price-display');
+  var periods=document.querySelectorAll('.billing-period');
+  var monthly=document.getElementById('toggle-monthly-btn');
+  var yearly=document.getElementById('toggle-yearly-btn');
+  if(!prices.length||!monthly||!yearly)return;
+  function setFreq(freq){
+    prices.forEach(function(el){el.textContent=el.dataset[freq]||'';});
+    periods.forEach(function(el){el.textContent=freq==='yearly'?(el.dataset.yearly||'/year'):(el.dataset.monthly||'/month');});
+    if(freq==='monthly'){monthly.classList.add('active');yearly.classList.remove('active');}
+    else{yearly.classList.add('active');monthly.classList.remove('active');}
+  }
+  monthly.onclick=function(){setFreq('monthly');};yearly.onclick=function(){setFreq('yearly');};setFreq('monthly');
+})();
+</script>
+{% endblock %}

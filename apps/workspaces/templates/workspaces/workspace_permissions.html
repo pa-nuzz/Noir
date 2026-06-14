@@ -1,0 +1,217 @@
+{% extends 'base_dashboard.html' %}
+{% load workspace_tags %}
+{% block title %}Permissions — {{ workspace.name }}{% endblock %}
+{% block content %}
+
+<div class="page-shell max-w-none space-y-8">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="flex items-center gap-4 min-w-0">
+      <a href="{% url 'workspaces:detail' workspace.id %}" class="p-2 rounded-xl hover:bg-slate-100 transition-colors flex-shrink-0" title="Back">
+        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      </a>
+      <div class="min-w-0">
+        <h2 class="page-title truncate">Permissions</h2>
+        <p class="page-subtitle truncate">{{ workspace.name }} — Role-based module access</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
+        {% if membership.role == 'owner' %}bg-amber-50 text-amber-700
+        {% elif membership.role == 'admin' %}bg-indigo-50 text-indigo-700
+        {% else %}bg-slate-100 text-slate-600{% endif %}">
+        {{ membership.get_role_display }}
+      </span>
+      <button onclick="resetAllPermissions()" class="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:border-primary/30 hover:text-primary transition-colors">
+        Reset All
+      </button>
+    </div>
+  </div>
+
+  {% if messages %}
+  <div class="space-y-2">
+    {% for message in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm font-semibold
+      {% if message.tags == 'success' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+      {% elif message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200
+      {% else %}bg-indigo-50 text-indigo-700 border border-indigo-200{% endif %}">
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+    <div class="xl:col-span-3 premium-surface card-elevate section-card overflow-x-auto">
+      <div class="section-head">
+        <h2 class="section-title">Module Access by Role</h2>
+        <p class="section-subtitle">Toggle CRUD permissions per role. Owner always has full access.</p>
+      </div>
+
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-200">
+            <th class="text-left py-3 px-4 font-bold text-slate-600 text-xs uppercase tracking-wider">Module</th>
+            {% for role in roles %}
+            <th class="text-center py-3 px-3 font-bold text-xs uppercase tracking-wider whitespace-nowrap
+              {% if role == 'owner' %}text-amber-700{% elif role == 'admin' %}text-indigo-700{% elif role == 'member' %}text-emerald-700{% else %}text-slate-500{% endif %}">
+              <span class="inline-flex items-center gap-1">{{ role_labels|dictget:role }}</span>
+            </th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for icon, group in module_groups.items %}
+          {% with g_label=group.0 g_modules=group.1 %}
+          <tr class="bg-slate-50/80">
+            <td colspan="5" class="py-2 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+              <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {% if icon == 'pencil-alt' %}<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>{% endif %}
+                {% if icon == 'mail' %}<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>{% endif %}
+                {% if icon == 'cog' %}<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>{% endif %}
+                {% if icon == 'clipboard-list' %}<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>{% endif %}
+              </svg>
+              {{ g_label }}
+            </td>
+          </tr>
+          {% for module in g_modules %}
+          {% with mod_perms=roles_matrix|dictget:module %}
+          {% if mod_perms %}
+          <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+            <td class="py-2.5 px-4 font-semibold text-slate-800 whitespace-nowrap text-sm">{{ module_labels|dictget:module }}</td>
+            {% for role in roles %}
+            <td class="text-center py-2.5 px-2">
+              {% with role_mod_perms=mod_perms|dictget:role %}
+              {% if role == 'owner' %}
+              <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600">
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                Full
+              </span>
+              {% else %}
+              <div class="flex items-center justify-center gap-0.5">
+                <label class="inline-flex items-center gap-0.5 cursor-pointer group p-1 rounded hover:bg-slate-100" title="Read">
+                  <input type="checkbox" {% if role_mod_perms and role_mod_perms.read %}checked{% endif %} data-role="{{ role }}" data-module="{{ module }}" data-field="can_read" class="ws-perm-checkbox w-3.5 h-3.5 rounded border-slate-300 text-primary focus:ring-primary/30 cursor-pointer">
+                  <span class="text-[9px] font-bold uppercase text-slate-400 group-hover:text-primary">R</span>
+                </label>
+                <label class="inline-flex items-center gap-0.5 cursor-pointer group p-1 rounded hover:bg-slate-100" title="Create">
+                  <input type="checkbox" {% if role_mod_perms and role_mod_perms.create %}checked{% endif %} data-role="{{ role }}" data-module="{{ module }}" data-field="can_create" class="ws-perm-checkbox w-3.5 h-3.5 rounded border-slate-300 text-emerald-500 focus:ring-emerald-300 cursor-pointer">
+                  <span class="text-[9px] font-bold uppercase text-slate-400 group-hover:text-emerald-600">C</span>
+                </label>
+                <label class="inline-flex items-center gap-0.5 cursor-pointer group p-1 rounded hover:bg-slate-100" title="Edit">
+                  <input type="checkbox" {% if role_mod_perms and role_mod_perms.edit %}checked{% endif %} data-role="{{ role }}" data-module="{{ module }}" data-field="can_edit" class="ws-perm-checkbox w-3.5 h-3.5 rounded border-slate-300 text-indigo-500 focus:ring-indigo-300 cursor-pointer">
+                  <span class="text-[9px] font-bold uppercase text-slate-400 group-hover:text-indigo-600">U</span>
+                </label>
+                <label class="inline-flex items-center gap-0.5 cursor-pointer group p-1 rounded hover:bg-slate-100" title="Delete">
+                  <input type="checkbox" {% if role_mod_perms and role_mod_perms.delete %}checked{% endif %} data-role="{{ role }}" data-module="{{ module }}" data-field="can_delete" class="ws-perm-checkbox w-3.5 h-3.5 rounded border-slate-300 text-red-500 focus:ring-red-300 cursor-pointer">
+                  <span class="text-[9px] font-bold uppercase text-slate-400 group-hover:text-red-600">D</span>
+                </label>
+              </div>
+              {% endif %}
+              {% endwith %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endif %}
+          {% endwith %}
+          {% endfor %}
+          {% endwith %}
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="mt-6 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-500">
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded border border-primary bg-white"></span> R = Read</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded border border-emerald-300 bg-white"></span> C = Create</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded border border-indigo-300 bg-white"></span> U = Update (Edit)</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded border border-red-300 bg-white"></span> D = Delete</span>
+        <span class="ml-auto text-slate-400">Changes are saved automatically on toggle.</span>
+      </div>
+    </div>
+
+    <div class="space-y-6">
+      <div class="premium-surface card-elevate section-card">
+        <div class="section-head">
+          <h2 class="section-title">Role Quick Reference</h2>
+          <p class="section-subtitle">Permission levels explained</p>
+        </div>
+        <div class="space-y-3">
+          <div class="flex items-start gap-3 p-3 rounded-xl bg-amber-50 border border-amber-100">
+            <span class="px-2 py-0.5 bg-white text-amber-700 rounded text-[9px] font-bold uppercase tracking-wider flex-shrink-0 mt-0.5">Owner</span>
+            <p class="text-xs text-slate-600 leading-relaxed">Unrestricted access to all modules and settings.</p>
+          </div>
+          <div class="flex items-start gap-3 p-3 rounded-xl bg-indigo-50 border border-indigo-100">
+            <span class="px-2 py-0.5 bg-white text-indigo-700 rounded text-[9px] font-bold uppercase tracking-wider flex-shrink-0 mt-0.5">Admin</span>
+            <p class="text-xs text-slate-600 leading-relaxed">Full module access. Can manage members and settings.</p>
+          </div>
+          <div class="flex items-start gap-3 p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+            <span class="px-2 py-0.5 bg-white text-emerald-700 rounded text-[9px] font-bold uppercase tracking-wider flex-shrink-0 mt-0.5">Member</span>
+            <p class="text-xs text-slate-600 leading-relaxed">Use workspace features — campaigns, content, social — but cannot manage settings, billing, or members.</p>
+          </div>
+          
+        </div>
+      </div>
+
+      <div class="premium-surface card-elevate section-card">
+        <div class="section-head flex items-center justify-between">
+          <div>
+            <h2 class="section-title">Members</h2>
+            <p class="section-subtitle">{{ member_count }} member{{ member_count|pluralize }} in this workspace</p>
+          </div>
+          <a href="{% url 'workspaces:invite' workspace.id %}" class="px-3 py-1.5 rounded-xl bg-primary text-white text-[10px] font-bold hover:bg-primary-hover transition-colors whitespace-nowrap">+ Invite</a>
+        </div>
+        <div class="space-y-2 max-h-80 overflow-y-auto">
+          {% for m in members %}
+          <div class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors">
+            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-purple-100 to-cyan-100 flex items-center justify-center text-sm font-bold text-purple-700 flex-shrink-0">
+              {{ m.user.get_full_name|default:m.user.email|first|upper }}
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="text-sm font-semibold text-slate-800 truncate">{{ m.user.get_full_name|default:"Unknown" }}</div>
+              <div class="text-[11px] text-slate-400 truncate">{{ m.user.email }}</div>
+            </div>
+            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider flex-shrink-0
+              {% if m.role == 'owner' %}bg-amber-50 text-amber-700 border border-amber-200
+              {% elif m.role == 'admin' %}bg-indigo-50 text-indigo-700 border border-indigo-200
+              {% elif m.role == 'member' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+              {% else %}bg-slate-100 text-slate-600 border border-slate-200{% endif %}">
+              {{ m.get_role_display }}
+            </span>
+          </div>
+          {% empty %}
+          <p class="text-sm text-slate-400 text-center py-4">No members yet.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.ws-perm-checkbox').forEach(function(cb) {
+  cb.addEventListener('change', function() {
+    var form = new FormData();
+    form.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    form.append('role', this.dataset.role);
+    form.append('module', this.dataset.module);
+    form.append('field', this.dataset.field);
+    form.append('value', this.checked ? '1' : '0');
+    fetch('{% url "workspaces:permissions_update" workspace.id %}', {
+      method: 'POST',
+      body: new URLSearchParams(form),
+      headers: {'X-Requested-With': 'XMLHttpRequest'},
+    }).then(function(r) {
+      if (!r.ok) console.error('Permission update failed');
+    }).catch(function(e) {
+      console.error('Permission update error', e);
+    });
+  });
+});
+
+function resetAllPermissions() {
+  if (!confirm('Reset all permissions to default values?')) return;
+  document.querySelectorAll('.ws-perm-checkbox').forEach(function(cb) {
+    cb.checked = cb.dataset.field === 'can_read';
+    cb.dispatchEvent(new Event('change'));
+  });
+}
+</script>
+{% endblock %}

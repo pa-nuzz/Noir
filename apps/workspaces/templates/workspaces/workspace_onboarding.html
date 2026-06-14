@@ -1,0 +1,106 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Set up {{ workspace.name }} — IDA{% endblock %}
+{% block page_title %}Welcome to {{ workspace.name }}{% endblock %}
+{% block content %}
+
+<div class="page-shell max-w-4xl mx-auto space-y-8">
+  <div class="text-center space-y-3 pb-6">
+    <div class="w-16 h-16 rounded-2xl bg-primary-light text-primary flex items-center justify-center text-3xl font-bold mx-auto ring-2 ring-indigo-100">
+      {{ workspace.name|first|upper }}
+    </div>
+    <h2 class="text-2xl font-bold text-slate-900">Let's set up your workspace</h2>
+    <p class="text-slate-500 max-w-lg mx-auto">Complete these steps to get your team collaborating in {{ workspace.name }}.</p>
+  </div>
+
+  <div class="space-y-4">
+    {% with step_classes_base="flex items-start gap-5 p-5 rounded-2xl border-2 transition-all" %}
+    {% with complete_badge="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0 text-sm font-bold" %}
+    {% with pending_badge="w-8 h-8 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center flex-shrink-0 text-sm font-bold" %}
+
+    <div class="{{ step_classes_base }} {% if shared_accounts|length > 0 %}border-emerald-300 bg-emerald-50/30{% else %}border-slate-200 bg-white hover:border-primary/30{% endif %}">
+      <span class="{% if shared_accounts|length > 0 %}{{ complete_badge }}{% else %}{{ pending_badge }}{% endif %}">
+        {% if shared_accounts|length > 0 %}
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+        {% else %}1{% endif %}
+      </span>
+      <div class="flex-1 min-w-0">
+        <h3 class="font-bold text-slate-900 text-base">Connect Social Accounts</h3>
+        <p class="text-sm text-slate-500 mt-1">Link your Facebook, Instagram, LinkedIn, Twitter, or TikTok accounts so your team can publish posts together.</p>
+        {% if shared_accounts %}
+        <div class="mt-3 flex flex-wrap gap-2">
+          {% for sa in shared_accounts %}
+          {% include "components/badge.html" with label=sa.account.get_platform_display|add:" · "|add:sa.account.account_name variant="purple" %}
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      <a href="{% url 'social_accounts:social_hub' %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap {% if shared_accounts|length > 0 %}bg-slate-100 text-slate-600{% else %}bg-primary text-white shadow-lg shadow-primary/20{% endif %} hover:opacity-90 transition-all">
+        {% if shared_accounts|length > 0 %}Manage{% else %}Connect{% endif %}
+      </a>
+    </div>
+
+    <div class="{{ step_classes_base }} {% if member_count > 1 %}border-emerald-300 bg-emerald-50/30{% else %}border-slate-200 bg-white hover:border-primary/30{% endif %}">
+      <span class="{% if member_count > 1 %}{{ complete_badge }}{% else %}{{ pending_badge }}{% endif %}">
+        {% if member_count > 1 %}
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+        {% else %}2{% endif %}
+      </span>
+      <div class="flex-1 min-w-0">
+        <h3 class="font-bold text-slate-900 text-base">Invite Team Members</h3>
+        <p class="text-sm text-slate-500 mt-1">Add your team with role-based access. You're the <strong>Owner</strong> — invite Admins,and Members.</p>
+        <p class="text-xs text-slate-400 mt-1">
+          {% if member_count > 1 %}{{ member_count }} member{{ member_count|pluralize }} so far{% endif %}
+          {% if pending_invites > 0 %} · {{ pending_invites }} pending invitation{{ pending_invites|pluralize }}{% endif %}
+          {% if member_count == 1 %}Just you so far{% endif %}
+        </p>
+      </div>
+      <a href="{% url 'workspaces:member_list' workspace.id %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap {% if member_count > 1 %}bg-slate-100 text-slate-600{% else %}bg-primary text-white shadow-lg shadow-primary/20{% endif %} hover:opacity-90 transition-all">
+        {% if member_count > 1 %}Manage{% else %}Invite{% endif %}
+      </a>
+    </div>
+
+    <div class="{{ step_classes_base }} border-slate-200 bg-white hover:border-primary/30">
+      <span class="{{ pending_badge }}">3</span>
+      <div class="flex-1 min-w-0">
+        <h3 class="font-bold text-slate-900 text-base">Configure Permissions</h3>
+        <p class="text-sm text-slate-500 mt-1">Set granular module-level access for each role — who can read, create, edit, or delete in Campaigns, Social, Contacts, and more.</p>
+      </div>
+      <a href="{% url 'workspaces:permissions' workspace.id %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all whitespace-nowrap">
+        Configure
+      </a>
+    </div>
+
+    <div class="{{ step_classes_base }} {% if storage_config %}border-emerald-300 bg-emerald-50/30{% else %}border-slate-200 bg-white hover:border-primary/30{% endif %}">
+      <span class="{% if storage_config %}{{ complete_badge }}{% else %}{{ pending_badge }}{% endif %}">
+        {% if storage_config %}
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+        {% else %}4{% endif %}
+      </span>
+      <div class="flex-1 min-w-0">
+        <h3 class="font-bold text-slate-900 text-base">Set Up Storage</h3>
+        <p class="text-sm text-slate-500 mt-1">Choose where your media assets are stored — Local Disk, Google Drive, or S3-compatible storage.</p>
+      </div>
+      <a href="{% url 'workspaces:storage_settings' %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold {% if storage_config %}bg-slate-100 text-slate-600{% else %}bg-primary text-white shadow-lg shadow-primary/20{% endif %} hover:opacity-90 transition-all whitespace-nowrap">
+        {% if storage_config %}Change{% else %}Configure{% endif %}
+      </a>
+    </div>
+
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+  </div>
+
+  <div class="text-center pt-6 border-t border-slate-100">
+    <p class="text-sm text-slate-500 mb-4">Your workspace is ready when you are. Return anytime to complete setup.</p>
+    <div class="flex items-center justify-center gap-3">
+      <a href="{% url 'workspaces:overview' workspace.id %}" class="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-all shadow-lg shadow-primary/20">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/></svg>
+        Go to Workspace Overview
+      </a>
+      <a href="{% url 'workspaces:list' %}" class="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-bold hover:border-slate-300 transition-all">
+        All Workspaces
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

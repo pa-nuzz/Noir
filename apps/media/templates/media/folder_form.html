@@ -1,0 +1,23 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}{% if form.instance.pk %}Edit Folder{% else %}New Folder{% endif %} — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}{% if form.instance.pk %}Edit Folder{% else %}New Folder{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-lg mx-auto">
+  <div class="premium-surface rounded-2xl p-8">
+    <form method="post" class="space-y-5">
+      {% csrf_token %}
+      {% for field in form %}
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">{{ field.label }}</label>
+        {{ field }}
+        {% for error in field.errors %}
+        <p class="text-xs text-red-500 mt-1">{{ error }}</p>
+        {% endfor %}
+      </div>
+      {% endfor %}
+      <button type="submit" class="w-full btn-action btn-action-primary justify-center">Create Folder</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

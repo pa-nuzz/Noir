@@ -1,0 +1,300 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Members — {{ workspace.name }}{% endblock %}
+{% block page_title %}Team Members{% endblock %}
+{% block content %}
+
+<div class="page-shell max-w-none space-y-8">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="flex items-center gap-4 min-w-0">
+      <a href="{% url 'workspaces:detail' workspace.id %}" class="p-2 rounded-xl hover:bg-slate-100 transition-colors flex-shrink-0" title="Back to {{ workspace.name }}">
+        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      </a>
+      <div class="min-w-0">
+        <h2 class="page-title truncate">Team Members</h2>
+        <p class="page-subtitle truncate">{{ workspace.name }}</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 flex-shrink-0">
+      <span class="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-50 text-slate-600 border border-slate-200">
+        <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+        {{ members|length }} member{{ members|length|pluralize }}
+      </span>
+      {% if membership.role == 'owner' or membership.role == 'admin' %}
+      <button onclick="openModal('invite-modal')" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-colors shadow-lg shadow-primary/20">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Invite Member
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if messages %}
+  <div class="space-y-2">
+    {% for message in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm font-semibold
+      {% if message.tags == 'success' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+      {% elif message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200
+      {% else %}bg-indigo-50 text-indigo-700 border border-indigo-200{% endif %}">
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+
+    <div class="xl:col-span-4 space-y-6">
+      <div class="premium-surface card-elevate surface-hover-clean section-card">
+        <div class="section-head">
+          <h2 class="section-title">Roles</h2>
+          <p class="section-subtitle">What each role can do</p>
+        </div>
+        <div class="space-y-3">
+          <div class="flex items-start gap-3 p-3 rounded-xl bg-amber-50 border border-amber-100">
+            <span class="px-2 py-0.5 bg-white text-amber-700 rounded text-[10px] font-bold uppercase tracking-wider flex-shrink-0 mt-0.5">Owner</span>
+            <p class="text-xs text-slate-700 leading-relaxed">Full control. Can edit settings, invite/remove members, manage storage, and delete the workspace.</p>
+          </div>
+          <div class="flex items-start gap-3 p-3 rounded-xl bg-indigo-50 border border-indigo-100">
+            <span class="px-2 py-0.5 bg-white text-indigo-700 rounded text-[10px] font-bold uppercase tracking-wider flex-shrink-0 mt-0.5">Admin</span>
+            <p class="text-xs text-slate-700 leading-relaxed">Can invite and remove members, change storage settings, but cannot delete the workspace.</p>
+          </div>
+          <div class="flex items-start gap-3 p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+            <span class="px-2 py-0.5 bg-white text-emerald-700 rounded text-[10px] font-bold uppercase tracking-wider flex-shrink-0 mt-0.5">Member</span>
+            <p class="text-xs text-slate-700 leading-relaxed">Can use all workspace features — campaigns, content, media — but cannot change settings or invite people.</p>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+
+    <div class="xl:col-span-8 space-y-6">
+
+      <div class="premium-surface card-elevate section-card" id="card-members">
+        <div class="section-head flex items-start justify-between gap-4">
+          <div>
+            <h2 class="section-title">Active Members</h2>
+            <p class="section-subtitle">{{ members|length }} member{{ members|length|pluralize }} with access</p>
+          </div>
+        </div>
+        <div class="divide-y divide-slate-100 -mx-6">
+          {% for m in members %}
+          <div class="px-6 py-4 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                {{ m.user.first_name|first|upper }}{{ m.user.last_name|first|upper }}
+              </div>
+              <div class="min-w-0">
+                <p class="font-bold text-slate-800 truncate">{{ m.user.get_full_name|default:m.user.email }}</p>
+                <p class="text-xs text-slate-500 mt-0.5 truncate">{{ m.user.email }}</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 flex-shrink-0">
+              {% if membership.role == 'owner' or membership.role == 'admin' %}
+                {% if m.role != 'owner' %}
+                <div class="relative role-dropdown" data-member-id="{{ m.id }}">
+                  <button onclick="toggleRoleDropdown(this)" class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-all hover:ring-2 hover:ring-offset-1
+                    {% if m.role == 'admin' %}bg-indigo-50 text-indigo-700 hover:ring-indigo-300
+                    {% elif m.role == 'member' %}bg-emerald-50 text-emerald-700 hover:ring-emerald-300
+                    {% else %}bg-slate-100 text-slate-600 hover:ring-slate-300{% endif %}">
+                    {{ m.get_role_display }}
+                    <svg class="w-3 h-3 inline-block ml-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                  </button>
+                  <div class="role-dropdown-menu hidden absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50" style="display:none">
+                    <form method="post" action="{% url 'workspaces:update_member_role' workspace.id m.id %}" class="role-change-form">
+                      {% csrf_token %}
+                      <input type="hidden" name="role" value="">
+                    </form>
+                    {% for rcode, rlabel in role_labels.items %}
+                      {% if rcode != 'owner' %}
+                      <button onclick="changeRole(this, '{{ rcode }}')" class="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-50 transition-colors flex items-center gap-2 {% if m.role == rcode %}text-primary bg-indigo-50/50{% else %}text-slate-600{% endif %}">
+                        <svg class="w-3.5 h-3.5 {% if m.role == rcode %}opacity-100{% else %}opacity-0{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                        {{ rlabel }}
+                      </button>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                </div>
+                {% else %}
+                {% include "components/badge.html" with label=m.get_role_display variant="yellow" %}
+                {% endif %}
+              {% else %}
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
+                {% if m.role == 'owner' %}bg-amber-50 text-amber-700
+                {% elif m.role == 'admin' %}bg-indigo-50 text-indigo-700
+                {% elif m.role == 'member' %}bg-emerald-50 text-emerald-700
+                {% else %}bg-slate-100 text-slate-600{% endif %}">
+                {{ m.get_role_display }}
+              </span>
+              {% endif %}
+              {% if membership.role == 'owner' or membership.role == 'admin' %}
+                {% if m.role != 'owner' %}
+                <a href="{% url 'workspaces:remove_member' workspace.id m.id %}" class="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Remove" onclick="return confirm('Remove {{ m.user.email }} from this workspace?')">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </a>
+                {% endif %}
+              {% endif %}
+            </div>
+          </div>
+          {% empty %}
+          <div class="px-6 py-10 text-center">
+            <p class="text-sm text-slate-400">No members yet.</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if pending_invites %}
+      <div class="premium-surface card-elevate section-card" id="card-pending">
+        <div class="section-head flex items-start justify-between gap-4">
+          <div>
+            <h2 class="section-title">Pending Invitations</h2>
+            <p class="section-subtitle">{{ pending_invites|length }} invitation{{ pending_invites|length|pluralize }} waiting to be accepted</p>
+          </div>
+          {% include "components/badge.html" with label="Pending" variant="yellow" dot=True %}
+        </div>
+        <div class="divide-y divide-slate-100 -mx-6">
+          {% for inv in pending_invites %}
+          <div class="px-6 py-4 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+              </div>
+              <div class="min-w-0">
+                <p class="font-bold text-slate-800 truncate">{{ inv.email }}</p>
+                <p class="text-xs text-slate-500 mt-0.5">{{ inv.get_role_display }} · Sent {{ inv.created_at|date:'M d, Y' }} · Expires {{ inv.expires_at|date:'M d' }}</p>
+                {% if inv.message %}
+                <p class="text-xs text-slate-400 mt-1 italic truncate">"{{ inv.message }}"</p>
+                {% endif %}
+              </div>
+            </div>
+            <div class="flex items-center gap-3 flex-shrink-0">
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
+                {% if inv.role == 'admin' %}bg-indigo-50 text-indigo-700
+                {% elif inv.role == 'member' %}bg-emerald-50 text-emerald-700
+                {% else %}bg-slate-100 text-slate-600{% endif %}">
+                {{ inv.get_role_display }}
+              </span>
+              {% if membership.role == 'owner' or membership.role == 'admin' %}
+              <a href="{% url 'workspaces:cancel_invitation' inv.id %}" class="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Cancel" onclick="return confirm('Cancel this invitation?')">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </a>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div id="invite-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+  <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" onclick="closeModal('invite-modal')"></div>
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[100vh] overflow-y-auto">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Invite Member</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Send an invitation to join {{ workspace.name }}</p>
+        </div>
+        <button type="button" onclick="closeModal('invite-modal')" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
+          <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form method="post" action="{% url 'workspaces:invite' workspace.id %}" class="p-6 space-y-5">
+        {% csrf_token %}
+        <div>
+          <label class="block text-sm font-bold text-slate-700 mb-1.5">Email Address</label>
+          <input type="email" name="email" required class="input-field w-full" placeholder="colleague@company.com">
+        </div>
+        <div>
+          <label class="block text-sm font-bold text-slate-700 mb-1.5">Role</label>
+          <select name="role" class="input-field w-full">
+            <option value="member">Member — full access, cannot change settings</option>
+            <option value="admin">Admin — can manage members and storage</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-bold text-slate-700 mb-1.5">Personal Message <span class="text-slate-400 font-normal">(optional)</span></label>
+          <textarea name="message" rows="3" class="input-field w-full resize-y" placeholder="Hey, join our workspace!"></textarea>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeModal('invite-modal')" class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors">Cancel</button>
+          <button type="submit" class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-colors shadow-lg shadow-primary/20">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            Send Invitation
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="invite-sent-modal" class="fixed inset-0 z-50 {% if not invite_sent_email %}hidden{% endif %}" role="dialog" aria-modal="true">
+  <div class="fixed inset-0 bg-black/40 backdrop-blur-sm"></div>
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 text-center">
+      <div class="w-16 h-16 mx-auto rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center mb-5">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+      </div>
+      <h3 class="text-xl font-bold text-slate-900 mb-2">Invitation Sent!</h3>
+      <p class="text-slate-600 mb-6">An invitation has been sent to <strong>{{ invite_sent_email }}</strong>. They will receive an email with instructions to join.</p>
+      <button type="button" onclick="closeModal('invite-sent-modal')" class="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-colors">Got it</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.addEventListener('keydown', function (e) {
+    var modal = document.getElementById('invite-modal');
+    if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+      modal.classList.add('hidden');
+    }
+  });
+  document.addEventListener('click', function (e) {
+    document.querySelectorAll('.role-dropdown-menu').forEach(function (menu) {
+      if (!menu.parentElement.contains(e.target)) {
+        menu.classList.add('hidden');
+        menu.style.display = 'none';
+      }
+    });
+  });
+});
+
+function toggleRoleDropdown(btn) {
+  var menu = btn.parentElement.querySelector('.role-dropdown-menu');
+  var isHidden = menu.classList.contains('hidden');
+  document.querySelectorAll('.role-dropdown-menu').forEach(function (m) {
+    m.classList.add('hidden');
+    m.style.display = 'none';
+  });
+  if (isHidden) {
+    menu.classList.remove('hidden');
+    menu.style.display = '';
+  }
+}
+
+function changeRole(btn, role) {
+  var container = btn.closest('.role-dropdown');
+  if (!container) return;
+  var form = container.querySelector('.role-change-form');
+  if (!form) return;
+  var input = form.querySelector('input[name="role"]');
+  if (input) input.value = role;
+  var fd = new FormData(form);
+  fetch(form.action, { method: 'POST', body: fd, headers: {'X-Requested-With': 'XMLHttpRequest'} })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.status === 'ok') {
+        location.reload();
+      } else {
+        alert(data.error || 'Failed to update role');
+      }
+    })
+    .catch(function () { alert('Failed to update role'); });
+  container.querySelector('.role-dropdown-menu').classList.add('hidden');
+}
+</script>
+{% endblock %}

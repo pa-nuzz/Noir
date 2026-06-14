@@ -1,0 +1,1212 @@
+{% load static dashboard_tags workspace_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>{% block title %}Dashboard — Intelligent Digital Automation (IDA){% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{% static 'images/logo-mark.svg' %}?v={{ STATIC_VERSION }}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v={{ STATIC_VERSION }}" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tiptap/core@2.11.5/dist/tiptap.min.css" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tiptap/placeholder@2.11.5/dist/index.min.css" media="print" onload="this.media='all'" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
+    <script src="{% static 'js/email-module.js' %}?v={{ STATIC_VERSION }}" defer></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Raleway", "system-ui", "sans-serif"],
+            },
+            colors: {
+              brand: "#6D28D9",
+              primary: {
+                DEFAULT: "#6D28D9",
+                hover: "#5424c8",
+                light: "#F3E8FF",
+              },
+              navy: {
+                DEFAULT: "#0A2540",
+                light: "#1A3A5C",
+              },
+              cyan: {
+                DEFAULT: "#06B6D4",
+                dark: "#0891B2",
+                light: "#ECFEFF",
+              },
+              dark: {
+                bg: "#0F1117",
+                surface: "#1A1D29",
+              }
+            },
+            keyframes: {
+              'toast-in':  { '0%': { opacity: '0', transform: 'translateX(100%)' }, '100%': { opacity: '1', transform: 'translateX(0)' } },
+              'toast-out': { '0%': { opacity: '1', transform: 'translateX(0)' },    '100%': { opacity: '0', transform: 'translateX(100%)' } },
+            },
+            animation: {
+              'toast-in':  'toast-in .4s ease-out forwards',
+              'toast-out': 'toast-out .4s ease-in forwards',
+            },
+          },
+        },
+      };
+    </script>
+    {% block extra_head %}{% endblock %}
+    <style id="ida-global">
+      /* ===== IDA Global Shell Styles (refined light design) ===== */
+      :root {
+        --brand: #6D28D9;
+        --brand-light: #F3E8FF;
+        --brand-mid: #C4B5FD;
+        --navy: #0A2540;
+        --cyan: #06B6D4;
+        --cyan-dark: #0891B2;
+        --cyan-light: #ECFEFF;
+        --text-primary: #0A2540;
+        --text-secondary: #475569;
+        --text-tertiary: #94A3B8;
+        --border-subtle: #E2E8F0;
+        --border-faint: #F1F5F9;
+        --bg-app: #F8FAFC;
+        --surface: #FFFFFF;
+        --radius-sm: 8px;
+        --radius-md: 10px;
+        --radius-lg: 12px;
+      }
+
+      .glass-card {
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        border-radius: 1rem;
+        box-shadow: 0 18px 42px -26px rgba(15, 23, 42, 0.28), 0 2px 10px rgba(91, 76, 245, 0.05);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+      .glass-card:hover {
+        box-shadow: 0 20px 48px -28px rgba(15, 23, 42, 0.32);
+        background: rgba(255, 255, 255, 0.96);
+      }
+
+      .ida-layout * { box-sizing: border-box; margin: 0; padding: 0; }
+      .ida-layout { display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: #F8FAFC; font-family:"Raleway", system-ui, sans-serif; }
+      .ida-topbar { height: 56px; background: #fff; border-bottom: 0.5px solid var(--border-subtle); display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0; }
+      .ida-topbar .logo-chip { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 500; color: var(--brand); white-space: nowrap; }
+      .ida-topbar .logo-dot { width: 26px; height: 26px; background: var(--brand); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; letter-spacing: -0.5px; }
+      .ida-topbar .breadcrumb { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-tertiary); flex: 1; }
+      .ida-topbar .breadcrumb b { color: var(--text-primary); font-weight: 500; }
+      .ida-topbar .bc-sep { color: var(--border-subtle); font-size: 10px; }
+      .ida-topbar .tb-actions { display: flex; align-items: center; gap: 8px; }
+      .ida-topbar .tb-btn { width: 30px; height: 30px; border-radius: 8px; border: 0.5px solid var(--border-subtle); background: #fff; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 15px; cursor: pointer; position: relative; transition: all .15s; }
+      .ida-topbar .tb-btn:hover { background: var(--brand-light); border-color: var(--brand-mid); color: var(--brand); }
+      .ida-topbar .notif-dot { position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; background: #EF4444; border-radius: 50%; border: 1.5px solid #fff; }
+      .ida-topbar .avatar { width: 30px; height: 30px; border-radius: 8px; background: var(--brand-light); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; color: var(--brand); border: 0.5px solid var(--brand-mid); }
+
+      .ida-body { display: flex; flex: 1; overflow: hidden; }
+      .ida-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+      .ida-content { flex: 1; overflow-y: auto; padding: 16px; }
+      .ida-footer { height: 38px; background: #fff; border-top: 0.5px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-size: 11px; color: var(--text-tertiary); flex-shrink: 0; }
+      .ida-footer a { color: var(--text-tertiary); text-decoration: none; transition: color .15s; cursor: pointer; }
+      .ida-footer a:hover { color: var(--brand); }
+
+      /* Collapsible groups transition */
+      .sidebar-group .sidebar-group-content { max-height: 0; overflow: hidden; transition: max-height 0.25s ease; }
+      .sidebar-group.expanded .sidebar-group-content { max-height: 500px; }
+      .sidebar-group.expanded .sidebar-chevron { transform: rotate(180deg); }
+      .sidebar-chevron { transition: transform 0.2s ease; }
+    </style>
+  </head>
+  <body class="premium-bg text-[#0F1117] font-sans min-h-screen flex flex-col relative overflow-x-hidden" style="font-family:'Raleway',system-ui,sans-serif">
+    <!-- Sidebar -->
+    <aside class="sidebar w-64 bg-white border-r border-slate-200 hidden lg:flex flex-col fixed h-full z-30 shadow-[10px_0_24px_rgba(15,23,42,0.08)]">
+      <div class="px-6 py-5 border-b border-white/10">
+        <a href="{% url 'dashboard:dashboard' %}" class="inline-flex items-center">
+          <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="Intelligent Digital Automation (IDA) Logo" class="h-[39px] w-auto" />
+        </a>
+      </div>
+
+      <style>
+        .sidebar-group .sidebar-group-content { max-height: 0; overflow: hidden; transition: max-height 0.25s ease; }
+        .sidebar-group.expanded .sidebar-group-content { max-height: 500px; }
+        .sidebar-group.expanded .sidebar-chevron { transform: rotate(180deg); }
+        .sidebar-chevron { transition: transform 0.2s ease; }
+        .sidebar-group-btn {
+          display: flex; align-items: center; width: 100%;
+          padding: 0.5rem 0.75rem; border-radius: 0.75rem;
+          color: #475569; font-size: 0.875rem;
+          transition: all 0.15s ease; cursor: pointer;
+          background: transparent; border: none; text-align: left;
+        }
+        .sidebar-group-btn:hover { background: #f1f5f9; color: #1e293b; }
+        .sidebar-nav .sidebar-link.sub-link { padding-left: 2.75rem; font-size: 0.8125rem; margin: 1px 0; border-left: 3px solid transparent; }
+        .sidebar-nav .sidebar-link.sub-link.active { background: #ECFEFF; color: #06B6D4; font-weight: 600; border-left-color: #06B6D4; }
+        .sidebar-nav .sidebar-link.sub-link.active .opacity-40 { opacity: 1 !important; }
+
+        .onboarding-card {
+          background: linear-gradient(135deg, #EEF2FF 0%, #FFFFFF 50%, #ECFDF5 100%);
+          border: 1px solid #E0E7FF;
+          border-radius: 1rem;
+          padding: 1.25rem 1.5rem;
+          position: relative;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .onboarding-steps { display: flex; gap: 6px; margin: 12px 0; }
+        .onboarding-step {
+          flex: 1; height: 4px; border-radius: 2px;
+          background: #E2E8F0; transition: background 0.3s;
+        }
+        .onboarding-step.done { background: #10B981; }
+        .onboarding-step.active { background: #818CF8; }
+      </style>
+
+      <nav class="flex-grow px-4 overflow-y-auto sidebar-nav">
+        <div class="px-4 mb-3 text-[11px] font-bold text-gray-400 uppercase tracking-[0.1em]">Overview</div>
+        <a href="{% url 'dashboard:dashboard' %}" class="sidebar-link {% if request.resolver_match.namespace == 'dashboard' and request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          Dashboard
+        </a>
+
+        <div class="px-4 mt-6 mb-3 text-[11px] font-bold text-gray-400 uppercase tracking-[0.1em]">Email</div>
+
+        <div class="sidebar-group">
+          <button type="button" class="sidebar-group-btn" onclick="toggleSidebarGroup(this)">
+            <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            <span class="flex-1 text-left text-sm font-medium">Campaigns</span>
+            <svg class="w-4 h-4 sidebar-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div class="sidebar-group-content">
+            <a href="{% url 'campaigns:campaign_list' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'campaigns' and request.resolver_match.url_name != 'template_list' and request.resolver_match.url_name != 'template_create' and request.resolver_match.url_name != 'template_edit' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              Campaigns
+            </a>
+            <a href="{% url 'campaigns:template_list' %}" class="sidebar-link sub-link {% if request.resolver_match.url_name == 'template_list' or request.resolver_match.url_name == 'template_create' or request.resolver_match.url_name == 'template_edit' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              Templates
+            </a>
+            <a href="{% url 'inbox:dashboard' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'inbox' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              AI Email Agent
+            </a>
+            <a href="{% url 'dashboard:settings' %}" class="sidebar-link sub-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              SMTP Senders
+            </a>
+          </div>
+        </div>
+
+        <div class="px-4 mt-6 mb-3 text-[11px] font-bold text-gray-400 uppercase tracking-[0.1em]">Social &amp; Content</div>
+
+        <div class="sidebar-group">
+          <button type="button" class="sidebar-group-btn" onclick="toggleSidebarGroup(this)">
+            <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+            <span class="flex-1 text-left text-sm font-medium">Social &amp; Content Hub</span>
+            <svg class="w-4 h-4 sidebar-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div class="sidebar-group-content">
+            <a href="{% url 'dashboard:social_content_hub' %}" class="sidebar-link sub-link {% if request.resolver_match.url_name == 'social_content_hub' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              Content Hub
+            </a>
+            <a href="{% url 'social_accounts:social_hub' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'social_accounts' and request.resolver_match.url_name != 'analytics_overview' and request.resolver_match.url_name != 'analytics_detail' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              Connected Accounts
+            </a>
+            <a href="{% url 'content_studio:content_hub' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'content_studio' and request.resolver_match.url_name != 'excel_sheets' and request.resolver_match.url_name != 'excel_sheets_add' and request.resolver_match.url_name != 'excel_sheets_sync' and request.resolver_match.url_name != 'sheets_auth_start' and request.resolver_match.url_name != 'sheets_auth_callback' and request.resolver_match.url_name != 'sheets_auth_disconnect' and request.resolver_match.url_name != 'sheets_list' and request.resolver_match.url_name != 'sheets_create' and request.resolver_match.url_name != 'sheets_select' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              AI Content Studio
+            </a>
+            <a href="{% url 'content_studio:excel_sheets' %}" class="sidebar-link sub-link {% if request.resolver_match.url_name == 'excel_sheets' or request.resolver_match.url_name == 'excel_sheets_add' or request.resolver_match.url_name == 'excel_sheets_sync' or request.resolver_match.url_name == 'sheets_auth_start' or request.resolver_match.url_name == 'sheets_auth_callback' or request.resolver_match.url_name == 'sheets_auth_disconnect' or request.resolver_match.url_name == 'sheets_list' or request.resolver_match.url_name == 'sheets_create' or request.resolver_match.url_name == 'sheets_select' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              Google Sheets
+            </a>
+            
+            <a href="{% url 'media_assets:library' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'media_assets' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              Media Library
+            </a>
+            <a href="{% url 'social_accounts:analytics_overview' %}" class="sidebar-link sub-link {% if request.resolver_match.url_name == 'analytics_overview' or request.resolver_match.url_name == 'analytics_detail' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              Analytics
+            </a>
+          </div>
+        </div>
+
+        <div class="px-4 mt-6 mb-3 text-[11px] font-bold text-gray-400 uppercase tracking-[0.1em]">Creative</div>
+
+        <div class="sidebar-group">
+          <button type="button" class="sidebar-group-btn" onclick="toggleSidebarGroup(this)">
+            <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 3.34a13.78 13.78 0 00-8.66 2.95 1 1 0 00-.35.9 13.78 13.78 0 002.6 8.42 13.73 13.73 0 007.18 4.3 1 1 0 00.67 0 13.73 13.73 0 007.17-4.3 13.78 13.78 0 002.6-8.42 1 1 0 00-.35-.9A13.78 13.78 0 0014 3.34a1 1 0 00-1 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 11a5 5 0 01-10 0"/></svg>
+            <span class="flex-1 text-left text-sm font-medium">Creative Suite</span>
+            <svg class="w-4 h-4 sidebar-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div class="sidebar-group-content">
+            <a href="{% url 'creative:media_library' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'creative' and request.resolver_match.url_name == 'media_library' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              Media Library
+            </a>
+            <a href="{% url 'creative:strategy_studio' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'creative' and request.resolver_match.url_name == 'strategy_studio' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              Strategy Studio
+            </a>
+            <a href="{% url 'creative:company_context' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'creative' and request.resolver_match.url_name == 'company_context' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              Company Context
+            </a>
+          </div>
+        </div>
+
+        <div class="px-4 mt-6 mb-3 text-[11px] font-bold text-gray-400 uppercase tracking-[0.1em]">Audience</div>
+
+        <div class="sidebar-group">
+          <button type="button" class="sidebar-group-btn" onclick="toggleSidebarGroup(this)">
+            <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <span class="flex-1 text-left text-sm font-medium">Contacts &amp; Lists</span>
+            <svg class="w-4 h-4 sidebar-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div class="sidebar-group-content">
+            <a href="{% url 'contacts:list' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'contacts' and request.resolver_match.url_name == 'list' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              Contacts
+            </a>
+            
+            <a href="{% url 'contacts:segment_list' %}" class="sidebar-link sub-link {% if request.resolver_match.url_name == 'segment_list' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              Segments
+            </a>
+            <a href="{% url 'contacts:tags_manager' %}" class="sidebar-link sub-link {% if request.resolver_match.url_name == 'tags_manager' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              Tags
+            </a>
+            
+          </div>
+        </div>
+
+        <div class="px-4 mt-6 mb-3 text-[11px] font-bold text-gray-400 uppercase tracking-[0.1em]">Workspace</div>
+
+        <div class="sidebar-group">
+          <button type="button" class="sidebar-group-btn" onclick="toggleSidebarGroup(this)">
+            <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <span class="flex-1 text-left text-sm font-medium">Settings</span>
+            <svg class="w-4 h-4 sidebar-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div class="sidebar-group-content">
+            <a href="{% url 'dashboard:analytics' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'dashboard' and request.resolver_match.url_name == 'analytics' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              Analytics
+            </a>
+            <a href="{% url 'workspaces:storage_settings' %}" class="sidebar-link sub-link {% if request.resolver_match.url_name == 'storage_settings' or request.resolver_match.url_name == 'storage_google_drive_callback' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              Storage
+            </a>
+            <a href="{% url 'workspaces:list' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'workspaces' and request.resolver_match.url_name != 'storage_settings' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              Workspace
+            </a>
+          </div>
+        </div>
+
+        <div class="px-4 mt-6 mb-3 text-[11px] font-bold text-gray-400 uppercase tracking-[0.1em]">Account</div>
+
+        <div class="sidebar-group">
+          <button type="button" class="sidebar-group-btn" onclick="toggleSidebarGroup(this)">
+            <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+            <span class="flex-1 text-left text-sm font-medium">Account</span>
+            <svg class="w-4 h-4 sidebar-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div class="sidebar-group-content">
+            <a href="{% url 'dashboard:profile' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'dashboard' and request.resolver_match.url_name == 'profile' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              User Profile
+            </a>
+            <a href="{% url 'billing:dashboard' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'billing' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              Billing
+            </a>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Sidebar Pro Tip -->
+      <!--<div class="px-5 py-4 mx-4 mb-4 premium-surface rounded-xl border border-slate-200">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-6 h-6 bg-primary-light rounded-md flex items-center justify-center text-primary text-[10px] font-black italic">AI</div>
+          <span class="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1">
+            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2l1.9 3.86L16 8l-4.1 2.14L10 14l-1.9-3.86L4 8l4.1-2.14L10 2z"/></svg>
+            Pro Tip
+          </span>
+        </div>
+        <p class="text-[11px] text-slate-600 leading-relaxed">Use our AI Spam Guard before each campaign for up to <span class="font-bold text-primary">3x</span> better inbox rates.</p>
+      </div>-->
+
+      <div class="px-6 py-4 border-t border-gray-50 bg-gray-50/50">
+        <form id="logout-form" action="{% url 'accounts:logout' %}" method="post">
+          {% csrf_token %}
+          <button type="button" onclick="showLogoutModal()" class="w-full flex items-center justify-center gap-2 py-3 px-4 bg-white border border-red-100 text-red-600 rounded-xl text-sm font-bold shadow-sm hover:bg-red-50 hover:border-red-200 transition-all btn-premium">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            Sign Out
+          </button>
+        </form>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="flex-grow lg:ml-64 flex flex-col min-h-screen">
+      <!-- Header -->
+      <header class="fixed top-0 left-0 lg:left-64 right-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-sm shadow-sm">
+        <div class="h-[68px] px-4 sm:px-6 lg:px-8">
+          <div class="flex h-full items-center justify-between gap-4">
+
+            <!-- Smart Breadcrumbs -->
+            <nav class="flex items-center gap-2 text-sm text-slate-500 min-w-0" aria-label="Breadcrumb">
+              <a href="{% url 'dashboard:dashboard' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                <span class="font-medium">Home</span>
+              </a>
+
+              {% with app_name=request.resolver_match.namespace %}
+              {% with view_name=request.resolver_match.url_name %}
+
+              <!-- Contacts Section -->
+              {% if app_name == 'contacts' %}
+                <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <a href="{% url 'contacts:list' %}" class="{% if view_name == 'list' %}text-slate-900 font-semibold{% else %}hover:text-primary{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'list' %}hover:bg-slate-100{% endif %}">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                  Contacts
+                </a>
+                {% if view_name == 'import_csv' %}
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <span class="text-slate-900 font-semibold p-2">Import CSV</span>
+                {% elif view_name == 'tags_manager' %}
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <span class="text-slate-900 font-semibold p-2">Tags</span>
+                {% elif view_name == 'create_list' %}
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <span class="text-slate-900 font-semibold p-2">Create List</span>
+                {% endif %}
+
+              <!-- Campaigns Section -->
+              {% elif app_name == 'campaigns' %}
+                {% if view_name == 'template_list' or view_name == 'template_create' or view_name == 'template_edit' %}
+                  <!-- Templates Sub-section -->
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <a href="{% url 'campaigns:template_list' %}" class="{% if view_name == 'template_list' %}text-slate-900 font-semibold{% else %}hover:text-primary{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'template_list' %}hover:bg-slate-100{% endif %}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    Templates
+                  </a>
+                  {% if view_name == 'template_create' %}
+                    <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="text-slate-900 font-semibold p-2">Create</span>
+                  {% elif view_name == 'template_edit' %}
+                    <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="text-slate-900 font-semibold p-2">Edit</span>
+                  {% endif %}
+                {% else %}
+                  <!-- Campaigns Sub-section -->
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <a href="{% url 'campaigns:campaign_list' %}" class="{% if view_name == 'campaign_list' %}text-slate-900 font-semibold{% else %}hover:text-primary{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'campaign_list' %}hover:bg-slate-100{% endif %}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                    Campaigns
+                  </a>
+                  {% if view_name == 'campaign_create' %}
+                    <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="text-slate-900 font-semibold p-2">Create</span>
+                  {% elif view_name == 'campaign_edit' %}
+                    <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="text-slate-900 font-semibold p-2">Edit</span>
+                  {% elif view_name == 'campaign_analytics' %}
+                    <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="text-slate-900 font-semibold p-2">Analytics</span>
+                  {% endif %}
+                {% endif %}
+
+              <!-- Dashboard Section -->
+              {% elif app_name == 'dashboard' %}
+                {% if view_name == 'settings' %}
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    SMTP Senders
+                  </span>
+                {% elif view_name == 'profile' %}
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                    User Profile
+                  </span>
+                {% elif view_name == 'analytics' %}
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    Analytics
+                  </span>
+                {% elif view_name == 'social_content_hub' %}
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    Content Hub
+                  </span>
+                {% endif %}
+
+              <!-- Automations Section -->
+              {% elif app_name == 'automations' %}
+                <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <a href="{% url 'automations:workflow_list' %}" class="{% if view_name == 'workflow_list' %}text-slate-900 font-semibold{% else %}hover:text-primary{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'workflow_list' %}hover:bg-slate-100{% endif %}">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                  Automations
+                </a>
+                {% if view_name == 'workflow_create' %}
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <span class="text-slate-900 font-semibold p-2">Create</span>
+                {% elif view_name == 'workflow_edit' %}
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <span class="text-slate-900 font-semibold p-2">Edit</span>
+                {% elif view_name == 'workflow_analytics' %}
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <span class="text-slate-900 font-semibold p-2">Analytics</span>
+                {% endif %}
+
+              <!-- Social Accounts Section -->
+              {% elif app_name == 'social_accounts' %}
+                <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                {% if view_name == 'social_hub' or view_name == 'connect_platform' or view_name == 'oauth_callback' or view_name == 'disconnect_account' or view_name == 'select_page' %}
+                  <a href="{% url 'social_accounts:social_hub' %}" class="{% if view_name == 'social_hub' %}text-slate-900 font-semibold{% else %}hover:text-primary{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'social_hub' %}hover:bg-slate-100{% endif %}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                    Connected Accounts
+                  </a>
+                  {% if view_name == 'select_page' %}
+                    <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="text-slate-900 font-semibold p-2">Select Page</span>
+                  {% endif %}
+                {% elif view_name == 'post_list' or view_name == 'post_create' or view_name == 'post_detail' or view_name == 'post_delete' or view_name == 'publish_post' %}
+                  <a href="{% url 'social_accounts:post_list' %}" class="{% if view_name == 'post_list' %}text-slate-900 font-semibold{% else %}hover:text-primary{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'post_list' %}hover:bg-slate-100{% endif %}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    Connected Accounts
+                  </a>
+                  {% if view_name == 'post_create' %}
+                    <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="text-slate-900 font-semibold p-2">Create</span>
+                  {% elif view_name == 'post_detail' %}
+                    <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="text-slate-900 font-semibold p-2">Detail</span>
+                  {% endif %}
+                {% elif view_name == 'analytics_overview' or view_name == 'analytics_detail' %}
+                  <a href="{% url 'social_accounts:analytics_overview' %}" class="{% if view_name == 'analytics_overview' %}text-slate-900 font-semibold{% else %}hover:text-primary{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'analytics_overview' %}hover:bg-slate-100{% endif %}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    Analytics
+                  </a>
+                {% elif view_name == 'calendar' or view_name == 'calendar_month' %}
+                  <a href="{% url 'social_accounts:social_hub' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                    Connected Accounts
+                  </a>
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <span class="text-slate-900 font-semibold p-2">Calendar</span>
+                {% endif %}
+
+              <!-- Content Studio Section -->
+              {% elif app_name == 'content_studio' %}
+                <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                {% if view_name == 'dashboard' %}
+                  <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    AI Content Studio
+                  </span>
+                {% elif view_name == 'content_hub' %}
+                  <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    AI Content Studio
+                  </span>
+                {% elif view_name == 'generate' %}
+                  <a href="{% url 'content_studio:content_hub' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    AI Content Studio
+                  </a>
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <span class="text-slate-900 font-semibold p-2">Generate Content</span>
+                {% elif view_name == 'history' %}
+                  <a href="{% url 'content_studio:content_hub' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    AI Content Studio
+                  </a>
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <span class="text-slate-900 font-semibold p-2">History</span>
+                {% elif view_name == 'detail' or view_name == 'edit' or view_name == 'refine' or view_name == 'approve' or view_name == 'save_draft' or view_name == 'calendar' %}
+                  <a href="{% url 'content_studio:dashboard' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    AI Content Studio
+                  </a>
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <span class="text-slate-900 font-semibold p-2 capitalize">{{ view_name|title }}</span>
+                {% elif view_name == 'excel_sheets' or view_name == 'excel_sheets_add' or view_name == 'excel_sheets_sync' or view_name == 'sheets_auth_start' or view_name == 'sheets_auth_callback' or view_name == 'sheets_auth_disconnect' or view_name == 'sheets_list' or view_name == 'sheets_create' or view_name == 'sheets_select' %}
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    Google Sheets
+                  </span>
+                {% endif %}
+
+              <!-- Media Assets Section -->
+              {% elif app_name == 'media_assets' %}
+                <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                {% if view_name == 'library' %}
+                  <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    Media Library
+                  </span>
+                {% elif view_name == 'upload' %}
+                  <a href="{% url 'media_assets:library' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    Media Library
+                  </a>
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <span class="text-slate-900 font-semibold p-2">Upload</span>
+                {% elif view_name == 'detail' or view_name == 'delete_asset' %}
+                  <a href="{% url 'media_assets:library' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    Media Library
+                  </a>
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <span class="text-slate-900 font-semibold p-2 capitalize">{{ view_name }}</span>
+                {% elif view_name == 'folders' or view_name == 'folder_detail' or view_name == 'delete_folder' %}
+                  <a href="{% url 'media_assets:folders' %}" class="{% if view_name == 'folders' %}text-slate-900 font-semibold{% else %}hover:text-primary{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'folders' %}hover:bg-slate-100{% endif %}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                    Folders
+                  </a>
+                  {% if view_name == 'folder_detail' %}
+                    <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="text-slate-900 font-semibold p-2">Detail</span>
+                  {% endif %}
+                {% endif %}
+
+              <!-- Inbox / AI Email Agent Section -->
+              {% elif app_name == 'inbox' %}
+                <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                {% if view_name == 'dashboard' %}
+                  <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    AI Email Agent
+                  </span>
+                {% elif view_name == 'connect' or view_name == 'disconnect' %}
+                  <a href="{% url 'inbox:dashboard' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    AI Email Agent
+                  </a>
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <span class="text-slate-900 font-semibold p-2">Connect Inbox</span>
+                {% elif view_name == 'thread_list' or view_name == 'thread_detail' or view_name == 'thread_summarize' or view_name == 'generate_draft' %}
+                  <a href="{% url 'inbox:thread_list' %}" class="text-slate-900 font-semibold transition-colors flex items-center gap-1 p-2 rounded-lg">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    Threads
+                  </a>
+                  {% if view_name == 'thread_detail' or view_name == 'thread_summarize' or view_name == 'generate_draft' %}
+                    <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="text-slate-900 font-semibold p-2">Detail</span>
+                  {% endif %}
+                {% elif view_name == 'draft_detail' or view_name == 'draft_review' or view_name == 'draft_approve' %}
+                  <a href="{% url 'inbox:thread_list' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    Threads
+                  </a>
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <span class="text-slate-900 font-semibold p-2 capitalize">{{ view_name|cut:'_'|title }}</span>
+                {% elif view_name == 'prompt_list' or view_name == 'prompt_create' or view_name == 'prompt_edit' %}
+                  <a href="{% url 'inbox:prompt_list' %}" class="{% if view_name == 'prompt_list' %}text-slate-900 font-semibold{% else %}hover:text-primary{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'prompt_list' %}hover:bg-slate-100{% endif %}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    Prompt Templates
+                  </a>
+                  {% if view_name != 'prompt_list' %}
+                    <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="text-slate-900 font-semibold p-2 capitalize">{{ view_name|cut:'prompt_'|title }}</span>
+                  {% endif %}
+                {% endif %}
+
+              <!-- Workspaces Section -->
+              {% elif app_name == 'workspaces' %}
+                <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                {% if view_name == 'storage_settings' or view_name == 'storage_google_drive_callback' %}
+                  <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 014-4h.5a5.5 5.5 0 0110.78-1.5A4.5 4.5 0 0118 19h-1a3 3 0 00-3-3v-1a3 3 0 00-6 0v1a3 3 0 00-3 3H3z"/></svg>
+                    Storage
+                  </span>
+                {% elif view_name == 'list' or view_name == 'create' %}
+                  <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    Workspace
+                  </span>
+                  {% if view_name == 'create' %}
+                    <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="text-slate-900 font-semibold p-2">Create</span>
+                  {% endif %}
+                {% elif view_name == 'detail' or view_name == 'edit' or view_name == 'member_list' or view_name == 'remove_member' or view_name == 'leave' or view_name == 'invite' or view_name == 'audit_log' %}
+                  <span class="text-slate-900 font-semibold p-2 flex items-center gap-1 capitalize">{{ view_name|cut:'_'|title }}</span>
+                {% elif view_name == 'my_invitations' or view_name == 'accept_invitation' or view_name == 'decline_invitation' or view_name == 'cancel_invitation' %}
+                  <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">Invitations</span>
+                {% endif %}
+
+              <!-- Billing Section -->
+              {% elif app_name == 'billing' %}
+                <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  Billing
+                </span>
+              {% endif %}
+              {% endwith %}
+              {% endwith %}
+            </nav>
+
+
+            <!-- Workspace Switcher Dropdown -->
+            <div class="hidden md:relative md:flex ws-switcher" id="ws-switcher">
+              <button onclick="toggleWsDropdown()" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 min-w-0 max-w-[220px] hover:border-primary/30 hover:bg-white transition-all cursor-pointer ws-switcher-btn">
+                {% if active_workspace %}
+                <span class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0"></span>
+                <span class="text-xs font-semibold text-slate-700 truncate">{{ active_workspace.name }}</span>
+                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider flex-shrink-0
+                  {% if active_membership.role == 'owner' %}bg-amber-50 text-amber-700
+                  {% elif active_membership.role == 'admin' %}bg-indigo-50 text-indigo-700
+                  {% elif active_membership.role == 'member' %}bg-emerald-50 text-emerald-700
+                  {% else %}bg-slate-100 text-slate-500{% endif %}">
+                  {{ active_membership.get_role_display }}
+                </span>
+                {% else %}
+                <span class="w-2 h-2 rounded-full bg-slate-300 flex-shrink-0"></span>
+                <span class="text-xs font-semibold text-slate-500 truncate">Personal Mode</span>
+                {% endif %}
+                <svg class="w-3 h-3 text-slate-400 ml-auto flex-shrink-0 ws-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </button>
+              <div id="ws-dropdown" class="absolute right-0 top-12 w-64 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-[61] opacity-0 pointer-events-none transition-all duration-150 ws-dropdown">
+                <div class="px-4 py-3 border-b border-slate-100">
+                  <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Switch Workspace</p>
+                </div>
+                <div class="max-h-72 overflow-y-auto divide-y divide-slate-50">
+                  {% for ws in user_workspaces %}
+                  <a href="{% url 'workspaces:activate' ws.id %}" class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors {% if active_workspace and active_workspace.id == ws.id %}bg-primary-light/30{% endif %}">
+                    <div class="w-8 h-8 rounded-lg {% if active_workspace and active_workspace.id == ws.id %}bg-primary text-white{% else %}bg-slate-100 text-slate-600{% endif %} flex items-center justify-center text-xs font-bold flex-shrink-0">
+                      {{ ws.name|first|upper }}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-semibold text-slate-800 truncate">{{ ws.name }}</p>
+                      <p class="text-[10px] text-slate-400 truncate">{{ ws.member_count }} member{{ ws.member_count|pluralize }}</p>
+                    </div>
+                    {% if active_workspace and active_workspace.id == ws.id %}
+                    <svg class="w-4 h-4 text-primary flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                    {% endif %}
+                  </a>
+                  {% endfor %}
+                </div>
+                <div class="border-t border-slate-100 divide-y divide-slate-50">
+                  {% if active_workspace %}
+                  <a href="{% url 'workspaces:deactivate' %}" class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-slate-600">
+                    <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                    <span class="text-sm font-semibold">Personal Mode</span>
+                  </a>
+                  {% endif %}
+                  <a href="{% url 'workspaces:list' %}" class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-primary">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    <span class="text-sm font-semibold">Manage Workspaces</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+            <script>
+            function toggleWsDropdown() {
+              var dd = document.getElementById('ws-dropdown');
+              var chevron = document.querySelector('.ws-chevron');
+              var notifDd = document.getElementById('notif-dropdown');
+              // Close notifications dropdown when opening workspace
+              if (dd.classList.contains('opacity-0')) {
+                if (notifDd && !notifDd.classList.contains('opacity-0')) {
+                  notifDd.classList.add('opacity-0', 'pointer-events-none');
+                  notifDd.classList.remove('opacity-100');
+                }
+                dd.classList.remove('opacity-0', 'pointer-events-none');
+                dd.classList.add('opacity-100', 'pointer-events-auto');
+                if (chevron) chevron.classList.add('rotate-180');
+              } else {
+                dd.classList.add('opacity-0', 'pointer-events-none');
+                dd.classList.remove('opacity-100', 'pointer-events-auto');
+                if (chevron) chevron.classList.remove('rotate-180');
+              }
+            }
+            document.addEventListener('click', function(e) {
+              var sw = document.getElementById('ws-switcher');
+              var notifWrapper = document.getElementById('notif-wrapper');
+              var wsDd = document.getElementById('ws-dropdown');
+              var notifDd = document.getElementById('notif-dropdown');
+              var wsChevron = document.querySelector('.ws-chevron');
+              var notifChevron = document.querySelector('.notif-chevron');
+              
+              // Close workspace dropdown if click is outside
+              if (sw && !sw.contains(e.target) && wsDd && !wsDd.classList.contains('opacity-0')) {
+                wsDd.classList.add('opacity-0', 'pointer-events-none');
+                wsDd.classList.remove('opacity-100', 'pointer-events-auto');
+                if (wsChevron) wsChevron.classList.remove('rotate-180');
+              }
+              // Close notification dropdown if click is outside
+              if (notifWrapper && !notifWrapper.contains(e.target) && notifDd && !notifDd.classList.contains('opacity-0')) {
+                notifDd.classList.add('opacity-0', 'pointer-events-none');
+                notifDd.classList.remove('opacity-100');
+                if (notifChevron) notifChevron.classList.remove('rotate-180');
+              }
+            });
+            </script>
+
+            <div class="flex items-center gap-3 sm:gap-4">
+              <div class="relative" id="notif-wrapper" data-clear-url="{% url 'dashboard:clear_notifications' %}" data-check-url="{% url 'dashboard:check_notifications' %}" data-csrf-token="{{ csrf_token }}">
+                <button onclick="toggleNotifications()" class="w-9 h-9 flex items-center justify-center text-slate-600 bg-white border border-slate-200 shadow-sm hover:text-primary hover:border-primary/30 hover:bg-primary-light rounded-xl transition-all relative hover-scale-soft">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                  <span id="notif-badge" class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white {% if dashboard_notification_count == 0 %}hidden{% endif %}"></span>
+                </button>
+
+                <div id="notif-dropdown" class="absolute right-0 top-14 w-[22rem] max-w-[calc(100vw-1.5rem)] bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-[60] opacity-0 pointer-events-none transition-opacity duration-150 ease-out">
+                  <div class="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
+                    <h4 class="text-sm font-bold text-slate-900">Notifications</h4>
+                    <button onclick="clearNotifications()" class="text-[10px] font-bold text-primary hover:underline uppercase tracking-wider">Clear all</button>
+                  </div>
+                  <div id="notif-list" class="max-h-96 overflow-y-auto divide-y divide-gray-50 pr-1 {% if dashboard_notification_count == 0 %}hidden{% endif %}">
+                    {% for notification in dashboard_notifications %}
+                    <a href="{{ notification.url }}" class="px-5 py-4 hover:bg-slate-100 transition-colors flex gap-3 group">
+                      <div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center
+                        {% if notification.tone == 'success' %}bg-emerald-50 text-emerald-600
+                        {% elif notification.tone == 'warning' %}bg-amber-50 text-amber-600
+                        {% elif notification.tone == 'danger' %}bg-red-50 text-red-600
+                        {% else %}bg-primary-light text-primary{% endif %}">
+                        {% if notification.tone == 'success' %}
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        {% elif notification.tone == 'warning' %}
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        {% elif notification.tone == 'danger' %}
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M4.93 19h14.14c1.54 0 2.502-1.667 1.732-3L13.73 4c-.77-1.333-2.694-1.333-3.464 0L3.2 16c-.77 1.333.192 3 1.73 3z"/></svg>
+                        {% else %}
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        {% endif %}
+                      </div>
+                      <div>
+                        <p class="text-sm font-semibold text-slate-800 group-hover:text-primary transition-colors">{{ notification.title }}</p>
+                        <p class="text-xs text-gray-400 mt-0.5">{{ notification.message }}</p>
+                      </div>
+                    </a>
+                    {% endfor %}
+                  </div>
+                  <div id="notif-empty" class="px-5 py-8 text-center {% if dashboard_notification_count > 0 %}hidden{% endif %}">
+                    <p class="text-sm text-gray-400">All caught up!</p>
+                  </div>
+                </div>
+              </div>
+
+              <a href="{% url 'dashboard:profile' %}" class="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity">
+                <div class="hidden sm:block text-right">
+                  <p class="text-sm font-bold text-slate-900">{{ user.get_full_name }}</p>
+                  <p class="text-[11px] text-gray-400 font-medium uppercase">{{ user.company|default:"User" }}</p>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-primary-light flex items-center justify-center text-primary font-bold shadow-inner overflow-hidden border-2 border-white">
+                  {% if user.avatar %}
+                  <img src="{{ user.avatar.url }}" alt="" class="w-full h-full object-cover">
+                  {% else %}
+                  {{ user.get_full_name|first|upper }}{{ user.last_name|first|upper }}
+                  {% endif %}
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {% if messages %}
+      <div id="toast-container" class="fixed top-24 right-10 z-[60] flex flex-col gap-3">
+        {% for message in messages %}
+        <div class="toast-msg animate-toast-in px-5 py-4 rounded-2xl shadow-2xl glass border border-white/50 flex items-center gap-3 {% if message.tags == 'success' %}text-emerald-700{% elif message.tags == 'error' %}text-red-700{% elif message.tags == 'warning' %}text-amber-700{% else %}text-slate-700{% endif %}">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center {% if message.tags == 'success' %}bg-emerald-100{% elif message.tags == 'error' %}bg-red-100{% elif message.tags == 'warning' %}bg-amber-100{% else %}bg-gray-100{% endif %}">
+            {% if message.tags == 'success' %}
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            {% elif message.tags == 'error' %}
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            {% elif message.tags == 'warning' %}
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            {% else %}
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            {% endif %}
+          </div>
+          <span class="font-semibold text-sm flex-1">{{ message }}</span>
+          <button onclick="this.parentElement.classList.add('animate-toast-out');setTimeout(()=>this.parentElement.remove(),400)" class="text-gray-300 hover:text-gray-500 transition-colors ml-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <main class="p-4 sm:p-5 lg:p-6 flex-grow max-w-[1500px] relative" style="padding-top: calc(1rem + 76px);">
+        <div class="reveal-on-scroll">
+          {% block breadcrumb %}
+          <div class="flex items-center gap-1.5 text-xs text-slate-400 mb-1 empty:hidden">{% block breadcrumb_inner %}{% endblock %}</div>
+          {% endblock %}
+          {% block content %}{% endblock %}
+        </div>
+      </main>
+
+      <footer class="mt-auto px-4 sm:px-6 lg:px-8 py-3.5 bg-white border-t border-gray-100 flex flex-col sm:flex-row gap-2 sm:gap-0 justify-between sm:items-center text-xs text-gray-400 font-medium">
+        <p>&copy; {% now "Y" %} Intelligent Digital Automation (IDA). High-Deliverability Command Center.</p>
+        <div class="flex gap-6">
+          <a href="#" class="hover:text-primary transition-colors">Documentation</a>
+          <a href="#" class="hover:text-primary transition-colors">System Status</a>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Mobile Bottom Tab Bar (visible on screens <1024px) -->
+    <nav class="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 safe-area-bottom">
+      <div class="flex items-center justify-around h-14 px-1">
+        <a href="{% url 'dashboard:dashboard' %}" class="mobile-nav-item flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg {% if request.resolver_match.namespace == 'dashboard' and request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          <span class="text-[10px] font-semibold">Home</span>
+        </a>
+        <a href="{% url 'campaigns:campaign_list' %}" class="mobile-nav-item flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg {% if request.resolver_match.namespace == 'campaigns' %}active{% endif %}">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          <span class="text-[10px] font-semibold">Campaigns</span>
+        </a>
+        <a href="{% url 'social_accounts:social_hub' %}" class="mobile-nav-item flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg {% if request.resolver_match.namespace == 'social_accounts' %}active{% endif %}">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+          <span class="text-[10px] font-semibold">Social</span>
+        </a>
+        <a href="{% url 'contacts:list' %}" class="mobile-nav-item flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg {% if request.resolver_match.namespace == 'contacts' %}active{% endif %}">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span class="text-[10px] font-semibold">Contacts</span>
+        </a>
+        <button onclick="toggleAiSidebar()" class="mobile-nav-item flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          <span class="text-[10px] font-semibold">AI</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Global Scripts -->
+    <script>
+      // Auto-dismiss toast notifications after 5 seconds
+      document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.toast-msg').forEach(function(toast, i) {
+          setTimeout(function() {
+            toast.classList.remove('animate-toast-in');
+            toast.classList.add('animate-toast-out');
+            setTimeout(function() { toast.remove(); }, 400);
+          }, 4000 + (i * 800));
+        });
+      });
+
+      // Notification bell dropdown
+      function toggleNotifications() {
+        var dd = document.getElementById('notif-dropdown');
+        var isOpen = dd.classList.contains('opacity-100');
+        if (isOpen) {
+          dd.classList.remove('opacity-100');
+          dd.classList.add('opacity-0', 'pointer-events-none');
+        } else {
+          dd.classList.remove('opacity-0', 'pointer-events-none');
+          dd.classList.add('opacity-100');
+        }
+      }
+
+      function closeNotifications() {
+        var dd = document.getElementById('notif-dropdown');
+        if (!dd) return;
+        dd.classList.remove('opacity-100');
+        dd.classList.add('opacity-0', 'pointer-events-none');
+      }
+
+      function clearNotifications() {
+        const wrapper = document.getElementById('notif-wrapper');
+        const clearUrl = wrapper ? wrapper.dataset.clearUrl : null;
+        const csrfToken = wrapper ? wrapper.dataset.csrfToken : null;
+        if (!clearUrl) return;
+
+        fetch(clearUrl, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+        }).then(function(response) {
+          if (!response.ok) return;
+          const list = document.getElementById('notif-list');
+          if (list) {
+            list.innerHTML = '';
+            list.classList.add('hidden');
+          }
+          const empty = document.getElementById('notif-empty');
+          if (empty) empty.classList.remove('hidden');
+          const badge = document.getElementById('notif-badge');
+          if (badge) badge.classList.add('hidden');
+        });
+      }
+
+      // Close dropdown when clicking outside
+      document.addEventListener('click', function(e) {
+        var wrapper = document.getElementById('notif-wrapper');
+        if (wrapper && !wrapper.contains(e.target)) {
+          closeNotifications();
+        }
+      });
+
+      // Poll for new notifications every 15 seconds — syncs toast + bell dropdown + badge
+      var lastNotifCount = {{ dashboard_notification_count }};
+      var toneMap = {
+        success: { bg: 'bg-emerald-50 text-emerald-600', icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>', toastClass: 'text-emerald-700' },
+        warning: { bg: 'bg-amber-50 text-amber-600', icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.2 16c-.77 1.333.192 3 1.73 3z"/></svg>', toastClass: 'text-amber-700' },
+        danger:  { bg: 'bg-red-50 text-red-600', icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M4.93 19h14.14c1.54 0 2.502-1.667 1.732-3L13.73 4c-.77-1.333-2.694-1.333-3.464 0L3.2 16c-.77 1.333.192 3 1.73 3z"/></svg>', toastClass: 'text-red-700' },
+      };
+      var defaultTone = { bg: 'bg-primary-light text-primary', icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>', toastClass: 'text-slate-700' };
+      setInterval(function() {
+        var wrapper = document.getElementById('notif-wrapper');
+        if (!wrapper) return;
+        fetch(wrapper.dataset.checkUrl, {
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        }).then(function(r) { return r.json(); }).then(function(data) {
+          var badge = document.getElementById('notif-badge');
+          if (badge) {
+            if (data.count > 0) badge.classList.remove('hidden');
+            else badge.classList.add('hidden');
+          }
+          // If new notifications arrived, sync toast + dropdown
+          data.notifications.forEach(function(n) {
+            var list = document.getElementById('notif-list');
+            if (!list) return;
+            // Skip if already in the dropdown
+            if (list.querySelector('[data-nid="' + n.id + '"]')) return;
+            var t = toneMap[n.tone] || defaultTone;
+            // Add to bell dropdown
+            var item = document.createElement('a');
+            item.setAttribute('href', n.url);
+            item.setAttribute('data-nid', n.id);
+            item.className = 'px-5 py-4 hover:bg-slate-100 transition-colors flex gap-3 group';
+            item.innerHTML = '<div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center ' + t.bg + '">' + t.icon + '</div><div><p class="text-sm font-semibold text-slate-800 group-hover:text-primary transition-colors">' + n.title + '</p><p class="text-xs text-gray-400 mt-0.5">' + n.message + '</p></div>';
+            list.appendChild(item);
+            list.classList.remove('hidden');
+            var empty = document.getElementById('notif-empty');
+            if (empty) empty.classList.add('hidden');
+            // Show toast popup
+            var toast = document.createElement('div');
+            toast.className = 'toast-msg animate-toast-in px-5 py-4 rounded-2xl shadow-2xl glass border border-white/50 flex items-center gap-3 ' + t.toastClass;
+            toast.innerHTML = '<div class="w-8 h-8 rounded-full flex items-center justify-center bg-white/80">' + t.icon + '</div><div><p class="text-sm font-bold">' + n.title + '</p><p class="text-xs opacity-80 mt-0.5">' + n.message + '</p></div>';
+            var container = document.getElementById('toast-container');
+            if (!container) {
+              container = document.createElement('div');
+              container.id = 'toast-container';
+              container.className = 'fixed top-24 right-10 z-[60] flex flex-col gap-3';
+              document.body.appendChild(container);
+            }
+            container.appendChild(toast);
+            setTimeout(function() {
+              toast.classList.add('animate-toast-out');
+              setTimeout(function() { toast.remove(); }, 400);
+            }, 5000);
+          });
+          lastNotifCount = data.count;
+        }).catch(function() {});
+      }, 15000);
+
+      // Sidebar collapsible groups
+      function toggleSidebarGroup(btn) {
+        var group = btn.closest('.sidebar-group');
+        if (!group) return;
+        group.classList.toggle('expanded');
+      }
+
+      // Scroll reveal for clean motion cadence
+      document.addEventListener('DOMContentLoaded', function () {
+        // Auto-expand groups with active children
+        document.querySelectorAll('.sidebar-group').forEach(function (group) {
+          if (group.querySelector('.sidebar-link.sub-link.active')) {
+            group.classList.add('expanded');
+          }
+        });
+
+        var revealEls = document.querySelectorAll('.reveal-on-scroll');
+        if (!revealEls.length) return;
+
+        var observer = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('visible');
+              observer.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+
+        revealEls.forEach(function (el) { observer.observe(el); });
+      });
+    </script>
+    <!-- Upload Media Modal -->
+    <div id="upload-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between p-5 border-b border-slate-200">
+          <h3 class="text-lg font-bold text-slate-800">Upload Media</h3>
+          <button type="button" onclick="closeUploadModal()" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
+            <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <form id="upload-form" method="post" enctype="multipart/form-data" class="p-5 space-y-4">
+          {% csrf_token %}
+          <div>
+            <div class="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer" onclick="document.getElementById('upload-file-input').click()">
+              <svg class="w-10 h-10 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+              <p class="text-sm font-semibold text-slate-600 mb-1" id="upload-drop-text">Click to select or drag &amp; drop</p>
+              <p class="text-xs text-gray-400">Images, videos, audio, or documents up to 100MB</p>
+              <input type="file" name="file" id="upload-file-input" class="hidden" onchange="onUploadFileSelect(this)" required accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt">
+            </div>
+            <p id="upload-file-name" class="text-xs text-gray-500 mt-2 hidden"></p>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Title</label>
+            <input type="text" name="title" class="input-field w-full" placeholder="Optional — defaults to filename">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Folder</label>
+            <select name="folder_id" id="upload-folder-select" class="input-field w-full">
+              <option value="">Root (no folder)</option>
+            </select>
+          </div>
+          <div id="upload-progress" class="hidden">
+            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+              <div id="upload-progress-bar" class="h-full bg-primary rounded-full transition-all duration-300" style="width:0%"></div>
+            </div>
+            <p id="upload-status" class="text-xs text-slate-500 mt-1 text-center">Uploading...</p>
+          </div>
+          <div class="flex justify-end gap-3 pt-2">
+            <button type="button" onclick="closeUploadModal()" class="btn-action btn-action-secondary">Cancel</button>
+            <button type="submit" id="upload-submit-btn" class="btn-action btn-action-primary">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+              Upload
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <script>
+      function openUploadModal() { document.getElementById('upload-modal').classList.remove('hidden'); fetchUploadFolders(); }
+      function closeUploadModal() { document.getElementById('upload-modal').classList.add('hidden'); resetUploadForm(); }
+      function resetUploadForm() {
+        document.getElementById('upload-form').reset();
+        document.getElementById('upload-file-name').classList.add('hidden');
+        document.getElementById('upload-progress').classList.add('hidden');
+        document.getElementById('upload-progress-bar').style.width = '0%';
+        document.getElementById('upload-drop-text').textContent = 'Click to select or drag & drop';
+      }
+      function onUploadFileSelect(input) {
+        if (input.files && input.files[0]) {
+          var f = input.files[0];
+          document.getElementById('upload-file-name').textContent = 'Selected: ' + f.name + ' (' + (f.size / 1024 / 1024).toFixed(1) + ' MB)';
+          document.getElementById('upload-file-name').classList.remove('hidden');
+          document.getElementById('upload-drop-text').textContent = f.name;
+        }
+      }
+      function fetchUploadFolders() {
+        var sel = document.getElementById('upload-folder-select');
+        sel.innerHTML = '<option value="">Root (no folder)</option>';
+        fetch('{% url "media_assets:folders" %}?format=json')
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.folders) {
+              data.folders.forEach(function(f) {
+                var opt = document.createElement('option');
+                opt.value = f.id; opt.textContent = f.name;
+                sel.appendChild(opt);
+              });
+            }
+          })
+          .catch(function() {});
+      }
+      document.getElementById('upload-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var form = this;
+        var fileInput = document.getElementById('upload-file-input');
+        if (!fileInput.files || !fileInput.files[0]) { alert('Please select a file.'); return; }
+        var progress = document.getElementById('upload-progress');
+        var bar = document.getElementById('upload-progress-bar');
+        var status = document.getElementById('upload-status');
+        var btn = document.getElementById('upload-submit-btn');
+        progress.classList.remove('hidden');
+        btn.disabled = true;
+        btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Uploading...';
+        var xhr = new XMLHttpRequest();
+        xhr.upload.onprogress = function(e) {
+          if (e.lengthComputable) { bar.style.width = (e.loaded / e.total * 80) + '%'; }
+        };
+        xhr.onload = function() {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            bar.style.width = '100%';
+            status.textContent = 'Complete!';
+            setTimeout(function() {
+              closeUploadModal();
+              window.location.reload();
+            }, 800);
+          } else {
+            var errMsg = 'Upload failed';
+            try { var resp = JSON.parse(xhr.responseText); errMsg = resp.error || errMsg; } catch(e) {}
+            status.textContent = errMsg;
+            status.className = 'text-xs text-red-500 mt-1 text-center';
+            bar.style.backgroundColor = '#ef4444';
+            setTimeout(function() {
+              btn.disabled = false;
+              btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg> Upload';
+            }, 2000);
+          }
+        };
+        xhr.onerror = function() {
+          status.textContent = 'Network error — could not reach server.';
+          status.className = 'text-xs text-red-500 mt-1 text-center';
+          btn.disabled = false;
+          btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg> Upload';
+          progress.classList.add('hidden');
+        };
+        xhr.open('POST', '{% url "media_assets:upload" %}');
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.send(new FormData(form));
+      });
+      document.getElementById('upload-modal').addEventListener('click', closeUploadModal);
+    </script>
+    {% include "components/modal.html" with id="logout-modal" title="Sign Out" content='<div class="text-center"><div class="w-14 h-14 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center"><svg class="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg></div><p class="text-sm text-slate-600 mb-6">Are you sure you want to sign out?</p><div class="flex gap-3"><button type="button" onclick="hideLogoutModal()" class="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors">Cancel</button><button type="button" onclick="confirmLogout()" class="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition-colors">Sign Out</button></div></div>' %}
+    <script>
+      function showLogoutModal() { openModal('logout-modal'); }
+      function hideLogoutModal() { closeModal('logout-modal'); }
+      function confirmLogout() { document.getElementById('logout-form').submit(); }
+    </script>
+    {% block extra_scripts %}{% endblock %}
+
+    <style>
+      /* Mobile Bottom Navigation */
+      .mobile-bottom-nav { padding-bottom: env(safe-area-inset-bottom, 0px); }
+      .mobile-nav-item { color: #94A3B8; transition: all 0.15s; }
+      .mobile-nav-item.active, .mobile-nav-item:active { color: #6D28D9; }
+      .mobile-nav-item.active svg, .mobile-nav-item:active svg { stroke: #6D28D9; }
+      .mobile-nav-item.active span, .mobile-nav-item:active span { color: #6D28D9; }
+
+      @media (max-width: 1023px) {
+        .ida-main { padding-bottom: 56px; }
+        #ai-trigger { bottom: 70px; }
+      }
+      @media (min-width: 1024px) {
+        .mobile-bottom-nav { display: none !important; }
+      }
+      @media (max-width: 640px) {
+        .ida-content { padding: 12px; }
+        .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        .grid-2, .grid-3 { grid-template-columns: 1fr; }
+        .dash-main { padding: 12px; }
+        .page-title { font-size: 1.25rem !important; }
+        .section-card { padding: 0.85rem; }
+        .table-wrap { margin: 0 -12px; }
+        .card { padding: 14px; }
+      }
+
+      .safe-area-bottom {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+    </style>
+
+</body>
+</html>

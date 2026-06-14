@@ -1,0 +1,1 @@
+Only template_1.html and template_2.html are real templates for now. All other template management files are deprecated and should not be used.

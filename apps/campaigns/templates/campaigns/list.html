@@ -1,0 +1,190 @@
+{% extends 'base_dashboard.html' %}
+
+{% block title %}Campaigns — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Campaigns{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none space-y-6">
+
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <p class="eyebrow">Campaign overview</p>
+      <h1 class="page-title mt-2">Campaigns</h1>
+      <p class="page-lead">Track drafts, scheduled sends, and delivery results.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="{% url 'campaigns:campaign_trash' %}" class="btn-action btn-action-secondary whitespace-nowrap">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        Trash{% if trash_count %}<span class="ml-1 text-[10px]">{{ trash_count }}</span>{% endif %}
+      </a>
+                {% url 'campaigns:campaign_create' as new_campaign_url %}
+                {% include 'campaigns/_button.html' with type='primary' text='New Campaign' button_type='a' href_url=new_campaign_url %}
+    </div>
+  </div>
+
+  <form id="campaign-filter-form" method="get" class="glass-card p-5">
+    <input type="hidden" id="status-filter" name="status" value="{{ filters.status|default:'all' }}" />
+    <div class="flex items-center gap-3">
+      <div class="flex-1">
+        <input id="id_q" name="q" type="text" value="{{ filters.q }}" placeholder="Search by name or subject" class="auth-input" />
+      </div>
+      <div>
+        <input id="id_start" name="start" type="date" value="{{ filters.start }}" class="auth-input" />
+      </div>
+      <div>
+        <input id="id_end" name="end" type="date" value="{{ filters.end }}" class="auth-input" />
+      </div>
+      <button type="submit" class="btn-action btn-action-primary whitespace-nowrap">Apply</button>
+      <a href="{% url 'campaigns:campaign_list' %}" class="btn-action btn-action-secondary whitespace-nowrap">Reset</a>
+    </div>
+  </form>
+
+  <div class="flex flex-wrap items-center gap-2">
+    <button type="button" class="btn-filter {% if filters.status == 'all' %}active{% endif %}" data-status="all">All <span class="ml-1.5 text-xs opacity-60">{{ status_counts.all }}</span></button>
+    <button type="button" class="btn-filter {% if filters.status == 'draft' %}active{% endif %}" data-status="draft">Draft <span class="ml-1.5 text-xs opacity-60">{{ status_counts.draft }}</span></button>
+    <button type="button" class="btn-filter {% if filters.status == 'scheduled' %}active{% endif %}" data-status="scheduled">Scheduled <span class="ml-1.5 text-xs opacity-60">{{ status_counts.scheduled }}</span></button>
+    <button type="button" class="btn-filter {% if filters.status == 'sent' %}active{% endif %}" data-status="sent">Sent <span class="ml-1.5 text-xs opacity-60">{{ status_counts.sent }}</span></button>
+    <button type="button" class="btn-filter {% if filters.status == 'failed' %}active{% endif %}" data-status="failed">Failed <span class="ml-1.5 text-xs opacity-60">{{ status_counts.failed }}</span></button>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+    <div class="glass-card p-6">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Recipients</p>
+      <p class="text-3xl font-bold text-slate-900 mt-1">{{ email_totals.recipients }}</p>
+      <p class="text-xs text-slate-400 mt-1">Configured across all campaigns</p>
+    </div>
+    <div class="glass-card p-6">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Sent</p>
+      <p class="text-3xl font-bold text-slate-900 mt-1">{{ email_totals.sent }}</p>
+      <p class="text-xs text-slate-400 mt-1">Delivered across all campaigns</p>
+    </div>
+  </div>
+
+  {% if campaigns %}
+  <div class="glass-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-slate-100">
+          <th class="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Campaign</th>
+          <th class="text-left px-4 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+          <th class="text-left px-4 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Sent / Total</th>
+          <th class="text-left px-4 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Updated</th>
+          <th class="text-right px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for campaign in campaigns %}
+        <tr class="hover:bg-slate-50/50 transition-colors">
+          <td class="px-6 py-4">
+            <p class="font-semibold text-slate-900">{{ campaign.name }}</p>
+            <p class="text-xs text-slate-500 mt-0.5">{{ campaign.subject }}</p>
+          </td>
+          <td class="px-4 py-4">
+            {% if campaign.status == 'sent' %}
+              {% include "components/badge.html" with label=campaign.get_status_display variant="green" dot=True %}
+            {% elif campaign.status == 'draft' %}
+              {% include "components/badge.html" with label=campaign.get_status_display variant="gray" dot=True %}
+            {% elif campaign.status == 'scheduled' %}
+              {% include "components/badge.html" with label=campaign.get_status_display variant="blue" dot=True %}
+            {% elif campaign.status == 'failed' %}
+              {% include "components/badge.html" with label=campaign.get_status_display variant="red" dot=True %}
+            {% else %}
+              {% include "components/badge.html" with label=campaign.get_status_display variant="yellow" dot=True %}
+            {% endif %}
+          </td>
+          <td class="px-4 py-4 text-slate-700">{{ campaign.sent_count }} / {{ campaign.total_recipients }}</td>
+          <td class="px-4 py-4 text-slate-500">{{ campaign.updated_at|date:"M j, Y" }}</td>
+          <td class="px-6 py-4">
+            <div class="flex items-center justify-end gap-1.5">
+              {% url 'campaigns:campaign_view' campaign.id as view_url %}
+              {% include "components/button.html" with label="View" variant="secondary" size="sm" href=view_url %}
+              {% url 'campaigns:campaign_analytics' campaign.id as analytics_url %}
+              {% include "components/button.html" with label="Analytics" variant="secondary" size="sm" href=analytics_url %}
+              {% url 'campaigns:campaign_edit' campaign.id as edit_url %}
+              {% include "components/button.html" with label="Edit" variant="secondary" size="sm" href=edit_url %}
+              {% if campaign.status == 'draft' or campaign.status == 'scheduled' %}
+              <form method="post" action="{% url 'campaigns:campaign_send' campaign.id %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" data-loading="Sending..." class="btn-action btn-action-primary btn-sm">Send</button>
+              </form>
+              {% endif %}
+              <form method="post" action="{% url 'campaigns:campaign_delete' campaign.id %}" data-confirm="Move this campaign to trash? You can restore it later." class="inline">
+                {% csrf_token %}
+                <button type="submit" data-loading="Moving to trash..." class="text-xs text-red-400 hover:text-red-600 font-semibold transition-colors" title="Move to trash">Trash</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {% if filters.q or filters.start or filters.end or filters.status != 'all' %}
+      {% url 'campaigns:campaign_list' as clear_url %}
+      {% include "components/empty_state.html" with title="No campaigns found" description="No campaigns matched your current filters. Try adjusting your search." cta_url=clear_url cta_label="Clear Filters" %}
+    {% else %}
+      {% url 'campaigns:campaign_create' as create_url %}
+      {% include "components/empty_state.html" with title="No campaigns yet" description="Create your first campaign to reach your audience with personalized messages." cta_url=create_url cta_label="Create Campaign" %}
+    {% endif %}
+  {% endif %}
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="flex items-center justify-between gap-3">
+    <p class="text-sm text-slate-500">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</p>
+    <div class="flex items-center gap-2">
+      {% if page_obj.has_previous %}
+      {% with prev_query="?page="|add:page_obj.previous_page_number|add:"&q="|add:filters.q|urlencode|add:"&status="|add:filters.status|urlencode|add:"&start="|add:filters.start|urlencode|add:"&end="|add:filters.end|urlencode %}
+      {% include "components/button.html" with label="Previous" variant="secondary" href=prev_query %}
+      {% endwith %}
+      {% endif %}
+      {% if page_obj.has_next %}
+      {% with next_query="?page="|add:page_obj.next_page_number|add:"&q="|add:filters.q|urlencode|add:"&status="|add:filters.status|urlencode|add:"&start="|add:filters.start|urlencode|add:"&end="|add:filters.end|urlencode %}
+      {% include "components/button.html" with label="Next" variant="secondary" href=next_query %}
+      {% endwith %}
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<style>
+  .btn-filter {
+    padding: 0.5rem 1rem;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    background: transparent;
+    color: #64748b;
+    border: 1px solid transparent;
+  }
+  .btn-filter:hover {
+    background: #f8fafc;
+    color: #1e293b;
+  }
+  .btn-filter.active {
+    background: #f8fafc;
+    color: #1e293b;
+    font-weight: 600;
+    border-color: #e2e8f0;
+  }
+</style>
+
+<script>
+  (function () {
+    var filterForm = document.getElementById('campaign-filter-form');
+    var statusInput = document.getElementById('status-filter');
+    var tabs = document.querySelectorAll('.btn-filter');
+
+    tabs.forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        if (!filterForm || !statusInput) return;
+        statusInput.value = (this.dataset.status || 'all').toLowerCase();
+        filterForm.submit();
+      });
+    });
+  })();
+</script>
+{% endblock %}

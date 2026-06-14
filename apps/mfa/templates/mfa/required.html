@@ -1,0 +1,115 @@
+{% extends "base_dashboard.html" %}
+{% block title %}MFA Required — IDA{% endblock %}
+
+{% block extra_head %}
+<style>
+  .mfa-required-wrap {
+    min-height: calc(100vh - 160px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 2rem 1rem;
+  }
+  .mfa-shield-icon {
+    width: 80px; height: 80px;
+    background: linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 100%);
+    border-radius: 1.25rem;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.5rem;
+    box-shadow: 0 8px 24px -6px rgba(109, 40, 217, 0.25);
+  }
+  .mfa-shield-icon svg { width: 40px; height: 40px; color: #6D28D9; }
+  .mfa-steps { list-style: none; padding: 0; margin: 1.5rem 0; text-align: left; }
+  .mfa-steps li {
+    display: flex; align-items: flex-start; gap: 0.875rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #F1F5F9;
+  }
+  .mfa-steps li:last-child { border-bottom: none; }
+  .mfa-step-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #F3E8FF; color: #6D28D9;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+  }
+  .mfa-step-text { font-size: 0.875rem; color: #334155; line-height: 1.5; padding-top: 2px; }
+  .mfa-step-text strong { color: #0F172A; }
+  .mfa-benefit {
+    display: flex; align-items: center; gap: 0.625rem;
+    padding: 0.5rem 0; font-size: 0.8125rem; color: #475569;
+  }
+  .mfa-benefit svg { width: 18px; height: 18px; color: #10B981; flex-shrink: 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mfa-required-wrap">
+  <div class="w-full max-w-lg">
+
+    <div class="text-center mb-8">
+      <div class="mfa-shield-icon">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+        </svg>
+      </div>
+      <h1 class="text-2xl font-bold text-[#0F172A] mb-2">Security Verification Required</h1>
+      <p class="text-sm text-[#64748B] leading-relaxed max-w-md mx-auto">
+        Your workspace requires Multi-Factor Authentication for admin accounts. Set it up once to continue.
+      </p>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-[#E2E8F0] shadow-[0_18px_42px_-26px_rgba(15,23,42,0.12)] overflow-hidden">
+      <div class="px-6 pt-6 pb-4">
+        <h2 class="text-sm font-semibold text-[#334155] mb-1">How it works</h2>
+        <p class="text-xs text-[#94A3B8] mb-3">Takes about 30 seconds — you only need a phone.</p>
+
+        <ol class="mfa-steps">
+          <li>
+            <span class="mfa-step-num">1</span>
+            <span class="mfa-step-text"><strong>Open</strong> Google Authenticator (or any TOTP app) on your phone</span>
+          </li>
+          <li>
+            <span class="mfa-step-num">2</span>
+            <span class="mfa-step-text"><strong>Scan</strong> the QR code we generate for your account</span>
+          </li>
+          <li>
+            <span class="mfa-step-num">3</span>
+            <span class="mfa-step-text"><strong>Enter</strong> the 6-digit code from the app to confirm</span>
+          </li>
+        </ol>
+      </div>
+
+      <div class="bg-[#F8FAFC] px-6 py-4 border-t border-[#F1F5F9]">
+        <div class="mfa-benefit">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+          </svg>
+          <span>Protects your account even if your password is compromised</span>
+        </div>
+        <div class="mfa-benefit">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+          </svg>
+          <span>Works offline — no SMS or phone number required</span>
+        </div>
+        <div class="mfa-benefit">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+          </svg>
+          <span>Compliant with SOC 2 and enterprise security standards</span>
+        </div>
+      </div>
+
+      <div class="px-6 pb-6 pt-4 text-center">
+        <a href="{% url 'mfa:settings' %}"
+           class="inline-flex items-center gap-2 bg-[#6D28D9] text-white text-sm font-semibold px-6 py-3 rounded-xl hover:bg-[#5424c8] transition-all shadow-[0_4px_14px_-3px_rgba(109,40,217,0.4)] hover:shadow-[0_6px_20px_-3px_rgba(109,40,217,0.5)]">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          </svg>
+          Set Up MFA Now
+        </a>
+        <p class="text-[11px] text-[#94A3B8] mt-3">You'll be redirected here until MFA is enabled.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

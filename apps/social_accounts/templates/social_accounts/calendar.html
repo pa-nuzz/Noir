@@ -1,0 +1,182 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Content Calendar - {{ month_name }} {{ year }} - IDA{% endblock %}
+{% load static workspace_tags %}
+{% can_create 'social' as can_create_social %}
+
+{% block content %}
+{% now "Y-m-d" as today_str %}
+
+<div class="max-w-7xl mx-auto space-y-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Content Calendar</h1>
+      <p class="text-sm text-slate-500 mt-1">{{ month_name }} {{ year }} — Plan, schedule &amp; review posts across all platforms</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="flex items-center bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <a href="{% url 'social_accounts:calendar_month' prev_year prev_month %}" class="p-2.5 hover:bg-slate-50 text-slate-500 border-r border-slate-200 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </a>
+        <a href="{% url 'social_accounts:calendar' %}" class="px-3 py-2 text-sm font-semibold text-primary hover:bg-brand-light transition-colors">Today</a>
+        <a href="{% url 'social_accounts:calendar_month' next_year next_month %}" class="p-2.5 hover:bg-slate-50 text-slate-500 border-l border-slate-200 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+      {% if can_create_social %}
+      {% url 'social_accounts:post_create' as cal_new_post_url %}
+      {% include "components/button.html" with label="New Post" variant="primary" href=cal_new_post_url icon="M12 4v16m8-8H4" class="shadow-lg shadow-brand/20" %}
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500 bg-white rounded-xl border border-slate-200 px-4 py-2.5 shadow-sm">
+    <span class="font-semibold text-slate-700">Status:</span>
+    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Published</span>
+    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Scheduled</span>
+    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-300"></span> Draft</span>
+    <span class="w-px h-4 bg-slate-200 mx-1"></span>
+    <span class="font-semibold text-slate-700">Platform:</span>
+    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded" style="background:#1877F2"></span> Facebook</span>
+    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded" style="background:#E4405F"></span> Instagram</span>
+    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded" style="background:#1DA1F2"></span> X</span>
+    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded" style="background:#0A66C2"></span> LinkedIn</span>
+    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded" style="background:#FE2C55"></span> TikTok</span>
+    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded" style="background:#FF0000"></span> YouTube</span>
+  </div>
+
+  <!-- Calendar Grid -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <!-- Day Headers (Mon-Sun) -->
+    <div class="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50">
+      <div class="py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest">Mon</div>
+      <div class="py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest">Tue</div>
+      <div class="py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest">Wed</div>
+      <div class="py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest">Thu</div>
+      <div class="py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest">Fri</div>
+      <div class="py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest">Sat</div>
+      <div class="py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest">Sun</div>
+    </div>
+
+    <!-- Day Cells -->
+    <div class="grid grid-cols-7 divide-x divide-y divide-slate-100">
+      {% for day_info in month_days %}
+        {% if day_info is None %}
+          <div class="bg-slate-50/30 min-h-[110px] sm:min-h-[130px]"></div>
+        {% else %}
+          {% with day_date=day_info.0 day_posts=day_info.1 %}
+          {% with day_str=day_date|date:"Y-m-d" %}
+          {% if day_str == today_str %}
+          <div class="min-h-[110px] sm:min-h-[130px] p-1.5 sm:p-2.5 flex flex-col relative group ring-1 ring-inset ring-brand/30 bg-brand-light/20">
+            <div class="flex items-center justify-between mb-1">
+              <span class="w-6 h-6 flex items-center justify-center rounded-full bg-brand text-white text-xs font-bold">{{ day_date.day }}</span>
+              {% if day_posts %}<span class="text-[10px] font-bold text-brand bg-brand/10 px-1.5 py-0.5 rounded-full leading-none">{{ day_posts|length }}</span>{% endif %}
+            </div>
+          {% else %}
+          <div class="min-h-[110px] sm:min-h-[130px] p-1.5 sm:p-2.5 flex flex-col relative group hover:bg-slate-50 transition-colors">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs sm:text-sm font-semibold text-slate-600 leading-none">{{ day_date.day }}</span>
+              {% if day_posts %}<span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full leading-none">{{ day_posts|length }}</span>{% endif %}
+            </div>
+          {% endif %}
+
+            <!-- Quick-add button (on hover) -->
+            {% if can_create_social %}
+            <a href="{% url 'social_accounts:post_create' %}" class="absolute top-1.5 right-1.5 w-6 h-6 flex items-center justify-center rounded-md bg-white border border-slate-200 text-slate-400 hover:text-brand hover:border-brand/30 hover:bg-brand-light opacity-0 group-hover:opacity-100 transition-all shadow-sm z-10" title="Create post">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            </a>
+            {% endif %}
+
+            <!-- Post badges -->
+            {% if day_posts %}
+            <div class="flex-1 space-y-1 overflow-hidden mt-0.5">
+              {% for post in day_posts|slice:":3" %}
+              <a href="{% url 'social_accounts:post_detail' post.id %}"
+                 class="flex items-center gap-1 px-1.5 py-1 rounded-md text-[11px] leading-tight transition-all hover:shadow-sm
+                 {% if post.status == 'published' %}bg-emerald-50 text-emerald-700 hover:bg-emerald-100
+                 {% elif post.status == 'scheduled' %}bg-amber-50 text-amber-700 hover:bg-amber-100
+                 {% elif post.status == 'failed' %}bg-red-50 text-red-700 hover:bg-red-100
+                 {% else %}bg-slate-50 text-slate-600 hover:bg-slate-100{% endif %}">
+                  <!-- Platform color dot -->
+                  {% if post.platform == 'facebook' %}<span class="w-2 h-2 rounded flex-shrink-0 mt-px" style="background:#1877F2"></span>{% endif %}
+                  {% if post.platform == 'instagram' %}<span class="w-2 h-2 rounded flex-shrink-0 mt-px" style="background:#E4405F"></span>{% endif %}
+                  {% if post.platform == 'twitter' %}<span class="w-2 h-2 rounded flex-shrink-0 mt-px" style="background:#1DA1F2"></span>{% endif %}
+                  {% if post.platform == 'linkedin' %}<span class="w-2 h-2 rounded flex-shrink-0 mt-px" style="background:#0A66C2"></span>{% endif %}
+                  {% if post.platform == 'tiktok' %}<span class="w-2 h-2 rounded flex-shrink-0 mt-px" style="background:#FE2C55"></span>{% endif %}
+                  {% if post.platform == 'youtube' %}<span class="w-2 h-2 rounded flex-shrink-0 mt-px" style="background:#FF0000"></span>{% endif %}
+                  <!-- Status icon -->
+                  {% if post.status == 'published' %}
+                  <svg class="w-2.5 h-2.5 flex-shrink-0 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>
+                  {% elif post.status == 'scheduled' %}
+                  <svg class="w-2.5 h-2.5 flex-shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3"/></svg>
+                  {% elif post.status == 'failed' %}
+                  <svg class="w-2.5 h-2.5 flex-shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                  {% else %}
+                  <svg class="w-2.5 h-2.5 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                  {% endif %}
+                  <span class="truncate flex-1">{{ post.content|truncatechars:18|default:"(no text)" }}</span>
+                </a>
+              {% endfor %}
+              {% if day_posts|length > 3 %}
+              <div class="text-[10px] font-semibold text-primary text-center pt-0.5">+{{ day_posts|length|add:"-3" }} more</div>
+              {% endif %}
+            </div>
+            {% endif %}
+          </div>
+          {% endwith %}
+          {% endwith %}
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Monthly Stats Bar -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h3 class="text-sm font-bold text-slate-800">{{ month_name }} {{ year }} Summary</h3>
+        <p class="text-xs text-slate-400 mt-0.5">Overview of content activity this month</p>
+      </div>
+      <div class="flex items-center gap-5 text-sm">
+        <div class="text-center">
+          <p class="text-lg font-extrabold text-slate-800" id="total-count">0</p>
+          <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Total Posts</p>
+        </div>
+        <div class="w-px h-10 bg-slate-200"></div>
+        <div class="text-center">
+          <p class="text-lg font-extrabold text-emerald-600" id="pub-count">0</p>
+          <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Published</p>
+        </div>
+        <div class="w-px h-10 bg-slate-200"></div>
+        <div class="text-center">
+          <p class="text-lg font-extrabold text-amber-500" id="sched-count">0</p>
+          <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Scheduled</p>
+        </div>
+        <div class="w-px h-10 bg-slate-200"></div>
+        <div class="text-center">
+          <p class="text-lg font-extrabold text-slate-500" id="draft-count">0</p>
+          <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Drafts</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var total = 0, pub = 0, sched = 0, draft = 0;
+  document.querySelectorAll('a[href*="/social-accounts/posts/"]').forEach(function(el) {
+    if (el.querySelector('.text-emerald-500')) { total++; pub++; }
+    else if (el.querySelector('.text-amber-500')) { total++; sched++; }
+    else { total++; draft++; }
+  });
+  document.getElementById('total-count').textContent = total;
+  document.getElementById('pub-count').textContent = pub;
+  document.getElementById('sched-count').textContent = sched;
+  document.getElementById('draft-count').textContent = draft;
+});
+</script>
+{% endblock %}

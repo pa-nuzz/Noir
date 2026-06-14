@@ -1,0 +1,467 @@
+{% extends "base_dashboard.html" %}
+{% load static dashboard_tags %}
+{% block title %}Command Center — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Command Center{% endblock %}
+{% block extra_head %}
+<style>
+  @keyframes kpiFadeUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .module-card {
+    position: relative;
+    overflow: hidden;
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  }
+  .module-card::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(91,76,245,0.0), rgba(91,76,245,0.0));
+    pointer-events: none;
+    transition: background .3s ease;
+  }
+  .module-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 40px -28px rgba(79, 70, 229, 0.32);
+    border-color: rgba(129, 140, 248, 0.34);
+  }
+  .module-card:hover::after {
+    background: linear-gradient(135deg, rgba(91,76,245,0.05), rgba(16,185,129,0.04));
+  }
+  .tab-btn {
+    transition: all .2s ease;
+  }
+  .tab-btn.active {
+    background: white;
+    color: #0F1117;
+    box-shadow: 0 4px 14px -8px rgba(15,23,42,0.18);
+  }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .activity-row {
+    transition: background-color .15s ease;
+  }
+  .activity-row:hover {
+    background-color: rgba(99, 102, 241, 0.04);
+  }
+  .channel-card {
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  }
+  .channel-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px -18px rgba(15, 23, 42, 0.28);
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-shell max-w-none reveal-on-scroll">
+
+  {# ───────── 1. GREETING + QUICK ACTIONS ───────── #}
+  <div class="premium-surface card-elevate rounded-2xl p-6 lg:p-7 reveal-up delay-1 flex flex-col lg:flex-row lg:items-center gap-5 lg:gap-8">
+    <div class="flex-1 min-w-0">
+      <p class="eyebrow mb-1.5">
+        <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+        {% now "l, F j, Y" %}
+      </p>
+      <h1 class="text-2xl lg:text-[1.7rem] font-extrabold tracking-tight text-slate-900 leading-tight">
+        {% greeting %}, <span class="gradient-text">{{ user.first_name|default:user.username }}</span>
+      </h1>
+      <p class="text-sm text-slate-500 mt-1.5 max-w-xl">
+        Your command center for Email, Social, AI content, and Audience — all in one place.
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      {% for action in quick_actions %}
+      <a href="{{ action.href }}" class="btn-action {% if forloop.first %}btn-action-primary{% else %}btn-action-secondary{% endif %}">
+        {{ action.icon_svg|safe }}
+        <span>{{ action.label }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ───────── 2. ONBOARDING CHECKLIST ───────── #}
+  {% include "onboarding/checklist.html" %}
+
+  {# ───────── 3. MULTI-MODULE KPI STRIP ───────── #}
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 stagger-children">
+    {% for kpi in multi_kpis %}
+    <a href="{{ kpi.href }}" class="group premium-surface card-elevate surface-hover-clean rounded-2xl p-6 reveal-up delay-{{ forloop.counter }} border-b-2 border-transparent hover:border-primary transition-all duration-300 block">
+      <div class="flex items-start justify-between mb-4">
+        <div class="w-10 h-10 {{ kpi.icon_bg }} rounded-lg flex items-center justify-center">
+          {{ kpi.icon_svg|safe }}
+        </div>
+        <svg class="w-4 h-4 text-slate-300 group-hover:text-primary group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </div>
+      <p class="text-2xl font-bold tabular-nums text-slate-900 mb-0.5">{{ kpi.value }}</p>
+      <p class="text-xs font-semibold text-slate-700">{{ kpi.label }}</p>
+      <p class="text-[11px] text-slate-400 mt-1">{{ kpi.sub }}</p>
+    </a>
+    {% endfor %}
+  </div>
+
+  {# ───────── 3. MULTI-CHANNEL PERFORMANCE CHART ───────── #}
+  <div class="premium-surface card-elevate surface-hover-clean section-card reveal-on-scroll">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div>
+        <h2 class="card-title">Multi-Channel Performance — Last 14 Days</h2>
+        <p class="meta-label mt-0.5">Switch between email, social, and AI content output</p>
+      </div>
+      <div class="inline-flex items-center gap-1 p-1 rounded-xl bg-slate-100 border border-slate-200/80">
+        <button type="button" class="tab-btn active px-3 py-1.5 text-xs font-bold rounded-lg" data-tab="email">
+          <span class="inline-flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span> Email
+          </span>
+        </button>
+        <button type="button" class="tab-btn px-3 py-1.5 text-xs font-bold rounded-lg text-slate-500" data-tab="social">
+          <span class="inline-flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-pink-500"></span> Social
+          </span>
+        </button>
+        <button type="button" class="tab-btn px-3 py-1.5 text-xs font-bold rounded-lg text-slate-500" data-tab="ai">
+          <span class="inline-flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-violet-500"></span> AI
+          </span>
+        </button>
+      </div>
+    </div>
+
+    {% for channel in multi_chart %}
+    <div class="tab-panel {% if forloop.first %}active{% endif %}" data-panel="{{ channel.key }}">
+      <div class="flex items-center gap-4 text-xs text-gray-500 mb-3">
+        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-md {{ channel.color }} inline-block"></span> {{ channel.label }}</span>
+      </div>
+      <div class="relative h-40">
+        <div class="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-slate-100"></div>
+        <div class="flex items-end gap-1.5 h-40 relative z-10">
+          {% for d in channel.data %}
+          <div class="flex-1 flex flex-col items-center gap-1 group" title="{{ d.label }}: {{ d.value }}">
+            <div class="w-full {{ channel.color }} rounded-t-sm opacity-80 hover:opacity-100 transition-opacity js-multi-bar" data-height="{{ d.pct }}" style="height:0%"></div>
+            {% if forloop.counter0|divisibleby:2 %}
+            <span class="text-[10px] text-gray-400 hidden md:block">{{ d.day }}</span>
+            {% else %}
+            <span class="text-[10px] text-gray-300 hidden md:block">·</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ───────── 4. MODULE QUICK-ENTRIES GRID ───────── #}
+  <div>
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="card-title">Modules</h2>
+      <p class="meta-label">Jump into any workspace</p>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 stagger-children">
+      {% for m in module_cards %}
+      <a href="{{ m.href }}" class="module-card premium-surface rounded-2xl p-6 reveal-up delay-{{ forloop.counter }} flex flex-col gap-4">
+        <div class="flex items-start justify-between">
+          <div class="w-11 h-11 {{ m.icon_bg }} rounded-xl flex items-center justify-center">
+            {{ m.icon_svg|safe }}
+          </div>
+          <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Open</span>
+        </div>
+        <div>
+          <p class="text-base font-bold text-slate-900">{{ m.name }}</p>
+          <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">{{ m.desc }}</p>
+        </div>
+        <div class="mt-auto flex items-end justify-between">
+          <div>
+            <p class="text-2xl font-extrabold tabular-nums text-slate-900">{{ m.count }}</p>
+            <p class="text-[11px] text-slate-400 font-medium">{{ m.count_label }}</p>
+          </div>
+          <span class="inline-flex items-center gap-1 text-xs font-bold text-primary">
+            {{ m.cta }}
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </span>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ───────── 5. CONNECTED CHANNELS + AI INBOX DRAFTS ───────── #}
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+
+    <div class="xl:col-span-2 premium-surface card-elevate section-card reveal-on-scroll">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <h2 class="card-title">Connected Channels</h2>
+          <p class="meta-label mt-0.5">Social platforms and inboxes</p>
+        </div>
+        {% url 'social:dashboard' as social_dashboard_url %}
+        {% include "components/button.html" with label="Manage" href=social_dashboard_url variant="outline" size="sm" icon="M5 12h14M12 5l7 7-7 7" class="text-xs" %}
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {% for c in channel_summaries %}
+        <div class="channel-card rounded-xl p-4 border {% if c.connected %}border-slate-200 bg-white{% else %}border-dashed border-slate-200 bg-slate-50/40{% endif %}">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 {% if c.connected %}bg-white border border-slate-200{% else %}bg-slate-100{% endif %}">
+              {% if c.icon %}
+                <img src="{% static 'images/'|add:c.icon %}" alt="{{ c.name }}" class="w-6 h-6 object-contain" />
+              {% else %}
+                <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+              {% endif %}
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-bold text-slate-800 truncate">{{ c.name }}</p>
+              {% if c.connected %}
+              <p class="text-[11px] text-slate-500 truncate">{{ c.account_name }}</p>
+              <span class="inline-flex items-center gap-1 mt-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full {{ c.pill }} border">
+                <span class="w-1 h-1 rounded-full bg-current"></span> Connected
+              </span>
+              {% else %}
+              <p class="text-[11px] text-slate-400 mt-0.5">Not connected</p>
+              <a href="/social-accounts/" class="inline-flex items-center gap-1 mt-1.5 text-[10px] font-semibold text-primary hover:underline">
+                Connect
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+              </a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="premium-surface card-elevate section-card reveal-on-scroll flex flex-col">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="card-title">AI Inbox Drafts</h2>
+          <p class="meta-label mt-0.5">Reply suggestions waiting for review</p>
+        </div>
+        {% url 'inbox:dashboard' as inbox_dashboard_url %}
+        {% include "components/button.html" with label="Open inbox" href=inbox_dashboard_url variant="outline" size="sm" class="text-[10px]" %}
+      </div>
+
+      {% if draft_rows %}
+      <div class="flex-1 space-y-2.5 overflow-y-auto max-h-72 pr-1">
+        {% for d in draft_rows %}
+        <a href="{{ d.url }}" class="block p-3 rounded-xl border border-slate-100 hover:border-primary/30 hover:bg-primary-light/30 transition-colors group">
+          <div class="flex items-start gap-2 mb-1">
+            <span class="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full
+              {% if d.urgency == 'urgent' or d.urgency == 'high' %}bg-rose-50 text-rose-600
+              {% elif d.urgency == 'medium' %}bg-amber-50 text-amber-600
+              {% else %}bg-emerald-50 text-emerald-600{% endif %}">
+              <span class="w-1 h-1 rounded-full bg-current"></span> {{ d.urgency|default:'normal'|capfirst }}
+            </span>
+            {% if d.intent %}
+            <span class="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600">{{ d.intent|capfirst }}</span>
+            {% endif %}
+          </div>
+          <p class="text-sm font-semibold text-slate-800 group-hover:text-primary transition-colors truncate">{{ d.subject }}</p>
+          <p class="text-[11px] text-slate-500 mt-0.5 line-clamp-2 leading-snug">{{ d.preview }}</p>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      {% include "components/empty_state.html" with title="Inbox is clear" description="AI will auto-summarize incoming emails and propose replies here." icon="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" %}
+      {% endif %}
+    </div>
+  </div>
+
+  {# ───────── 6. UPCOMING SCHEDULED CONTENT + AUDIENCE HEALTH ───────── #}
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+
+    <div class="xl:col-span-2 premium-surface card-elevate section-card reveal-on-scroll">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="card-title">Upcoming Scheduled Content</h2>
+          <p class="meta-label mt-0.5">Next campaigns and posts in the queue</p>
+        </div>
+        {% url 'campaigns:campaign_list' as campaigns_list_url %}
+        {% include "components/button.html" with label="View all" href=campaigns_list_url variant="outline" size="sm" class="text-[10px]" %}
+      </div>
+
+      {% if upcoming_rows %}
+      <div class="divide-y divide-slate-100">
+        {% for r in upcoming_rows %}
+        <a href="{{ r.url }}" class="flex items-center gap-3 py-3 hover:bg-slate-50/60 rounded-lg px-2 transition-colors group">
+          <div class="w-9 h-9 rounded-lg {{ r.pill }} flex items-center justify-center flex-shrink-0">
+            {{ r.icon_svg|safe }}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-slate-800 truncate group-hover:text-primary transition-colors">{{ r.title }}</p>
+            <p class="text-[11px] text-slate-500">{{ r.pill_label }}</p>
+          </div>
+          <div class="text-right flex-shrink-0">
+            <p class="text-xs font-semibold text-slate-700">{{ r.when|date:"M j, g:i A"|default:"—" }}</p>
+            <p class="text-[10px] text-slate-400">{{ r.when|timesince }} away</p>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      {% include "components/empty_state.html" with title="Nothing scheduled" description="Schedule a campaign or post and it will appear here in the queue." icon="M12 8v4l3 3M3.05 11A9 9 0 1012 3" %}
+      {% endif %}
+    </div>
+
+    <div class="premium-surface card-elevate section-card reveal-on-scroll">
+      <div class="mb-4">
+        <h2 class="card-title">Audience Health</h2>
+        <p class="meta-label mt-0.5">Contacts at a glance</p>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <p class="text-3xl font-extrabold tabular-nums text-slate-900">{{ audience.total|default:0 }}</p>
+          <p class="text-xs text-slate-500">Total contacts</p>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-emerald-700">+ This week</p>
+            <p class="text-lg font-bold text-emerald-700 mt-0.5">{{ audience.new_week }}</p>
+          </div>
+          <div class="p-3 rounded-xl bg-rose-50 border border-rose-100">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-rose-700">Unsub.</p>
+            <p class="text-lg font-bold text-rose-700 mt-0.5">{{ audience.unsubscribed_week }}</p>
+          </div>
+        </div>
+        <div>
+          <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">7-day growth</p>
+          <div class="flex items-end gap-1.5 h-14">
+            {% for pct in audience.growth_pcts %}
+            <div class="flex-1 rounded-sm bg-emerald-400/80 hover:bg-emerald-500 transition-colors" style="height: {{ pct|default:0 }}%" title="{{ pct }}%"></div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ───────── 7. RECENT EMAIL CAMPAIGNS TABLE (preserved) ───────── #}
+  <div class="premium-surface card-elevate surface-hover-clean rounded-2xl reveal-on-scroll overflow-hidden">
+    <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
+      <h2 class="card-title">Recent Email Campaigns</h2>
+      {% url 'campaigns:campaign_list' as campaigns_list_url %}
+      {% include "components/button.html" with label="View all" href=campaigns_list_url variant="outline" size="sm" icon="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" %}
+    </div>
+    {% if campaigns %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-100">
+            <th class="text-left text-xs font-medium text-gray-400 px-6 py-3">Campaign</th>
+            <th class="text-left text-xs font-medium text-gray-400 px-4 py-3">Status</th>
+            <th class="text-left text-xs font-medium text-gray-400 px-4 py-3">Recipients</th>
+            <th class="text-left text-xs font-medium text-gray-400 px-4 py-3">Open Rate</th>
+            <th class="text-left text-xs font-medium text-gray-400 px-4 py-3">Date</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50">
+          {% for c in campaigns %}
+          <tr class="surface-hover-clean hover:bg-indigo-50/20 transition-colors">
+            <td class="px-6 py-3.5"><span class="font-medium text-slate-800">{{ c.name }}</span></td>
+            <td class="px-4 py-3.5">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border {{ c.status_style }}">
+                <span class="w-1.5 h-1.5 rounded-full inline-block mr-1 {% if c.status == 'Sent' %}bg-emerald-500{% elif c.status == 'Scheduled' %}bg-indigo-500{% elif c.status == 'Sending' %}bg-amber-500{% elif c.status == 'Draft' %}bg-slate-500{% elif c.status == 'Failed' %}bg-red-500{% else %}bg-slate-500{% endif %}"></span>
+                {{ c.status }}
+              </span>
+            </td>
+            <td class="px-4 py-3.5 text-gray-500">{{ c.recipients }}</td>
+            <td class="px-4 py-3.5">
+              <span class="font-semibold {% if c.open_rate == '—' %}text-gray-300{% else %}text-slate-800{% endif %}">{{ c.open_rate }}</span>
+            </td>
+            <td class="px-4 py-3.5 text-gray-400">{{ c.date }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    {% url 'campaigns:campaign_create' as campaign_create_url %}
+    {% include "components/empty_state.html" with title="No campaigns yet" description="Create your first campaign to start tracking delivery and opens." cta_url=campaign_create_url cta_label="Create your first campaign" icon="M4 6h16M4 12h16M4 18h16" %}
+    {% endif %}
+  </div>
+
+  {# ───────── 8. RECENT ACTIVITY FEED ───────── #}
+  <div class="premium-surface card-elevate section-card reveal-on-scroll">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 class="card-title">Recent Activity</h2>
+        <p class="meta-label mt-0.5">Latest actions across all modules</p>
+      </div>
+      <span class="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live
+      </span>
+    </div>
+    {% if activity %}
+    <div class="space-y-1.5">
+      {% for a in activity %}
+      <a href="{{ a.url }}" class="activity-row flex items-center gap-3 px-3 py-2.5 rounded-xl group">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+          {% if a.tone == 'indigo' %}bg-indigo-50 text-indigo-600
+          {% elif a.tone == 'emerald' %}bg-emerald-50 text-emerald-600
+          {% elif a.tone == 'pink' %}bg-pink-50 text-pink-600
+          {% elif a.tone == 'violet' %}bg-violet-50 text-violet-600
+          {% else %}bg-slate-100 text-slate-600{% endif %}">
+          {{ a.icon_svg|safe }}
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold text-slate-800 truncate group-hover:text-primary transition-colors">{{ a.title }}</p>
+          <p class="text-[11px] text-slate-500 truncate">{{ a.sub }}</p>
+        </div>
+        <p class="text-[11px] text-slate-400 flex-shrink-0">{{ a.when|timesince }} ago</p>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    {% include "components/empty_state.html" with title="No activity yet" description="Once you send campaigns, publish posts, or generate content, the latest actions show up here." icon="M12 8v4l3 3M3.05 11A9 9 0 1012 3" %}
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+  document.querySelectorAll('.js-bar-height').forEach((el) => {
+    const value = parseFloat(el.dataset.height || '0');
+    el.style.height = `${Number.isFinite(value) ? value : 0}%`;
+  });
+  document.querySelectorAll('.js-progress-width').forEach((el) => {
+    const raw = (el.dataset.width || '0').trim();
+    if (raw.endsWith('%')) { el.style.width = raw; return; }
+    const value = parseFloat(raw);
+    el.style.width = `${Number.isFinite(value) ? value : 0}%`;
+  });
+
+  // Multi-channel chart tabs
+  document.querySelectorAll('.tab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      const card = btn.closest('.section-card');
+      if (!card) return;
+      card.querySelectorAll('.tab-btn').forEach((b) => {
+        b.classList.remove('active');
+        b.classList.add('text-slate-500');
+      });
+      btn.classList.add('active');
+      btn.classList.remove('text-slate-500');
+      card.querySelectorAll('.tab-panel').forEach((p) => {
+        p.classList.toggle('active', p.dataset.panel === tab);
+      });
+      // Animate bars in the now-active panel
+      card.querySelectorAll('.tab-panel.active .js-multi-bar').forEach((el, i) => {
+        const value = parseFloat(el.dataset.height || '0');
+        el.style.height = '0%';
+        setTimeout(() => {
+          el.style.transition = 'height .5s cubic-bezier(.4,.0,.2,1)';
+          el.style.height = `${Number.isFinite(value) ? value : 0}%`;
+        }, 30 + (i * 12));
+      });
+    });
+  });
+  // Initial bar animation for the first panel
+  document.querySelectorAll('.tab-panel.active .js-multi-bar').forEach((el, i) => {
+    const value = parseFloat(el.dataset.height || '0');
+    setTimeout(() => {
+      el.style.transition = 'height .5s cubic-bezier(.4,.0,.2,1)';
+      el.style.height = `${Number.isFinite(value) ? value : 0}%`;
+    }, 100 + (i * 20));
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Edit {{ item.title }} — Content Studio{% endblock %}
+{% block page_title %}Edit Content{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none mx-auto">
+  <div class="flex items-center gap-3 mb-6">
+    <a href="{% url 'content_studio:detail' item.id %}" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
+      <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    </a>
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Edit Content</h1>
+      <p class="text-sm text-slate-500">{{ item.get_content_type_display }}</p>
+    </div>
+  </div>
+
+  <form method="post" class="space-y-6">
+    {% csrf_token %}
+    <div class="premium-surface rounded-2xl p-6 space-y-5">
+      <div>
+        <label for="title" class="block text-sm font-semibold text-slate-700 mb-1.5">Title</label>
+        <input type="text" name="title" id="title" class="auth-input w-full" value="{{ item.title }}" required>
+      </div>
+      <div>
+        <label for="body" class="block text-sm font-semibold text-slate-700 mb-1.5">Content</label>
+        <textarea name="body" id="body" rows="12" class="auth-input w-full resize-y font-mono text-sm" required>{{ item.body }}</textarea>
+      </div>
+    </div>
+    <div class="flex items-center justify-end gap-3">
+      {% url 'content_studio:detail' item.id as content_studio_detail_url %}
+      {% include "components/button.html" with label="Cancel" variant="secondary" href=content_studio_detail_url %}
+      <button type="submit" class="btn-action btn-action-primary">Save Changes</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

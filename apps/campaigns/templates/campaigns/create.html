@@ -1,0 +1,1310 @@
+{% extends 'base_dashboard.html' %}
+{% load widget_tweaks %}
+
+{% block title %}Create Campaign — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}{% if read_only %}View Campaign{% elif campaign %}Edit Campaign{% else %}Create Campaign{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none space-y-6">
+
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <p class="eyebrow">Campaign studio</p>
+      <h1 class="page-title mt-2">{% if read_only %}View Campaign{% elif campaign %}Edit Campaign{% else %}Create Campaign{% endif %}</h1>
+      <p class="page-lead">Build and manage campaigns inside your workspace.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="{% url 'campaigns:campaign_list' %}" class="btn-action btn-action-secondary whitespace-nowrap">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+        Back
+      </a>
+      {% if read_only and campaign %}
+      <a href="{% url 'campaigns:campaign_edit' campaign.id %}" class="btn-action btn-action-secondary whitespace-nowrap">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+        Edit
+      </a>
+      {% endif %}
+      {% if campaign or read_only %}
+      <a href="{% url 'campaigns:campaign_create' %}" class="btn-action btn-action-primary whitespace-nowrap">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        New Campaign
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if campaign %}
+  <div class="mb-4 flex justify-end">
+    {% if read_only %}
+    {% include "components/badge.html" with label="View only" variant="gray" %}
+    {% elif campaign.status == 'draft' %}
+    {% include "components/badge.html" with label="Editing draft" variant="yellow" %}
+    {% elif campaign.status == 'sent' %}
+    {% include "components/badge.html" with label="Editing sent campaign" variant="red" %}
+    {% elif campaign.status == 'scheduled' %}
+    {% include "components/badge.html" with label="Editing scheduled campaign" variant="blue" %}
+    {% else %}
+    {% with label_str="Editing "|add:campaign.status %}
+    {% include "components/badge.html" with label=label_str variant="gray" %}
+    {% endwith %}
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- ── Interactive Step Progress Bar ── -->
+  <div class="glass-card card-elevate rounded-2xl p-4">
+    <div class="flex items-center justify-between">
+      {% for s in wizard_steps %}
+      <button type="button" onclick="goToStep({{ forloop.counter0 }})"
+        class="step-btn flex items-center gap-2 {% if forloop.counter0 <= current_step %}text-slate-800{% else %}text-slate-400 cursor-not-allowed{% endif %} group transition-colors"
+        data-step="{{ forloop.counter0 }}" {% if forloop.counter0 > current_step %}disabled{% endif %}>
+        <span class="step-circle w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all
+          {% if forloop.counter0 < current_step %}bg-emerald-500 text-white{% elif forloop.counter0 == current_step %}bg-primary text-white ring-4 ring-primary/20{% else %}bg-slate-200 text-slate-500{% endif %}">
+          {% if forloop.counter0 < current_step %}
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+          {% else %}
+          {{ forloop.counter }}
+          {% endif %}
+        </span>
+        <span class="text-xs font-semibold hidden sm:inline">{{ s }}</span>
+      </button>
+      {% if not forloop.last %}
+      <div class="flex-1 h-px mx-2 {% if forloop.counter <= current_step %}bg-emerald-400{% else %}bg-slate-200{% endif %}"></div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <form method="post" id="campaign-form" enctype="multipart/form-data" class="grid grid-cols-1 gap-8 items-start">
+    {% csrf_token %}
+    {% if selected_template %}<input type="hidden" name="template_id" value="{{ selected_template.id }}">{% endif %}
+
+    <!-- ═══════════════════════ MAIN CONTENT ═══════════════════════ -->
+    <section class="xl:col-span-2 space-y-6">
+
+      <!-- ═══ STEP 1: Contacts ═══ -->
+      <div id="step-0" class="step-panel">
+        <div class="glass-card section-card font-sans">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-7 h-7 bg-primary text-white rounded-lg flex items-center justify-center text-xs font-bold font-sans">1</div>
+            <div>
+              <h2 class="section-title">Choose Your Contacts</h2>
+              <p class="section-subtitle">Pick a saved list, upload a CSV, or enter emails manually</p>
+            </div>
+          </div>
+
+          <div class="mb-3 flex items-center justify-between gap-3 flex-wrap">
+            <div id="contact-source-hint" class="text-xs font-semibold text-slate-500 bg-slate-100 rounded-full px-3 py-1">
+              Source: Manual entry
+            </div>
+            <p class="text-[11px] text-slate-400">Tip: you can select multiple lists and optionally filter to specific tags.</p>
+          </div>
+
+          <div class="flex gap-2 mb-5 bg-gray-100/70 p-1 rounded-xl w-fit">
+            <button type="button" id="tab-manual" onclick="switchTab('manual')"
+              class="tab-btn px-4 py-2 rounded-lg text-xs font-bold transition-all bg-white text-slate-800 shadow-sm flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+              Manual
+            </button>
+            <button type="button" id="tab-list" onclick="switchTab('list')"
+              class="tab-btn px-4 py-2 rounded-lg text-xs font-bold transition-all text-gray-400 hover:text-slate-700 flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              Saved List
+            </button>
+            <button type="button" id="tab-csv" onclick="switchTab('csv')"
+              class="tab-btn px-4 py-2 rounded-lg text-xs font-bold transition-all text-gray-400 hover:text-slate-700 flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+              Upload CSV
+            </button>
+          </div>
+
+          <!-- Manual -->
+          <div id="panel-manual">
+            <div class="rounded-xl border-2 border-dashed border-indigo-100 bg-indigo-50/40 px-5 py-4">
+              <p class="text-sm text-slate-600 font-medium">Type or paste recipient emails directly in the <span class="text-primary font-bold">Recipients</span> field in the next step.</p>
+              <p class="text-xs text-slate-500 mt-1.5">Best for quick one-off campaigns where you already have clean emails.</p>
+            </div>
+            <input type="hidden" name="contact_list" value="" id="id_contact_list">
+            <input type="hidden" name="csv_emails" id="csv_emails_input">
+            <input type="hidden" name="csv_context" id="csv_context_input">
+          </div>
+
+          <!-- Saved List -->
+          <div id="panel-list" class="hidden">
+            <div class="mb-3 flex items-center justify-between gap-3">
+              <p class="text-xs font-bold text-slate-700 uppercase tracking-widest">Saved Lists ({{ contact_lists|length }})</p>
+              <p id="selected-lists-summary" class="text-xs text-slate-500">No lists selected</p>
+            </div>
+            {% if available_tags %}
+            <div class="mb-4 rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
+              <div class="flex items-center justify-between gap-3 mb-2">
+                <p class="text-xs font-bold text-emerald-700 uppercase tracking-widest">Tag Segmentation (Optional)</p>
+                <a href="{% url 'contacts:tags_manager' %}" target="_blank" class="text-[11px] font-semibold text-emerald-700 hover:underline">Manage tags</a>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                {% for tag in available_tags %}
+                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-200 bg-white text-xs font-semibold text-emerald-700 cursor-pointer hover:bg-emerald-50">
+                  <input type="checkbox" name="contact_tags" value="{{ tag.id }}" class="accent-emerald-600" />
+                  {{ tag.name }}
+                </label>
+                {% endfor %}
+              </div>
+              <p class="mt-2 text-[11px] text-emerald-700">If tags are selected, only contacts in the chosen list(s) with those tags will be included.</p>
+            </div>
+            {% endif %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {% for cl in contact_lists %}
+              <label class="contact-list-option relative flex items-start gap-3 p-4 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-primary/50 hover:bg-indigo-50/40 transition-all">
+                <input type="checkbox" name="contact_lists" value="{{ cl.id }}" data-contact-count="{{ cl.contacts.count }}" class="mt-0.5 accent-indigo-600 contact-list-checkbox" />
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-semibold text-slate-800 leading-snug break-words">{{ cl.name }}</p>
+                  <p class="text-xs text-gray-400 mt-0.5">{{ cl.contacts.count }} contact{{ cl.contacts.count|pluralize }}</p>
+                  {% if cl.description %}
+                  <p class="text-xs text-gray-400 truncate">{{ cl.description }}</p>
+                  {% endif %}
+                </div>
+                <span class="absolute top-3 right-3 check-badge hidden">
+                  <svg class="w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                </span>
+              </label>
+              {% empty %}
+              <div class="sm:col-span-2 text-center py-8 rounded-xl border-2 border-dashed border-gray-200">
+                <p class="text-sm text-gray-400">No contact lists yet.</p>
+                <a href="{% url 'contacts:import_csv' %}" class="text-xs text-primary font-semibold hover:underline mt-1 inline-block">Create your first list →</a>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- CSV Upload -->
+          <div id="panel-csv" class="hidden">
+            <div id="csv-drop-zone"
+              class="border-2 border-dashed border-gray-200 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary/50 hover:bg-indigo-50/30 transition-all"
+              onclick="document.getElementById('csv-file-input').click()">
+              <svg class="w-10 h-10 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+              <p class="text-sm font-semibold text-slate-700">Drop your CSV here or <span class="text-primary">browse</span></p>
+              <p class="text-xs text-gray-400 mt-1">CSV must have an <span class="font-mono bg-gray-100 px-1 rounded">email</span> column</p>
+              <input type="file" id="csv-file-input" accept=".csv" class="hidden" />
+            </div>
+            <div id="csv-preview" class="hidden mt-4">
+              <div class="flex items-center justify-between mb-2">
+                <p class="text-xs font-bold text-slate-700 uppercase tracking-widest">Preview</p>
+                <button type="button" onclick="clearCSV()" class="text-xs text-red-500 font-semibold hover:underline">Remove</button>
+              </div>
+              <div class="bg-gray-50 rounded-xl border border-gray-100 px-4 py-3">
+                <p class="text-sm font-semibold text-slate-800" id="csv-filename"></p>
+                <p class="text-xs text-gray-400 mt-0.5" id="csv-count"></p>
+                <div id="csv-email-preview" class="mt-2 text-xs text-gray-500 font-mono max-h-24 overflow-y-auto leading-5"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end mt-6">
+          <button type="button" onclick="goToStep(1)" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white font-semibold hover:bg-primary-hover transition-all shadow-lg shadow-indigo-500/30">
+            Next: Identity
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- ═══ STEP 2: Identity ═══ -->
+      <div id="step-1" class="step-panel hidden">
+        <div class="glass-card section-card font-sans">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-7 h-7 bg-primary text-white rounded-lg flex items-center justify-center text-xs font-bold font-sans">2</div>
+            <div>
+              <h2 class="section-title">Campaign Identity</h2>
+              <p class="section-subtitle">How your campaign will appear to recipients</p>
+            </div>
+          </div>
+
+          {% if form.non_field_errors %}
+          <div class="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {{ form.non_field_errors }}
+          </div>
+          {% endif %}
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div class="md:col-span-2">
+              <label for="id_name" class="block text-sm font-semibold text-slate-700 mb-2">Campaign Name</label>
+              {{ form.name|add_class:"auth-input"|attr:"placeholder:Q2 Product Launch - Segment A" }}
+              {% if form.name.errors %}<p class="mt-1 text-xs text-red-600">{{ form.name.errors.0 }}</p>{% endif %}
+            </div>
+
+            <div class="md:col-span-2">
+              <label for="id_from_name" class="block text-sm font-semibold text-slate-700 mb-2">From Name</label>
+              {{ form.from_name|add_class:"auth-input"|attr:"placeholder:Mailexa Team" }}
+              {% if form.from_name.errors %}<p class="mt-1 text-xs text-red-600">{{ form.from_name.errors.0 }}</p>{% endif %}
+            </div>
+
+            <div>
+              <label for="id_reply_to" class="block text-sm font-semibold text-slate-700 mb-2">Reply-To Email</label>
+              {{ form.reply_to|add_class:"auth-input"|attr:"placeholder:support@example.com" }}
+              {% if form.reply_to.errors %}<p class="mt-1 text-xs text-red-600">{{ form.reply_to.errors.0 }}</p>{% endif %}
+            </div>
+
+            <div class="md:col-span-2">
+              <label for="id_recipient_emails" class="block text-sm font-semibold text-slate-700 mb-2">
+                Recipients
+                <span class="text-xs text-gray-400 font-normal ml-1">(or select a list in Step 1)</span>
+              </label>
+              {{ form.recipient_emails|add_class:"auth-input min-h-24"|attr:"placeholder:alice@example.com, bob@example.com" }}
+              {% if form.recipient_emails.errors %}<p class="mt-1 text-xs text-red-600">{{ form.recipient_emails.errors.0 }}</p>{% endif %}
+              <p class="mt-1.5 text-[10px] text-gray-400 font-medium">Add one or many emails (comma or new line separated).</p>
+              <p id="recipient-live-stats" class="mt-1 text-xs text-slate-500">0 unique recipients · 0 duplicates removed</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-between mt-6">
+          <button type="button" onclick="goToStep(0)" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100 transition-all">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 12H5m7 7l-7-7 7-7"/></svg>
+            Back: Contacts
+          </button>
+          <button type="button" onclick="goToStep(2)" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white font-semibold hover:bg-primary-hover transition-all shadow-lg shadow-indigo-500/30">
+            Next: Message
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- ═══ STEP 3: Message ═══ -->
+      <div id="step-2" class="step-panel hidden">
+        <div class="glass-card section-card font-sans">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-7 h-7 bg-primary text-white rounded-lg flex items-center justify-center text-xs font-bold font-sans">3</div>
+            <div>
+              <h2 class="section-title">Message Content</h2>
+              <p class="section-subtitle">Write your message in plain text</p>
+            </div>
+          </div>
+
+          <div class="space-y-5">
+            {% if templates and not selected_template %}
+            <div class="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+              <div class="flex items-center justify-between gap-3 mb-3">
+                <label class="text-sm font-semibold text-slate-700">Start from a template</label>
+                <span class="text-[10px] text-slate-400">{{ templates|length }} available</span>
+              </div>
+              <input type="text" id="template-search-input" class="auth-input mb-2" placeholder="Search templates..." oninput="filterTemplates(this.value)">
+              <div class="flex items-center gap-2">
+                <select id="template-selector" class="auth-input flex-1 text-sm">
+                  <option value="">— Select a template —</option>
+                  {% for t in templates %}
+                  <option value="{{ t.id }}">{{ t.name }}</option>
+                  {% endfor %}
+                </select>
+                <button type="button" id="apply-template-btn" class="btn-action btn-action-secondary whitespace-nowrap">Apply</button>
+              </div>
+            </div>
+            {% endif %}
+
+            <div id="standard-subject-block">
+              <label for="id_subject" class="block text-sm font-semibold text-slate-700 mb-2">Subject Line</label>
+              {{ form.subject|add_class:"auth-input"|attr:"placeholder:Your April update is ready" }}
+              {% if form.subject.errors %}<p class="mt-1 text-xs text-red-600">{{ form.subject.errors.0 }}</p>{% endif %}
+              <p class="mt-1.5 text-[10px] text-gray-400 font-medium">Keep it under 60 characters for best open rates.</p>
+              <p id="subject-char-counter" class="mt-1 text-xs text-slate-400">0/60 characters</p>
+            </div>
+            <div id="ab-subject-block" class="hidden">
+              <div class="ab-tabs-container flex border-b border-slate-200 mb-4">
+                <button type="button" class="ab-tab-btn active px-4 py-2 text-sm font-bold text-violet-700 border-b-2 border-violet-600" data-ab-tab="a-subject">
+                  <span class="variant-indicator variant-a mr-1.5">A</span> Variant A Subject
+                </button>
+                <button type="button" class="ab-tab-btn px-4 py-2 text-sm font-semibold text-slate-500 border-b-2 border-transparent hover:text-violet-700" data-ab-tab="b-subject">
+                  <span class="variant-indicator variant-b mr-1.5">B</span> Variant B Subject
+                </button>
+              </div>
+              <div class="ab-panel" id="ab-panel-a-subject">
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Variant A Subject</label>
+                {{ form.variant_a_subject|add_class:"auth-input"|attr:"placeholder:Variant A - your compelling subject line" }}
+                {% if form.variant_a_subject.errors %}<p class="mt-1 text-xs text-red-600">{{ form.variant_a_subject.errors.0 }}</p>{% endif %}
+              </div>
+              <div class="ab-panel hidden" id="ab-panel-b-subject">
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Variant B Subject</label>
+                {{ form.variant_b_subject|add_class:"auth-input"|attr:"placeholder:Variant B - your alternative subject line" }}
+                {% if form.variant_b_subject.errors %}<p class="mt-1 text-xs text-red-600">{{ form.variant_b_subject.errors.0 }}</p>{% endif %}
+              </div>
+            </div>
+
+            <div id="standard-body-block">
+              <input type="hidden" name="body_html" id="id_body_html" value="">
+              <label for="id_body_text" class="block text-sm font-semibold text-slate-700 mb-2">Message Body</label>
+              {{ form.body_text|add_class:"auth-input min-h-40"|attr:"placeholder:Hello [first_name], thanks for joining us." }}
+              {% if form.body_text.errors %}<p class="mt-1 text-xs text-red-600">{{ form.body_text.errors.0 }}</p>{% endif %}
+              <p class="mt-1.5 text-[10px] text-gray-400 font-medium">This text is converted to HTML automatically during send.</p>
+              <p id="body-text-counter" class="mt-1 text-xs text-slate-400">0 words · 0 chars</p>
+
+              <details class="mt-3 group">
+                <summary class="cursor-pointer text-xs font-semibold text-slate-500 hover:text-slate-700 select-none">
+                  <svg class="w-3.5 h-3.5 inline mr-1 group-open:rotate-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  Template variables — click to see available placeholders
+                </summary>
+                <div class="mt-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-2">
+                  <p class="font-semibold text-slate-700">Available variables (use in subject &amp; body):</p>
+                  <div class="grid grid-cols-2 gap-x-4 gap-y-1">
+                    <code class="text-indigo-600 font-mono">{<!-- -->{ first_name }}</code><span>Recipient's first name</span>
+                    <code class="text-indigo-600 font-mono">{<!-- -->{ last_name }}</code><span>Recipient's last name</span>
+                    <code class="text-indigo-600 font-mono">{<!-- -->{ email }}</code><span>Recipient's email address</span>
+                    <code class="text-indigo-600 font-mono">{<!-- -->{ company_name }}</code><span>Your company name</span>
+                    <code class="text-indigo-600 font-mono">{<!-- -->{ month }}</code><span>Current month (e.g. June 2026)</span>
+                    <code class="text-indigo-600 font-mono">{<!-- -->{ year }}</code><span>Current year</span>
+                    <code class="text-indigo-600 font-mono">{<!-- -->{ voucher }}</code><span>From CSV or campaign data</span>
+                    <code class="text-indigo-600 font-mono">{<!-- -->{ client_name }}</code><span>From CSV or campaign data</span>
+                    <code class="text-indigo-600 font-mono">{<!-- -->{ subject }}</code><span>Email subject line</span>
+                  </div>
+                  {% if csv_columns %}
+                  <div class="pt-2 border-t border-slate-200">
+                    <p class="font-semibold text-slate-700">CSV columns:</p>
+                    <div id="csv-variables-grid" class="grid grid-cols-2 gap-x-4 gap-y-1 mt-1">
+                    {% for col in csv_columns %}
+                    <code class="text-indigo-600 font-mono text-xs">{<!-- -->{ {{ col|escape }} }}</code><span class="text-xs text-slate-500">From CSV column "{{ col|escape }}"</span>
+                    {% endfor %}
+                    </div>
+                  </div>
+                  {% endif %}
+                </div>
+              </details>
+
+              <div class="mt-3 flex items-center gap-2">
+                <button type="button" onclick="openCampaignPreview(event)" data-preview-btn class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-800 text-xs font-semibold transition-colors">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                  Preview
+                </button>
+                <button type="button" onclick="previewCampaignInNewWindow()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-800 text-xs font-semibold transition-colors">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                  Open in Tab
+                </button>
+              </div>
+            </div>
+
+            <div id="ab-body-block" class="hidden">
+              <div class="ab-tabs-container flex border-b border-slate-200 mb-4">
+                <button type="button" class="ab-tab-btn active px-4 py-2 text-sm font-bold text-violet-700 border-b-2 border-violet-600" data-ab-tab="a-body">
+                  <span class="variant-indicator variant-a mr-1.5">A</span> Variant A Body
+                </button>
+                <button type="button" class="ab-tab-btn px-4 py-2 text-sm font-semibold text-slate-500 border-b-2 border-transparent hover:text-violet-700" data-ab-tab="b-body">
+                  <span class="variant-indicator variant-b mr-1.5">B</span> Variant B Body
+                </button>
+              </div>
+              <div class="ab-panel" id="ab-panel-a-body">
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Variant A Body</label>
+                {{ form.variant_a_body|add_class:"auth-input min-h-40"|attr:"rows:5"|attr:"placeholder:Variant A email body copy..." }}
+                {% if form.variant_a_body.errors %}<p class="mt-1 text-xs text-red-600">{{ form.variant_a_body.errors.0 }}</p>{% endif %}
+              </div>
+              <div class="ab-panel hidden" id="ab-panel-b-body">
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Variant B Body</label>
+                {{ form.variant_b_body|add_class:"auth-input min-h-40"|attr:"rows:5"|attr:"placeholder:Variant B email body copy..." }}
+                {% if form.variant_b_body.errors %}<p class="mt-1 text-xs text-red-600">{{ form.variant_b_body.errors.0 }}</p>{% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-between mt-6">
+          <button type="button" onclick="goToStep(1)" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100 transition-all">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 12H5m7 7l-7-7 7-7"/></svg>
+            Back: Identity
+          </button>
+          <button type="button" onclick="goToStep(3)" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white font-semibold hover:bg-primary-hover transition-all shadow-lg shadow-indigo-500/30">
+            Next: Delivery
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- ═══ STEP 4: Delivery ═══ -->
+      <div id="step-3" class="step-panel hidden">
+        <div class="glass-card section-card font-sans">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-7 h-7 bg-emerald-600 text-white rounded-lg flex items-center justify-center text-xs font-bold font-sans">4</div>
+            <div>
+              <h2 class="section-title">Delivery Settings</h2>
+              <p class="section-subtitle">Configure sender, schedule, A/B test, and more</p>
+            </div>
+          </div>
+
+          <div class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label for="id_sender" class="block text-sm font-semibold text-slate-700 mb-2">Sender Profile</label>
+                {{ form.sender|add_class:"auth-input" }}
+                {% if form.sender.errors %}<p class="mt-1 text-xs text-red-600">{{ form.sender.errors.0 }}</p>{% endif %}
+                <p class="mt-2 text-xs text-gray-500">{{ senders|length }} active sender{{ senders|length|pluralize }} available.</p>
+              </div>
+              <div>
+                <label for="id_scheduled_at" class="block text-sm font-semibold text-slate-700 mb-2">Schedule (Optional)</label>
+                {{ form.scheduled_at|add_class:"auth-input"|attr:"type:datetime-local" }}
+                {% if form.scheduled_at.errors %}<p class="mt-1 text-xs text-red-600">{{ form.scheduled_at.errors.0 }}</p>{% endif %}
+                <p class="mt-2 text-xs text-gray-500">Leave empty to keep as draft.</p>
+              </div>
+            </div>
+
+            <details class="rounded-xl border border-slate-200 group mb-6" {% if campaign and campaign.is_ab_test %}open{% endif %}>
+              <summary class="flex items-center gap-3 p-4 cursor-pointer select-none list-none">
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="w-7 h-7 bg-slate-600 text-white rounded-lg flex items-center justify-center text-xs font-bold">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+                  </div>
+                  <span class="text-sm font-bold text-slate-900">Advanced Options</span>
+                </div>
+                <svg class="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </summary>
+              <div class="px-4 pb-4 space-y-4">
+                <!-- A/B Testing -->
+                <div id="ab-testing-section" class="rounded-xl border border-slate-200 p-4">
+                  <div class="flex items-center gap-3 mb-4">
+                    <div class="w-7 h-7 bg-violet-600 text-white rounded-lg flex items-center justify-center text-xs font-bold">A/B</div>
+                    <h3 class="text-sm font-bold text-slate-900 uppercase tracking-widest">A/B Testing</h3>
+                  </div>
+                  <label class="flex items-center gap-3 p-4 rounded-xl border border-slate-200 cursor-pointer hover:border-violet-300 transition-all {% if campaign and campaign.is_ab_test %}border-violet-300 bg-violet-50/50{% endif %}">
+                    {{ form.is_ab_test|add_class:"w-5 h-5 text-violet-600 rounded border-gray-300 focus:ring-violet-500 cursor-pointer" }}
+                    <div>
+                      <p class="text-sm font-bold text-slate-800">Test subject lines & content</p>
+                      <p class="text-xs text-slate-500">Send variants A and B to a test segment, then deliver the winner.</p>
+                    </div>
+                  </label>
+                  <div id="ab-options" class="mt-4 space-y-4 {% if campaign and campaign.is_ab_test %}{% else %}hidden{% endif %}">
+                    <div class="grid grid-cols-2 gap-5">
+                      <div>
+                        <label for="id_ab_test_duration_hours" class="block text-xs font-semibold text-slate-700 mb-1.5">Test Duration (hours)</label>
+                        {{ form.ab_test_duration_hours|add_class:"auth-input" }}
+                      </div>
+                      <div>
+                        <label for="id_ab_percentage" class="block text-xs font-semibold text-slate-700 mb-1.5">Test Size (%)</label>
+                        {{ form.ab_percentage|add_class:"auth-input" }}
+                        <p class="mt-1 text-[10px] text-slate-400">Each variant gets this %; remaining goes to winner.</p>
+                      </div>
+                    </div>
+                    <div class="rounded-xl bg-amber-50 border border-amber-200 p-3">
+                      <p class="text-[11px] font-semibold text-amber-800">
+                        <svg class="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        After the test window expires, the winning variant (by open rate) is sent to the remaining recipients automatically.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </details>
+
+            <!-- Attachments -->
+            <details class="rounded-xl border border-slate-200 group" {% if campaign and campaign.attachments.exists %}open{% endif %}>
+              <summary class="flex items-center gap-3 p-4 cursor-pointer select-none list-none">
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="w-7 h-7 bg-slate-600 text-white rounded-lg flex items-center justify-center text-xs font-bold">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                  </div>
+                  <h3 class="text-sm font-bold text-slate-900 uppercase tracking-widest">Attachments</h3>
+                </div>
+                <svg class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </summary>
+              <div class="px-4 pb-4 space-y-4">
+                <p class="text-xs text-slate-500">Attach files to include in the email.</p>
+                {% if campaign %}
+                <div id="existing-attachments" class="space-y-2">
+                  {% for att in campaign.attachments.all %}
+                  <div class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-200">
+                    <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                    <span class="text-xs text-slate-700 truncate flex-1">{{ att.original_filename }}</span>
+                    <span class="text-[10px] text-slate-400">{% widthratio att.file_size 1024 1 %}KB</span>
+                    <label class="text-[10px] text-red-600 hover:text-red-800 cursor-pointer flex items-center gap-1">
+                      <input type="checkbox" name="delete_attachment_{{ att.id }}" value="1" class="w-3 h-3 text-red-500 rounded border-gray-300"> Remove
+                    </label>
+                  </div>
+                  {% endfor %}
+                </div>
+                {% endif %}
+                <div id="new-attachment-rows" class="space-y-2"></div>
+                <template id="attachment-row-template">
+                  <div class="attachment-row flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-200">
+                    <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                    <input type="file" class="attachment-file text-xs flex-1" style="font-size:11px">
+                    <button type="button" onclick="this.closest('.attachment-row').remove()" class="text-slate-400 hover:text-red-600 transition-colors p-1">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                  </div>
+                </template>
+                <button type="button" onclick="addAttachmentRow()" class="w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-dashed border-slate-300 text-slate-500 hover:text-slate-700 hover:border-slate-400 text-xs font-semibold transition-colors">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                  Add Attachment
+                </button>
+              </div>
+            </details>
+
+            <!-- Spam Analysis -->
+            <details class="rounded-xl border border-slate-200 group">
+              <summary class="flex items-center gap-3 p-4 cursor-pointer select-none list-none">
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="w-7 h-7 bg-indigo-600 text-white rounded-lg flex items-center justify-center font-bold text-[9px] italic">AI</div>
+                  <h3 class="text-sm font-bold text-slate-900 uppercase tracking-widest">Spam Analysis</h3>
+                </div>
+                <svg class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </summary>
+              <div class="px-4 pb-4 space-y-4">
+                <p class="text-xs text-gray-500">Check your content against our AI model before sending.</p>
+                <div id="spam-result" class="hidden">
+                  <div class="p-4 rounded-xl border" id="spam-result-box">
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-xs font-bold text-slate-700">Spam Score</span>
+                      <span class="text-lg font-black tabular-nums" id="spam-score-val">--</span>
+                    </div>
+                    <div class="w-full bg-gray-100 rounded-full h-2 mb-2">
+                      <div class="h-2 rounded-full transition-all duration-700" id="spam-bar" style="width: 0%"></div>
+                    </div>
+                    <p class="text-[10px] font-medium" id="spam-verdict"></p>
+                  </div>
+                </div>
+                <button type="button" id="analyze-spam-btn" class="w-full flex items-center justify-center gap-2 py-3 px-4 bg-indigo-50 text-indigo-700 rounded-xl text-sm font-bold hover:bg-indigo-100 transition-all border border-indigo-100">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                  Analyze with AI
+                </button>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div class="flex justify-between mt-6">
+          <button type="button" onclick="goToStep(2)" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100 transition-all">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 12H5m7 7l-7-7 7-7"/></svg>
+            Back: Message
+          </button>
+          <button type="button" onclick="goToStep(4)" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white font-semibold hover:bg-primary-hover transition-all shadow-lg shadow-indigo-500/30">
+            Next: Review
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- ═══ STEP 5: Review & Send ═══ -->
+      <div id="step-4" class="step-panel hidden">
+        <div class="glass-card section-card font-sans">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-7 h-7 bg-emerald-600 text-white rounded-lg flex items-center justify-center text-xs font-bold font-sans">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+              <h2 class="section-title">Review & Launch</h2>
+              <p class="section-subtitle">Double-check everything before sending</p>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Campaign Name</p>
+                <p class="text-sm font-semibold text-slate-800" id="review-name">—</p>
+              </div>
+              <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Subject Line</p>
+                <p class="text-sm font-semibold text-slate-800" id="review-subject">—</p>
+              </div>
+              <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">From</p>
+                <p class="text-sm font-semibold text-slate-800" id="review-from">—</p>
+              </div>
+              <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Recipients</p>
+                <p class="text-sm font-semibold text-slate-800" id="review-recipients">0</p>
+              </div>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Sender Profile</p>
+              <p class="text-sm font-semibold text-slate-800" id="review-sender">—</p>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Body Preview</p>
+              <div id="review-body" class="text-sm text-slate-700 mt-1 prose prose-sm max-w-none"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card section-card font-sans p-6 mt-6">
+          <h3 class="text-sm font-bold uppercase tracking-widest text-slate-900">Launch campaign</h3>
+          <p class="text-xs text-slate-500 mt-2 leading-relaxed">{% if read_only %}This campaign is in view-only mode.{% else %}Save as draft to continue later, send a test, or launch once everything looks good.{% endif %}</p>
+
+          <div class="mt-6 flex flex-col gap-3">
+            {% if not read_only %}
+            <button type="button" onclick="confirmCampaignSend('send_now')"
+              class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-colors shadow-lg shadow-emerald-500/30">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"/></svg>
+              Review & Send Now
+            </button>
+            <label for="id_test_email" class="text-xs font-semibold text-slate-600">Test Email</label>
+            <input id="id_test_email" name="test_email" type="email" class="auth-input" placeholder="you@example.com" />
+            <p class="text-[11px] text-slate-500">Sends a single preview email and keeps this campaign in draft/edit mode.</p>
+            <button type="submit" name="action" value="send_test"
+              class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold transition-colors border border-indigo-200">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8m-18 8h18a2 2 0 002-2V8a2 2 0 00-2-2H3a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
+              Send Test Email
+            </button>
+  {% include 'campaigns/_button.html' with type='primary' text='Save Draft Only' button_type='submit' name='action' value='save_draft' %}
+            {% endif %}
+            <a href="{% url 'campaigns:campaign_list' %}"
+              class="w-full inline-flex items-center justify-center px-4 py-3 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors text-sm font-semibold">
+              {% if read_only %}Back to Campaigns{% else %}Cancel{% endif %}
+            </a>
+          </div>
+        </div>
+
+        <div class="flex justify-between mt-6">
+          <button type="button" onclick="goToStep(3)" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100 transition-all">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 12H5m7 7l-7-7 7-7"/></svg>
+            Back: Delivery
+          </button>
+        </div>
+      </div>
+    </section>
+  </form>
+</div>
+
+<!-- ── AI Content Co-Pilot Slide-Over Panel ── -->
+<button type="button" id="copilot-trigger" class="copilot-trigger fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-transparent text-white shadow-none hover:-translate-y-1 transition-transform flex items-center justify-center border-0" title="Open AI Write" aria-label="Open AI Write">
+  <svg class="copilot-trigger-mark w-[32px] h-[32px] drop-shadow-[0_2px_6px_rgba(15,23,42,0.14)]" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+    <style>
+      .copilot-trigger { background: radial-gradient(circle at 30% 28%, rgba(255,255,255,0.36) 0%, rgba(255,255,255,0.14) 28%, rgba(255,255,255,0.03) 58%, rgba(255,255,255,0) 74%), linear-gradient(135deg, rgba(76,29,149,0.34), rgba(124,58,237,0.18), rgba(168,85,247,0.28)); box-shadow: 0 16px 34px -18px rgba(76,29,149,0.62), 0 5px 14px rgba(15,23,42,0.10), inset 0 1px 0 rgba(255,255,255,0.58), inset 0 0 0 1px rgba(255,255,255,0.18); backdrop-filter: blur(14px); animation: copilotFloat 4.2s ease-in-out infinite; }
+      .copilot-trigger-mark { animation: copilotGlow 2.8s ease-in-out infinite; }
+      .copilot-trigger-orbit { transform-origin: 28px 12px; animation: copilotOrbit 3.8s ease-in-out infinite; }
+      @keyframes copilotFloat { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-5px); } }
+      @keyframes copilotGlow { 0%, 100% { filter: drop-shadow(0 2px 5px rgba(76,29,149,0.18)); transform: scale(1); } 50% { filter: drop-shadow(0 8px 16px rgba(76,29,149,0.28)); transform: scale(1.04); } }
+      @keyframes copilotOrbit { 0%, 100% { opacity: .72; transform: rotate(0deg) scale(.98); } 50% { opacity: 1; transform: rotate(18deg) scale(1.06); } }
+      @media (prefers-reduced-motion: reduce) { .copilot-trigger, .copilot-trigger-mark, .copilot-trigger-orbit { animation: none; } }
+    </style>
+    <defs><linearGradient id="copilot-mark-gradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4C1D95"/><stop offset="45%" stop-color="#7C3AED"/><stop offset="100%" stop-color="#A855F7"/></linearGradient></defs>
+    <g><path class="copilot-trigger-orbit" d="M31.6 9.5C34.3 11.1 35.7 13.7 35.7 16.9" fill="none" stroke="url(#copilot-mark-gradient)" stroke-width="2.5" stroke-linecap="round"/><circle class="copilot-trigger-orbit" cx="35.8" cy="17.1" r="1.8" fill="url(#copilot-mark-gradient)"/><text x="7.2" y="31.2" fill="url(#copilot-mark-gradient)" font-size="21.5" font-weight="900" font-family="Inter, system-ui, sans-serif" letter-spacing="-2.1">AI</text></g>
+  </svg>
+</button>
+
+<div id="copilot-drawer" class="copilot-drawer hidden flex flex-col">
+  <div class="copilot-header">
+    <div class="flex items-center gap-3">
+      <div class="left">
+        <div id="copilot-badge" class="copilot-badge" aria-hidden="true">
+          <svg class="w-6 h-6 drop-shadow-[0_2px_4px_rgba(15,23,42,0.10)]" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+            <style>
+              .copilot-badge-mark { animation: copilotBadgeFloat 4.2s ease-in-out infinite; }
+              .copilot-badge-orbit { transform-origin: 28px 12px; animation: copilotBadgeOrbit 3.8s ease-in-out infinite; }
+              @keyframes copilotBadgeFloat { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-2px); } }
+              @keyframes copilotBadgeOrbit { 0%, 100% { opacity: .72; transform: rotate(0deg) scale(.98); } 50% { opacity: 1; transform: rotate(18deg) scale(1.06); } }
+              @media (prefers-reduced-motion: reduce) { .copilot-badge-mark, .copilot-badge-orbit { animation: none; } }
+            </style>
+            <defs><linearGradient id="copilot-mark-gradient-header" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4C1D95"/><stop offset="45%" stop-color="#7C3AED"/><stop offset="100%" stop-color="#A855F7"/></linearGradient></defs>
+            <g class="copilot-badge-mark"><path class="copilot-badge-orbit" d="M31.6 9.5C34.3 11.1 35.7 13.7 35.7 16.9" fill="none" stroke="url(#copilot-mark-gradient-header)" stroke-width="2.5" stroke-linecap="round"/><circle class="copilot-badge-orbit" cx="35.8" cy="17.1" r="1.8" fill="url(#copilot-mark-gradient-header)"/><text x="7.2" y="31.2" fill="url(#copilot-mark-gradient-header)" font-size="21.5" font-weight="900" font-family="Inter, system-ui, sans-serif" letter-spacing="-2.1">AI</text></g>
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-[15px] font-extrabold tracking-[-0.03em] text-slate-900">AI Write</h3>
+          <p id="copilot-header-note" class="copilot-note">Draft polished copy with AI</p>
+        </div>
+      </div>
+    </div>
+    <button type="button" onclick="closeCopilot()" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="copilot-body">
+    <div class="space-y-5">
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">What do you want to write about?</label>
+        <textarea id="copilot-prompt" rows="4" class="auth-input min-h-24" placeholder="e.g., A welcome email for new SaaS users highlighting our key features and offering a 14-day free trial..."></textarea>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">Tone</label>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="tone-option flex items-center gap-2 p-3 rounded-xl border-2 border-slate-200 cursor-pointer hover:border-violet-300 transition-all" data-tone="professional">
+            <input type="radio" name="copilot-tone" value="professional" class="hidden" checked>
+            <div class="w-4 h-4 rounded-full border-2 border-slate-300 flex items-center justify-center flex-shrink-0"><div class="w-2 h-2 rounded-full bg-violet-600 hidden"></div></div>
+            <span class="text-sm font-semibold text-slate-700">Professional</span>
+          </label>
+          <label class="tone-option flex items-center gap-2 p-3 rounded-xl border-2 border-slate-200 cursor-pointer hover:border-violet-300 transition-all" data-tone="urgent">
+            <input type="radio" name="copilot-tone" value="urgent" class="hidden">
+            <div class="w-4 h-4 rounded-full border-2 border-slate-300 flex items-center justify-center flex-shrink-0"><div class="w-2 h-2 rounded-full bg-violet-600 hidden"></div></div>
+            <span class="text-sm font-semibold text-slate-700">Urgent</span>
+          </label>
+          <label class="tone-option flex items-center gap-2 p-3 rounded-xl border-2 border-slate-200 cursor-pointer hover:border-violet-300 transition-all" data-tone="casual">
+            <input type="radio" name="copilot-tone" value="casual" class="hidden">
+            <div class="w-4 h-4 rounded-full border-2 border-slate-300 flex items-center justify-center flex-shrink-0"><div class="w-2 h-2 rounded-full bg-violet-600 hidden"></div></div>
+            <span class="text-sm font-semibold text-slate-700">Casual</span>
+          </label>
+          <label class="tone-option flex items-center gap-2 p-3 rounded-xl border-2 border-slate-200 cursor-pointer hover:border-violet-300 transition-all" data-tone="creative">
+            <input type="radio" name="copilot-tone" value="creative" class="hidden">
+            <div class="w-4 h-4 rounded-full border-2 border-slate-300 flex items-center justify-center flex-shrink-0"><div class="w-2 h-2 rounded-full bg-violet-600 hidden"></div></div>
+            <span class="text-sm font-semibold text-slate-700">Creative</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="copilot-footer">
+    <div id="copilot-result" class="hidden mb-4 max-h-48 overflow-y-auto space-y-3">
+      <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Subject</p>
+        <p id="copilot-subject-result" class="text-sm font-semibold text-slate-800"></p>
+      </div>
+      <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Body</p>
+        <p id="copilot-body-result" class="text-sm text-slate-700 whitespace-pre-wrap max-h-32 overflow-y-auto"></p>
+      </div>
+      <div class="flex items-center justify-between p-2 rounded-lg border" id="copilot-spam-box">
+        <span class="text-xs font-semibold text-slate-600">Spam Score</span>
+        <span class="text-sm font-black" id="copilot-spam-val">--</span>
+      </div>
+      <p id="copilot-source-note" class="text-[11px] font-medium text-slate-400"></p>
+    </div>
+    <div class="flex flex-col gap-2">
+      <button type="button" id="copilot-generate-btn" class="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-700 text-white font-bold text-sm hover:from-violet-700 hover:to-indigo-800 transition-all shadow-lg shadow-indigo-500/30">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/></svg>
+        Generate with AI
+      </button>
+      <button type="button" id="copilot-apply-btn" class="w-full hidden inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/30">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        Apply Content to Campaign
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Campaign Preview Modal ── -->
+<div id="campaignPreviewOverlay" class="hidden fixed inset-0 z-[100] bg-black/20 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeCampaignPreview()">
+  <div id="campaignPreviewPanel" class="bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden w-full max-w-3xl max-h-[85vh] flex flex-col">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 shrink-0">
+      <span class="text-sm font-semibold text-slate-800">Campaign Preview</span>
+      <div class="flex items-center gap-1.5">
+        <button type="button" onclick="previewCampaignInNewWindow()" class="text-xs font-medium text-slate-400 hover:text-slate-600 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors">Open in Tab</button>
+        <button type="button" onclick="closeCampaignPreview()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="p-4 bg-slate-50 flex-1 overflow-auto">
+      <iframe id="campaignPreviewFrame" class="border-0 rounded-lg bg-white" style="max-width:600px;width:100%;display:block;margin:0 auto" srcdoc="<html><body style='font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:40px;text-align:center;color:#999'><p>Fill in the subject and body, then click Preview</p></body></html>"></iframe>
+    </div>
+  </div>
+</div>
+
+<style>
+.copilot-drawer {
+  position: fixed; right: 20px; bottom: 90px; width: 420px; max-width: calc(100% - 40px);
+  background: white; z-index: 200;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px -24px rgba(15,23,42,0.35), 0 8px 20px -12px rgba(15,23,42,0.12);
+  border: 1px solid #e2e8f0;
+  animation: fadeInUp 0.2s ease-out;
+  max-height: 70vh;
+}
+.copilot-drawer.hidden { display: none !important; }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.copilot-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; }
+.copilot-header .left { display: flex; align-items: center; gap: 0.75rem; }
+.copilot-body { flex: 1; overflow-y: auto; padding: 1.25rem; max-height: 360px; }
+.copilot-footer { padding: 1rem 1.25rem; border-top: 1px solid #e2e8f0; flex-shrink: 0; }
+.copilot-note { font-size: 0.75rem; color: #94a3b8; margin-top: 0.125rem; font-weight: 500; }
+</style>
+
+{% endblock %}
+
+{% block extra_scripts %}
+{% include 'campaigns/_preview_helpers.html' %}
+<script>
+// ── Wizard Navigation ──────────────────────────────────────────
+var TOTAL_STEPS = 5;
+var currentStep = 0;
+var maxCompletedStep = 0;
+
+function filterTemplates(query) {
+  var sel = document.getElementById('template-selector');
+  if (!sel) return;
+  var opts = sel.options;
+  query = query.toLowerCase().trim();
+  for (var i = 0; i < opts.length; i++) {
+    var label = opts[i].text.toLowerCase();
+    opts[i].style.display = (!query || label.indexOf(query) !== -1) ? '' : 'none';
+  }
+}
+
+function validateStep(step) {
+  var existing = document.getElementById('wizard-error-' + step);
+  if (existing) existing.remove();
+  
+  var errors = [];
+  
+  if (step === 1) {
+    var nameField = document.getElementById('id_name');
+    if (nameField && !nameField.value.trim()) { errors.push('Campaign Name is required'); nameField.focus(); }
+  } else if (step === 2) {
+    var subjField = document.getElementById('id_subject');
+    var bodyField = document.getElementById('id_body_text');
+    if (subjField && !subjField.value.trim()) { errors.push('Subject is required'); subjField.focus(); }
+    else if (bodyField && !bodyField.value.trim()) { errors.push('Message body is required'); bodyField.focus(); }
+  } else if (step === 3) {
+    var senderField = document.getElementById('id_sender');
+    if (senderField && !senderField.value) { errors.push('Please select a sender profile'); senderField.focus(); }
+  }
+
+  if (errors.length) {
+    var panel = document.getElementById('step-' + step);
+    var errDiv = document.createElement('div');
+    errDiv.id = 'wizard-error-' + step;
+    errDiv.className = 'mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-center gap-2';
+    errDiv.innerHTML = '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>' + errors[0] + '</span>';
+    panel.insertBefore(errDiv, panel.firstChild);
+    return false;
+  }
+  return true;
+}
+
+function goToStep(step) {
+  if (step < 0 || step >= TOTAL_STEPS) return;
+  if (step > maxCompletedStep && !validateStep(currentStep)) return;
+  if (step > maxCompletedStep) maxCompletedStep = step;
+  document.querySelectorAll('.step-panel').forEach(function(el) { el.classList.add('hidden'); });
+  document.getElementById('step-' + step).classList.remove('hidden');
+  document.querySelectorAll('.step-btn').forEach(function(btn, idx) {
+    var circle = btn.querySelector('.step-circle');
+    btn.disabled = idx > maxCompletedStep;
+    if (idx < step) {
+      circle.className = 'step-circle w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all bg-emerald-500 text-white';
+      circle.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>';
+      btn.classList.remove('cursor-not-allowed', 'text-slate-400');
+      btn.classList.add('text-slate-800');
+    } else if (idx === step) {
+      circle.className = 'step-circle w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all bg-primary text-white ring-4 ring-primary/20';
+      circle.textContent = idx + 1;
+      btn.classList.remove('cursor-not-allowed', 'text-slate-400');
+      btn.classList.add('text-slate-800');
+    } else {
+      circle.className = 'step-circle w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all bg-slate-200 text-slate-500';
+      circle.textContent = idx + 1;
+      btn.classList.add('cursor-not-allowed', 'text-slate-400');
+      btn.classList.remove('text-slate-800');
+    }
+    if (idx <= maxCompletedStep) { btn.disabled = false; btn.classList.remove('cursor-not-allowed', 'text-slate-400'); btn.classList.add('text-slate-800'); }
+  });
+  currentStep = step;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  updateReviewStep();
+}
+
+// ── Review Step Sync ────────────────────────────────────────────
+function updateReviewStep() {
+  if (currentStep !== 4) return;
+  var nameEl = document.getElementById('id_name');
+  var subjectEl = document.getElementById('id_subject');
+  var fromEl = document.getElementById('id_from_name');
+  var senderEl = document.getElementById('id_sender');
+  var recipientEl = document.getElementById('id_recipient_emails');
+  var bodyEl = document.getElementById('id_body_text');
+
+  document.getElementById('review-name').textContent = nameEl ? (nameEl.value || '—') : '—';
+  document.getElementById('review-subject').textContent = subjectEl ? (subjectEl.value || '—') : '—';
+  document.getElementById('review-from').textContent = fromEl ? (fromEl.value || '—') : '—';
+
+  if (recipientEl) {
+    var emails = recipientEl.value.split(/[,;\n]/).map(function(e) { return e.trim(); }).filter(Boolean);
+    document.getElementById('review-recipients').textContent = emails.length + ' recipient' + (emails.length !== 1 ? 's' : '');
+  }
+
+  if (senderEl) {
+    var selected = senderEl.options[senderEl.selectedIndex];
+    document.getElementById('review-sender').textContent = selected && selected.value ? selected.text : '—';
+  }
+
+  var reviewBody = document.getElementById('review-body');
+  var bodyHtmlEl = document.getElementById('id_body_html');
+  var bodyHtml = bodyHtmlEl ? (bodyHtmlEl.value || '') : '';
+  var content = bodyHtml || (bodyEl ? bodyEl.value : '');
+  if (content) {
+    var sampleData2 = {
+      first_name: 'John', last_name: 'Doe', email: 'john@example.com',
+      company_name: 'Acme Inc.', company: 'Acme Inc.', name: 'John Doe',
+      full_name: 'John Doe', year: new Date().getFullYear().toString(),
+      month: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
+      date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+      voucher: 'WELCOME20', client_name: 'John Doe',
+    };
+    if (bodyHtml) {
+      var renderedBody = bodyHtml;
+      for (var key in sampleData2) {
+        renderedBody = renderedBody.replace(new RegExp('\\{\\{\\s*' + key + '\\s*\\}\\}', 'g'), sampleData2[key]);
+      }
+      renderedBody = renderedBody.replace(/<img\s+/g, '<img loading="lazy" style="max-width:100%;height:auto;border-radius:4px;margin:8px 0;" ');
+      reviewBody.innerHTML = renderedBody;
+    } else {
+      var renderedBody = (bodyEl ? bodyEl.value : '').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g, '<br>');
+      for (var key in sampleData2) {
+        renderedBody = renderedBody.replace(new RegExp('\\{\\{\\s*' + key + '\\s*\\}\\}', 'g'), sampleData2[key]);
+      }
+      reviewBody.innerHTML = renderedBody;
+    }
+  } else {
+    reviewBody.innerHTML = '<span class="text-slate-400 italic">No body content yet.</span>';
+  }
+}
+
+// ── Tab switching ──────────────────────────────────────────────
+function switchTab(tab) {
+  ['manual','list','csv'].forEach(function(t) {
+    document.getElementById('panel-' + t).classList.add('hidden');
+    var btn = document.getElementById('tab-' + t);
+    btn.classList.remove('bg-white','text-slate-800','shadow-sm');
+    btn.classList.add('text-gray-400');
+  });
+  document.getElementById('panel-' + tab).classList.remove('hidden');
+  document.getElementById('tab-' + tab).classList.add('bg-white','text-slate-800','shadow-sm');
+  document.getElementById('tab-' + tab).classList.remove('text-gray-400');
+  document.getElementById('contact-source-hint').textContent = 'Source: ' + (tab === 'manual' ? 'Manual entry' : tab === 'list' ? 'Contact list' : 'CSV upload');
+}
+
+// ── Template Selector ──────────────────────────────────────────
+(function () {
+  var templateData = {{ templates_json|safe }};
+  var selector = document.getElementById('template-selector');
+  var applyBtn = document.getElementById('apply-template-btn');
+  if (!selector || !applyBtn) return;
+  function applyTemplate() {
+    var option = selector.options[selector.selectedIndex];
+    if (!option || !option.value) return;
+    var tpl = templateData[option.value];
+    if (!tpl) return;
+    var subjectField = document.getElementById('id_subject');
+    var bodyField = document.getElementById('id_body_text');
+    var bodyHtmlField = document.getElementById('id_body_html');
+    var currentSubject = (subjectField && subjectField.value) || '';
+    var currentBody = (bodyField && bodyField.value) || '';
+    if ((currentSubject || currentBody) && !confirm('This will overwrite your current subject and body. Continue?')) return;
+    if (subjectField) subjectField.value = tpl.subject || '';
+    if (tpl.body_html) {
+      if (bodyHtmlField) bodyHtmlField.value = tpl.body_html;
+      if (bodyField) bodyField.value = tpl.body_text || '';
+    } else {
+      if (bodyHtmlField) bodyHtmlField.value = '';
+      if (bodyField) bodyField.value = tpl.body_text || '';
+    }
+    var tidInput = document.querySelector('input[name="template_id"]');
+    if (tidInput) { tidInput.value = tpl.id; }
+    else {
+      tidInput = document.createElement('input');
+      tidInput.type = 'hidden'; tidInput.name = 'template_id'; tidInput.value = tpl.id;
+      document.getElementById('campaign-form').appendChild(tidInput);
+    }
+    applyBtn.className = 'btn-action btn-action-primary whitespace-nowrap';
+  }
+  selector.addEventListener('change', function() {
+    applyBtn.className = (selector.value && templateData[selector.value]) ? 'btn-action btn-action-primary whitespace-nowrap' : 'btn-action btn-action-secondary whitespace-nowrap';
+  });
+  applyBtn.addEventListener('click', applyTemplate);
+  applyBtn.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); applyTemplate(); } });
+})();
+
+// ── Schedule Confirmation ─────────────────────────────────────
+(function () {
+  var scheduledField = document.getElementById('id_scheduled_at');
+var form = document.getElementById('campaign-form');
+    if (!form || !scheduledField) return;
+    form.addEventListener('submit', function(e) {
+      var submitter = e.submitter;
+      if (!submitter) return;
+      
+      // Handle save_draft action
+      if (submitter.value === 'save_draft') {
+        var scheduledVal = scheduledField.value;
+        if (!scheduledVal) return;
+        var d = new Date(scheduledVal);
+        if (isNaN(d.getTime())) return;
+        if (!confirm('This campaign will be scheduled to send on ' + d.toLocaleString() + '. Continue?')) e.preventDefault();
+      }
+      
+      // Handle send_now action - let it submit normally
+      if (submitter.value === 'send_now') {
+        // No special handling needed - let form submit directly
+        return;
+      }
+      
+      // Handle send_test action - let it submit normally
+      if (submitter.value === 'send_test') {
+        // No special handling needed - let form submit directly
+        return;
+      }
+    });
+  })();
+
+// ── Campaign Preview ──────────────────────────────────────────
+function buildCampaignPreviewHtml() {
+  var subjEl = document.getElementById('id_subject');
+  var bodyEl = document.getElementById('id_body_text');
+  var subj = (subjEl && subjEl.value) || '(No subject)';
+  var body = (bodyEl && bodyEl.value) || '';
+  var s = previewReplacePlaceholders(subj.replace(/</g,'&lt;').replace(/>/g,'&gt;'));
+  var b;
+  if (/<[a-z][\s\S]*>/i.test(body)) {
+    b = previewReplacePlaceholders(body);
+  } else {
+    b = body.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') || '<p style="color:#999;margin:0;padding:16px 0;">(No content)</p>';
+    b = previewReplacePlaceholders(b);
+  }
+  b = previewFixImages(b);
+  return previewEmailShell({
+    title: 'Campaign Preview',
+    headerRows: '<tr><td style="padding:20px 24px 16px;border-bottom:1px solid #e2e8f0">'
+      + '<h1 style="font-size:18px;font-weight:600;margin:0;color:#1e293b;font-family:' + PREVIEW_FONT + ';line-height:1.4">' + s + '</h1></td></tr>',
+    bodyRows: '<tr><td style="padding:20px 24px;font-size:15px;line-height:1.6;color:#1e293b;font-family:' + PREVIEW_FONT + '">' + b + '</td></tr>',
+    footerRows: '<tr><td style="padding:16px 24px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e2e8f0;font-family:' + PREVIEW_FONT + '">'
+      + '<p style="margin:0;line-height:1.5">This is a preview. Sent from Intelligent Digital Automation (IDA).</p></td></tr>',
+  });
+}
+function openCampaignPreview(event) {
+  var overlay = document.getElementById('campaignPreviewOverlay');
+  var iframe = document.getElementById('campaignPreviewFrame');
+  iframe.style.width = '100%'; iframe.style.maxWidth = '600px';
+  iframe.style.height = ''; iframe.srcdoc = buildCampaignPreviewHtml();
+  iframe.onload = function() { try { var doc = iframe.contentWindow.document; iframe.style.height = Math.min(doc.documentElement.scrollHeight, 600) + 'px'; } catch(e) {} iframe.onload = null; };
+  overlay.classList.remove('hidden'); document.body.style.overflow = 'hidden';
+}
+function closeCampaignPreview() { document.getElementById('campaignPreviewOverlay').classList.add('hidden'); document.body.style.overflow = ''; }
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && !document.getElementById('campaignPreviewOverlay').classList.contains('hidden')) closeCampaignPreview(); });
+function previewCampaignInNewWindow() { var html = buildCampaignPreviewHtml(); var w = window.open(); if (w) { w.document.write(html); w.document.close(); } }
+
+// ── AI Write Copilot ──────────────────────────────────────────
+function openCopilot() { document.getElementById('copilot-drawer').classList.remove('hidden'); document.getElementById('copilot-trigger').classList.add('hidden'); }
+function closeCopilot() { document.getElementById('copilot-drawer').classList.add('hidden'); document.getElementById('copilot-trigger').classList.remove('hidden'); }
+document.querySelectorAll('.tone-option').forEach(function(el) {
+  el.addEventListener('click', function() {
+    document.querySelectorAll('.tone-option').forEach(function(o) { o.classList.remove('border-violet-600','bg-violet-50/50'); o.classList.add('border-slate-200'); o.querySelector('div:first-child div').classList.add('hidden'); });
+    el.classList.remove('border-slate-200'); el.classList.add('border-violet-600','bg-violet-50/50'); el.querySelector('div:first-child div').classList.remove('hidden'); el.querySelector('input[type="radio"]').checked = true;
+  });
+});
+document.getElementById('copilot-trigger').addEventListener('click', openCopilot);
+document.getElementById('copilot-generate-btn').addEventListener('click', function() {
+  var prompt = document.getElementById('copilot-prompt').value.trim();
+  if (!prompt) { alert('Please enter what you want to write about.'); return; }
+  var toneEl = document.querySelector('input[name="copilot-tone"]:checked'); var tone = toneEl ? toneEl.value : 'professional';
+  var btn = this; btn.disabled = true;
+  btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Generating...';
+  fetch('/intelligence/api/copilot/', { method:'POST', headers: { 'Content-Type':'application/json', 'X-CSRFToken':document.querySelector('[name=csrfmiddlewaretoken]').value }, body: JSON.stringify({ prompt:prompt, tone:tone }) })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.success) {
+      document.getElementById('copilot-subject-result').textContent = data.subject;
+      document.getElementById('copilot-body-result').textContent = data.body;
+      document.getElementById('copilot-spam-val').textContent = data.spam_score + '%';
+      var spamBox = document.getElementById('copilot-spam-box');
+      if (data.spam_score < 30) { spamBox.className = 'flex items-center justify-between p-2 rounded-lg border border-emerald-200 bg-emerald-50'; document.getElementById('copilot-spam-val').className = 'text-sm font-black text-emerald-600'; }
+      else if (data.spam_score < 60) { spamBox.className = 'flex items-center justify-between p-2 rounded-lg border border-amber-200 bg-amber-50'; document.getElementById('copilot-spam-val').className = 'text-sm font-black text-amber-600'; }
+      else { spamBox.className = 'flex items-center justify-between p-2 rounded-lg border border-red-200 bg-red-50'; document.getElementById('copilot-spam-val').className = 'text-sm font-black text-red-600'; }
+      document.getElementById('copilot-source-note').textContent = data.mode === 'gemini' ? 'Powered by Gemini 2.5 Flash' : data.mode === 'openrouter' ? 'Powered by GPT-4o Mini' : '';
+      document.getElementById('copilot-result').classList.remove('hidden'); document.getElementById('copilot-apply-btn').classList.remove('hidden');
+    } else { alert(data.error || 'Generation failed.'); }
+  }).catch(function() { alert('Network error.'); }).finally(function() { btn.disabled = false; btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/></svg>\n        Generate with AI'; });
+});
+document.getElementById('copilot-apply-btn').addEventListener('click', function() {
+  var subject = document.getElementById('copilot-subject-result').textContent;
+  var body = document.getElementById('copilot-body-result').textContent;
+  var subjectField = document.getElementById('id_subject'); var bodyField = document.getElementById('id_body_text');
+  if (subjectField) subjectField.value = subject; if (bodyField) bodyField.value = body;
+  closeCopilot();
+});
+
+// ── Spam Analysis ─────────────────────────────────────────────
+document.getElementById('analyze-spam-btn').addEventListener('click', function() {
+  var bodyEl = document.getElementById('id_body_text'); var subjectEl = document.getElementById('id_subject');
+  var text = ((subjectEl ? subjectEl.value : '') + ' ' + (bodyEl ? bodyEl.value : '')).trim();
+  if (!text) { alert('Please add subject and body text first.'); return; }
+  var btn = this; var origHtml = btn.innerHTML; btn.disabled = true;
+  btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Analyzing...';
+  fetch('/intelligence/api/analyze/', { method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':document.querySelector('[name=csrfmiddlewaretoken]').value}, body:JSON.stringify({text:text}) })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.success) {
+      var score = data.spam_score;
+      document.getElementById('spam-score-val').textContent = score + '%';
+      document.getElementById('spam-verdict').textContent = data.risk_level === 'Very Low' || data.risk_level === 'Low' ? 'Looking good! Low spam risk.' : data.risk_level === 'Medium' ? 'Moderate spam risk. Consider revising.' : 'High spam risk. Revise your content.';
+      var resultBox = document.getElementById('spam-result-box'); var bar = document.getElementById('spam-bar');
+      resultBox.className = 'p-4 rounded-xl border'; bar.style.width = score + '%';
+      if (score < 30) { resultBox.className += ' border-emerald-200 bg-emerald-50'; bar.className = 'h-2 rounded-full bg-emerald-500'; }
+      else if (score < 60) { resultBox.className += ' border-amber-200 bg-amber-50'; bar.className = 'h-2 rounded-full bg-amber-500'; }
+      else { resultBox.className += ' border-red-200 bg-red-50'; bar.className = 'h-2 rounded-full bg-red-500'; }
+      document.getElementById('spam-result').classList.remove('hidden');
+    } else { alert(data.error || 'Analysis failed.'); }
+  }).catch(function() { alert('Network error.'); }).finally(function() { btn.disabled = false; btn.innerHTML = origHtml; });
+});
+
+// ── CSV Upload Handling ───────────────────────────────────────
+(function() {
+  var csvInput = document.getElementById('csv-file-input');
+  if (!csvInput) return;
+  csvInput.addEventListener('change', function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) { alert('Please upload a valid CSV file.'); csvInput.value = ''; return; }
+    var reader = new FileReader();
+    reader.onload = function(event) {
+      try {
+        var text = event.target.result, lines = text.split(/\r?\n/).filter(function(l) { return l.trim(); });
+        if (lines.length < 2) { alert('CSV must have a header and at least one data row.'); csvInput.value = ''; return; }
+        var headers = lines[0].split(',').map(function(h) { return h.trim().replace(/^"|"$/g,''); });
+        var emailIndex = headers.findIndex(function(h) { return h.toLowerCase() === 'email'; });
+        if (emailIndex === -1) { alert('CSV must contain an "email" column.'); csvInput.value = ''; return; }
+        var emails = [], validCount = 0, invalidCount = 0;
+        for (var i = 1; i < lines.length; i++) {
+          var values = lines[i].split(',').map(function(v) { return v.trim().replace(/^"|"$/g,''); });
+          if (values.length > emailIndex) {
+            var email = values[emailIndex].toLowerCase().trim();
+            if (email && email.includes('@')) { emails.push(email); validCount++; }
+            else if (values[emailIndex].trim()) invalidCount++;
+          }
+        }
+        if (emails.length === 0) { alert('No valid email addresses found.'); csvInput.value = ''; return; }
+        document.getElementById('csv-preview').classList.remove('hidden');
+        document.getElementById('csv-filename').textContent = file.name;
+        document.getElementById('csv-count').textContent = validCount + ' valid emails' + (invalidCount > 0 ? ' · ' + invalidCount + ' invalid skipped' : '');
+        document.getElementById('csv-email-preview').textContent = emails.slice(0,5).join(', ') + (emails.length > 5 ? ' ...' : '');
+        document.getElementById('csv_emails_input').value = emails.join(',');
+        var contextData = {};
+        for (var i = 1; i < lines.length; i++) {
+          var values = lines[i].split(',').map(function(v) { return v.trim().replace(/^"|"$/g,''); });
+          var rowEmail = values.length > emailIndex ? values[emailIndex].toLowerCase().trim() : '';
+          if (rowEmail && contextData[rowEmail] === undefined) {
+            var rowData = {};
+            headers.forEach(function(header, idx) { if (values.length > idx) rowData[header] = values[idx]; });
+            contextData[rowEmail] = rowData;
+          }
+        }
+        document.getElementById('csv_context_input').value = JSON.stringify(contextData);
+        switchTab('csv');
+      } catch (err) { alert('Error reading CSV: ' + err.message); csvInput.value = ''; }
+    };
+    reader.readAsText(file);
+  });
+})();
+function clearCSV() { var csvInput=document.getElementById('csv-file-input'); var preview=document.getElementById('csv-preview'); if(csvInput)csvInput.value=''; if(preview)preview.classList.add('hidden'); document.getElementById('csv_emails_input').value=''; document.getElementById('csv_context_input').value=''; switchTab('manual'); }
+function addAttachmentRow() { var template=document.getElementById('attachment-row-template'); var container=document.getElementById('new-attachment-rows'); container.appendChild(template.content.cloneNode(true)); }
+
+// ── Subject char counter ─────────────────────────────────────
+(function() {
+  var subjectField = document.getElementById('id_subject');
+  var counter = document.getElementById('subject-char-counter');
+  if (!subjectField || !counter) return;
+  subjectField.addEventListener('input', function() {
+    var len = this.value.length;
+    counter.textContent = len + '/60 characters';
+    counter.className = 'mt-1 text-xs ' + (len > 60 ? 'text-red-600 font-semibold' : 'text-slate-400');
+  });
+})();
+
+// ── Body text word/char counter ──────────────────────────────
+(function() {
+  var bodyField = document.getElementById('id_body_text');
+  var counter = document.getElementById('body-text-counter');
+  if (!bodyField || !counter) return;
+  bodyField.addEventListener('input', function() {
+    var val = this.value;
+    var words = val.trim() ? val.trim().split(/\s+/).length : 0;
+    counter.textContent = words + ' words · ' + val.length + ' chars';
+  });
+})();
+
+// ── Recipient live stats ─────────────────────────────────────
+(function() {
+  var recipField = document.getElementById('id_recipient_emails');
+  var stats = document.getElementById('recipient-live-stats');
+  if (!recipField || !stats) return;
+  recipField.addEventListener('input', function() {
+    var val = this.value;
+    var emails = val.split(/[,;\n]/).map(function(e) { return e.trim().toLowerCase(); }).filter(Boolean);
+    var unique = []; emails.forEach(function(e) { if (unique.indexOf(e) === -1) unique.push(e); });
+    stats.textContent = unique.length + ' unique recipients · ' + (emails.length - unique.length) + ' duplicates removed';
+  });
+})();
+
+// ── Form Loading States ─────────────────────────────────────
+(function() {
+  var form = document.getElementById('campaign-form');
+  if (!form) return;
+  form.addEventListener('submit', function(e) {
+    var submitter = e.submitter;
+    if (!submitter || submitter.type !== 'submit') return;
+    var submitButtons = form.querySelectorAll('button[type="submit"]');
+    submitButtons.forEach(function(btn) {
+      if (btn === submitter) {
+        btn.disabled = true; btn.dataset.originalHtml = btn.innerHTML;
+        var action = btn.value || 'Processing';
+        btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> ' + (action === 'send_now' ? 'Sending...' : action === 'send_test' ? 'Sending Test...' : action === 'save_draft' ? 'Saving...' : 'Processing...');
+      } else { btn.disabled = true; }
+    });
+  });
+})();
+
+// ── A/B Testing Toggle ────────────────────────────────────────
+(function() {
+  var abCheckbox = document.querySelector('#id_is_ab_test');
+  if (!abCheckbox) return;
+  function toggleAB() {
+    var checked = abCheckbox.checked;
+    document.getElementById('ab-options').classList.toggle('hidden', !checked);
+    document.getElementById('standard-subject-block').classList.toggle('hidden', checked);
+    document.getElementById('standard-body-block').classList.toggle('hidden', checked);
+    document.getElementById('ab-subject-block').classList.toggle('hidden', !checked);
+    document.getElementById('ab-body-block').classList.toggle('hidden', !checked);
+  }
+  abCheckbox.addEventListener('change', toggleAB);
+  toggleAB();
+})();
+
+// ── A/B Tab Panels ──────────────────────────────────────────
+(function() {
+  var tabs = document.querySelectorAll('.ab-tab-btn');
+  tabs.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var tabGroup = this.closest('.ab-tabs-container');
+      tabGroup.querySelectorAll('.ab-tab-btn').forEach(function(b) { b.classList.remove('text-violet-700','border-violet-600','font-bold'); b.classList.add('text-slate-500','border-transparent','font-semibold'); });
+      this.classList.remove('text-slate-500','border-transparent','font-semibold');
+      this.classList.add('text-violet-700','border-violet-600','font-bold');
+      var target = this.getAttribute('data-ab-tab');
+      var panelGroup = this.closest('.space-y-5') || this.closest('#ab-subject-block, #ab-body-block');
+      if (this.closest('#ab-subject-block')) { document.querySelectorAll('#ab-subject-block .ab-panel').forEach(function(p) { p.classList.add('hidden'); }); document.getElementById('ab-panel-' + target).classList.remove('hidden'); }
+      else { document.querySelectorAll('#ab-body-block .ab-panel').forEach(function(p) { p.classList.add('hidden'); }); document.getElementById('ab-panel-' + target).classList.remove('hidden'); }
+    });
+  });
+})();
+
+// ── Initialize ─────────────────────────────────────────────────
+goToStep({% if read_only %}4{% else %}0{% endif %});
+
+// ── Campaign Send Confirmation ─────────────────────────────────
+function confirmCampaignSend(action) {
+  // Get campaign info
+  var campaignName = document.getElementById('review-name')?.textContent || 'Campaign';
+  var recipientCount = parseInt(document.getElementById('review-recipients')?.textContent || '0');
+  var senderSelect = document.querySelector('#id_sender');
+  var senderText = senderSelect?.options[senderSelect.selectedIndex]?.text || 'Sender';
+  
+  // Get quota info (would need to be passed from backend or fetched via AJAX)
+  // For now, show basic confirmation
+  if (recipientCount === 0) {
+    alert('Please add at least one recipient before sending.');
+    return;
+  }
+  
+  var estimatedMinutes = Math.ceil(recipientCount / 20); // 20 emails per minute
+  var confirmMsg = 'Sending Campaign: ' + campaignName + '\n\n' +
+                   'Recipients: ' + recipientCount + ' contacts\n' +
+                   'Sender: ' + senderText + '\n' +
+                   'Estimated time: ~' + estimatedMinutes + ' minutes\n\n' +
+                   '⚠️ This will send immediately to all recipients.\n\n' +
+                   'Click OK to confirm sending.';
+  
+  if (confirm(confirmMsg)) {
+    // Find the form and submit with the correct action
+    var form = document.querySelector('#campaign-form');
+    if (form) {
+      var hiddenInput = document.createElement('input');
+      hiddenInput.type = 'hidden';
+      hiddenInput.name = 'action';
+      hiddenInput.value = action;
+      form.appendChild(hiddenInput);
+      form.submit();
+    }
+  }
+}
+</script>
+{% endblock %}

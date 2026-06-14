@@ -1,0 +1,81 @@
+{% extends 'base_dashboard.html' %}
+
+{% block title %}Import CSV -  IDA{% endblock %}
+{% block page_title %}Import Contact List{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-2xl">
+  <div class="premium-surface card-elevate section-card">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-7 h-7 bg-primary text-white rounded-lg flex items-center justify-center text-xs font-bold">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+      </div>
+      <div>
+        <h2 class="section-title">Import from CSV</h2>
+        <p class="section-subtitle">Upload a CSV to create a new saved contact list</p>
+      </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="space-y-5">
+      {% csrf_token %}
+
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">List Name</label>
+        <input type="text" name="list_name" required
+          class="auth-input" placeholder="e.g. Newsletter Subscribers Q2" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">CSV File</label>
+        <div id="drop-zone"
+          class="border-2 border-dashed border-gray-200 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary/50 transition-all"
+          onclick="document.getElementById('csv-file').click()">
+          <svg class="w-10 h-10 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+          <p class="text-sm font-semibold text-slate-700">Drop your CSV here or <span class="text-primary">browse</span></p>
+          <p class="text-xs text-gray-400 mt-1">Must have an <span class="font-mono bg-gray-100 px-1 rounded">email</span> column.</p>
+          <input type="file" id="csv-file" name="csv_file" accept=".csv" class="hidden" onchange="showFileName(this)" />
+        </div>
+        <p id="file-name" class="mt-2 text-xs text-primary font-semibold hidden"></p>
+      </div>
+
+      <div class="flex gap-3 pt-2">
+        <button type="submit"
+          class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary-hover text-white font-semibold text-sm transition-colors shadow-lg shadow-indigo-500/20">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+          Import & Save List
+        </button>
+        <a href="{% url 'campaigns:campaign_create' %}"
+          class="inline-flex items-center px-5 py-3 rounded-xl border border-gray-200 text-slate-600 hover:bg-gray-50 transition-colors text-sm font-semibold">
+          Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function showFileName(input) {
+  const label = document.getElementById('file-name');
+  if (input.files[0]) {
+    label.textContent = '✓ ' + input.files[0].name;
+    label.classList.remove('hidden');
+  }
+}
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('border-primary','bg-primary/5'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('border-primary','bg-primary/5'));
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.classList.remove('border-primary','bg-primary/5');
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    document.getElementById('csv-file').files = e.dataTransfer.files;
+    showFileName(document.getElementById('csv-file'));
+  }
+});
+</script>
+{% endblock %}

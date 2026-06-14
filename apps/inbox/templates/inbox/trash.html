@@ -1,0 +1,68 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Trash — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Trash{% endblock %}
+{% block content %}
+<div class="page-shell max-w-none space-y-6">
+  <div class="flex items-center justify-between gap-4">
+    <div>
+      <p class="eyebrow">AI Email Agent</p>
+      <h1 class="page-title mt-2">Trash</h1>
+      <p class="page-lead">Deleted messages are stored here for recovery</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <select onchange="if(this.value) window.location.href='?inbox_id='+this.value" class="appearance-none bg-white border border-slate-200 rounded-xl px-4 py-2 pr-8 text-sm font-semibold text-slate-700">
+        {% for ib in inboxes %}
+        <option value="{{ ib.id }}" {% if selected_inbox and selected_inbox.id == ib.id %}selected{% endif %}>{{ ib.email_address }}</option>
+        {% endfor %}
+      </select>
+      {% url 'inbox:dashboard' as inbox_dashboard_url %}
+      {% include "components/button.html" with label="Back to Inbox" variant="secondary" size="sm" href=inbox_dashboard_url %}
+    </div>
+  </div>
+
+  <div class="glass-card overflow-hidden">
+    {% if deleted_messages %}
+    <div class="divide-y divide-slate-100">
+      {% for msg in deleted_messages %}
+      <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50/60 transition-colors">
+        <div class="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-xs font-bold text-red-600 shrink-0">
+          {{ msg.from_name|default:msg.from_email|first|upper }}
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-baseline gap-3">
+            <span class="text-sm font-semibold text-slate-900 truncate">{{ msg.from_name|default:msg.from_email }}</span>
+            <span class="text-sm text-slate-700 truncate flex-1">{{ msg.subject|default:'(No subject)' }}</span>
+          </div>
+          <p class="text-xs text-slate-400 truncate mt-0.5">{{ msg.body_text|default:''|truncatechars:100 }}</p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <form method="post" action="{% url 'inbox:message_restore' msg.id %}" class="inline">
+            {% csrf_token %}
+            {% include 'campaigns/_button.html' with type='secondary' text='Restore' button_type='submit' data_loading='Restoring...' extra_class='text-xs font-semibold text-emerald-600 hover:text-emerald-800 transition-colors cursor-pointer' %}
+          </form>
+          <a href="{% url 'inbox:message_detail' msg.id %}" class="text-xs font-semibold text-primary hover:text-primary-hover transition-colors">View</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    {% url 'inbox:dashboard' as inbox_dashboard_url %}
+    {% include "components/empty_state.html" with title="Trash is empty" description="Deleted messages appear here." cta_url=inbox_dashboard_url cta_label="Back to inbox →" icon="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" %}
+    {% endif %}
+  </div>
+
+  {% if page_obj and page_obj.paginator.num_pages > 1 %}
+  <div class="flex items-center justify-between pt-4">
+    <span class="text-xs text-slate-400">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    <div class="flex gap-2">
+      {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}{% if selected_inbox %}&inbox_id={{ selected_inbox.id }}{% endif %}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">Previous</a>
+      {% endif %}
+      {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{% if selected_inbox %}&inbox_id={{ selected_inbox.id }}{% endif %}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">Next</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Select Facebook Page — Mailexa AI{% endblock %}
+{% block page_title %}Select Facebook Page{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-lg mx-auto space-y-6">
+  <div class="premium-surface rounded-2xl p-6">
+    <h2 class="text-lg font-bold text-slate-900 mb-1">Choose a Page</h2>
+    <p class="text-sm text-slate-500 mb-6">You manage multiple Pages. Select which one to connect.</p>
+
+    <form method="post" class="space-y-3">
+      {% csrf_token %}
+      {% for page in pages %}
+      <label class="flex items-center gap-4 p-4 rounded-xl border border-slate-200 hover:border-primary/40 hover:bg-primary-light/20 transition-all cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary-light/30 has-[:checked]:ring-1 has-[:checked]:ring-primary/30">
+        <input type="radio" name="page_id" value="{{ page.id }}" class="w-4 h-4 text-primary accent-primary" {% if forloop.first %}checked{% endif %}>
+        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center overflow-hidden flex-shrink-0">
+          {% if page.picture and page.picture.data and page.picture.data.url %}
+          <img src="{{ page.picture.data.url }}" alt="{{ page.name }}" class="w-full h-full object-cover">
+          {% else %}
+          <span class="text-sm font-bold text-blue-600">{{ page.name|first }}</span>
+          {% endif %}
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold text-slate-900 truncate">{{ page.name }}</p>
+          <p class="text-xs text-slate-400">Facebook Page</p>
+        </div>
+      </label>
+      {% endfor %}
+
+      <div class="flex gap-3 pt-4">
+        {% url 'social_accounts:social_hub' as hub_url %}
+        {% include "components/button.html" with label="Connect Selected Page" variant="primary" type="submit" class="flex-1" %}
+        {% include "components/button.html" with label="Cancel" variant="secondary" href=hub_url %}
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

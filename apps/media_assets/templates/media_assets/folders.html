@@ -1,0 +1,60 @@
+{% extends 'base_dashboard.html' %}
+{% load workspace_tags %}
+{% block title %}Folders — Media Library{% endblock %}
+{% block page_title %}Folders{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none mx-auto">
+  <div class="flex items-center gap-3 mb-6">
+    <a href="{% url 'media_assets:library' %}" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
+      <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    </a>
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Folders</h1>
+      <p class="text-sm text-slate-500">Organize your media assets into folders</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div>
+      <div class="premium-surface rounded-2xl p-6">
+        <h2 class="text-base font-bold text-slate-800 mb-4">New Folder</h2>
+{% can_create 'media' as can_create_media %}{% if can_create_media %}
+        <form method="post" class="space-y-4">
+          {% csrf_token %}
+          <div>
+            <label for="name" class="block text-sm font-semibold text-slate-700 mb-1.5">Name</label>
+            <input type="text" name="name" id="name" class="auth-input w-full" placeholder="Folder name" required>
+          </div>
+          <div>
+            <label for="parent_id" class="block text-sm font-semibold text-slate-700 mb-1.5">Parent (optional)</label>
+            <select name="parent_id" id="parent_id" class="auth-input w-full">
+              <option value="">Root</option>
+              {% for f in all_folders %}
+              <option value="{{ f.id }}">{{ f.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn-action btn-action-primary w-full">Create Folder</button>
+        </form>
+{% endif %}
+      </div>
+    </div>
+
+    <div class="lg:col-span-2">
+      <div class="premium-surface rounded-2xl overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100">
+          <h2 class="text-base font-bold text-slate-800">Folder Structure</h2>
+        </div>
+        {% if folder_tree %}
+        <div class="p-4">
+          {% include 'media_assets/_folder_tree.html' with folders=folder_tree %}
+        </div>
+        {% else %}
+        {% include "components/empty_state.html" with title="No folders yet" description="Create your first folder." %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

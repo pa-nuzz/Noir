@@ -1,0 +1,120 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Post Detail — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Post Detail{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-2xl mx-auto space-y-6">
+  <a href="{% url 'social:post_list' %}" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-primary transition-colors">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 12H5m7 7l-7-7 7-7"/></svg>
+    Back to Posts
+  </a>
+
+  <div class="premium-surface rounded-2xl p-6 space-y-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm
+          {% if post.platform == 'facebook' %}bg-blue-600
+          {% elif post.platform == 'instagram' %}bg-gradient-to-br from-purple-500 to-pink-500
+          {% elif post.platform == 'twitter' %}bg-slate-900
+          {% elif post.platform == 'linkedin' %}bg-blue-700
+          {% elif post.platform == 'tiktok' %}bg-slate-800
+          {% elif post.platform == 'youtube' %}bg-red-600
+          {% else %}bg-gray-500{% endif %}">
+          {{ post.get_platform_display|first }}
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-slate-900">{{ post.account.account_name }}</p>
+          <p class="text-xs text-gray-500">{{ post.get_platform_display }}</p>
+        </div>
+      </div>
+      {% if post.status == 'draft' %}
+        {% include "components/badge.html" with label=post.status variant="gray" %}
+      {% elif post.status == 'scheduled' %}
+        {% include "components/badge.html" with label=post.status variant="blue" %}
+      {% elif post.status == 'published' %}
+        {% include "components/badge.html" with label=post.status variant="green" %}
+      {% elif post.status == 'failed' %}
+        {% include "components/badge.html" with label=post.status variant="red" %}
+      {% else %}
+        {% include "components/badge.html" with label=post.status variant="gray" %}
+      {% endif %}
+    </div>
+
+    <div class="bg-slate-50 rounded-xl p-4">
+      <p class="text-sm text-slate-800 whitespace-pre-wrap">{{ post.content }}</p>
+    </div>
+
+    {% if post.link_url %}
+    <div>
+      <p class="text-xs text-gray-500 font-medium mb-1">Link</p>
+      <a href="{{ post.link_url }}" target="_blank" class="text-sm text-primary hover:underline">{{ post.link_url }}</a>
+    </div>
+    {% endif %}
+
+    {% if post.media_urls %}
+    <div>
+      <p class="text-xs text-gray-500 font-medium mb-1">Media ({{ post.media_urls|length }})</p>
+      <ul class="space-y-1">
+        {% for url in post.media_urls %}
+        <li><a href="{{ url }}" target="_blank" class="text-xs text-primary hover:underline truncate block">{{ url }}</a></li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-2 gap-4 text-sm">
+      <div>
+        <p class="text-xs text-gray-500">Created</p>
+        <p class="text-sm font-medium text-slate-800">{{ post.created_at|date:'M d, Y H:i' }}</p>
+      </div>
+      {% if post.scheduled_at %}
+      <div>
+        <p class="text-xs text-gray-500">Scheduled</p>
+        <p class="text-sm font-medium text-slate-800">{{ post.scheduled_at|date:'M d, Y H:i' }}</p>
+      </div>
+      {% endif %}
+      {% if post.published_at %}
+      <div>
+        <p class="text-xs text-gray-500">Published</p>
+        <p class="text-sm font-medium text-slate-800">{{ post.published_at|date:'M d, Y H:i' }}</p>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if analytics %}
+    <div class="border-t border-slate-100 pt-4">
+      <h3 class="text-sm font-bold text-slate-800 mb-3">Analytics</h3>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="bg-slate-50 rounded-xl p-3 text-center">
+          <p class="text-lg font-bold text-slate-900">{{ analytics.impressions }}</p>
+          <p class="text-[10px] text-gray-500 font-medium uppercase">Impressions</p>
+        </div>
+        <div class="bg-slate-50 rounded-xl p-3 text-center">
+          <p class="text-lg font-bold text-slate-900">{{ analytics.likes }}</p>
+          <p class="text-[10px] text-gray-500 font-medium uppercase">Likes</p>
+        </div>
+        <div class="bg-slate-50 rounded-xl p-3 text-center">
+          <p class="text-lg font-bold text-slate-900">{{ analytics.shares }}</p>
+          <p class="text-[10px] text-gray-500 font-medium uppercase">Shares</p>
+        </div>
+        <div class="bg-slate-50 rounded-xl p-3 text-center">
+          <p class="text-lg font-bold text-slate-900">{{ analytics.comments }}</p>
+          <p class="text-[10px] text-gray-500 font-medium uppercase">Comments</p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if post.status != 'published' %}
+    <div class="flex items-center gap-3 pt-2">
+      {% url 'social:post_edit' post.id as social_post_edit_url %}
+      {% include "components/button.html" with label="Edit" variant="secondary" href=social_post_edit_url %}
+      <form method="post" action="{% url 'social:post_delete' post.id %}" onsubmit="return confirm('Delete this post?')">
+        {% csrf_token %}
+        <button type="submit" class="px-4 py-2 rounded-xl border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors">Delete</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

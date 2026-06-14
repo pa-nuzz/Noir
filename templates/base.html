@@ -1,0 +1,102 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}IDA — Intelligent Digital Automation{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'images/logo-mark.svg' %}?v={{ STATIC_VERSION }}"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v={{ STATIC_VERSION }}"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Raleway"', 'system-ui', 'sans-serif'],
+            serif: ['"Raleway"', 'Georgia', 'serif'],
+          },
+          colors: {
+            primary: { DEFAULT: '#6D28D9', hover: '#5B21B6', light: '#EDE9FE' },
+            cyan:    { DEFAULT: '#06B6D4', light: '#ECFEFF' },
+            ink:     { DEFAULT: '#0A2540', muted: '#445B73', subtle: '#8FA5BC' },
+            surface: { DEFAULT: '#FFFFFF', raised: '#F8FAFC', border: '#E2E8F0' },
+          },
+          maxWidth: { '8xl': '88rem' },
+          borderRadius: { '2xl': '1rem', '3xl': '1.25rem' },
+        },
+      },
+    };
+  </script>
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-surface-raised text-ink font-sans min-h-screen flex flex-col overflow-x-hidden antialiased">
+
+<!-- ── NAV ── -->
+<nav class="fixed top-0 left-0 w-full z-50 bg-white/95 backdrop-blur-xl border-b border-surface-border">
+  <div class="max-w-8xl mx-auto h-[60px] px-5 sm:px-8 flex items-center justify-between">
+    <a href="{% if user.is_authenticated %}{% url 'dashboard:dashboard' %}{% else %}{% url 'home' %}{% endif %}" class="flex-shrink-0">
+      <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="IDA" class="h-16 w-auto"/>
+    </a>
+    <div class="hidden md:flex items-center gap-1">
+      <a href="#platform" class="px-4 py-2 text-sm font-medium text-ink-muted hover:text-ink hover:bg-surface-raised rounded-xl transition-all">Platform</a>
+      <a href="#features" class="px-4 py-2 text-sm font-medium text-ink-muted hover:text-ink hover:bg-surface-raised rounded-xl transition-all">Features</a>
+      <a href="#pricing" class="px-4 py-2 text-sm font-medium text-ink-muted hover:text-ink hover:bg-surface-raised rounded-xl transition-all">Pricing</a>
+    </div>
+    <div class="flex items-center gap-2">
+      {% if user.is_authenticated %}
+      <a href="{% url 'dashboard:dashboard' %}" class="text-sm font-semibold text-ink border border-surface-border px-4 py-2 rounded-xl hover:border-primary hover:text-primary bg-white transition-all">Dashboard</a>
+      <div class="relative group">
+        <button class="flex items-center p-0.5 rounded-full border border-surface-border hover:border-primary/40 transition-colors">
+          <div class="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center text-primary font-bold text-xs overflow-hidden">
+            {% if user.avatar %}<img src="{{ user.avatar.url }}" alt="{{ user.username }}" class="w-full h-full object-cover">{% else %}{{ user.username|first|upper }}{% endif %}
+          </div>
+        </button>
+        <div class="absolute right-0 mt-2 w-48 bg-white border border-surface-border rounded-2xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden">
+          <div class="px-4 py-3 border-b border-surface-border">
+            <p class="text-sm font-semibold truncate text-ink">{{ user.get_full_name }}</p>
+            <p class="text-xs text-ink-subtle truncate">{{ user.email }}</p>
+          </div>
+          <a href="{% url 'dashboard:profile' %}" class="block px-4 py-2.5 text-sm text-ink-muted hover:bg-surface-raised transition-colors">My Profile</a>
+          <a href="{% url 'dashboard:settings' %}" class="block px-4 py-2.5 text-sm text-ink-muted hover:bg-surface-raised transition-colors">Settings</a>
+          <div class="border-t border-surface-border py-1">
+            <form id="logout-form" action="{% url 'accounts:logout' %}" method="post">
+              {% csrf_token %}
+              <button type="button" onclick="showLogoutModal()" class="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors">Log Out</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <a href="{% url 'accounts:login' %}" class="text-sm font-medium text-ink-muted hover:text-ink px-3 py-2 transition-colors">Log In</a>
+      <a href="{% url 'accounts:register' %}" class="text-sm font-semibold bg-primary hover:bg-primary-hover text-white px-5 py-2 rounded-xl transition-all shadow-sm shadow-primary/20">Get started free</a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+
+{% if messages %}
+<div class="fixed top-16 right-5 z-[60] flex flex-col gap-2 mt-2">
+  {% for message in messages %}
+  <div class="px-4 py-3 rounded-xl bg-white border border-surface-border shadow-lg flex items-center gap-3 {% if message.tags == 'success' %}text-emerald-700{% elif message.tags == 'error' %}text-red-600{% else %}text-ink-muted{% endif %}">
+    {% if message.tags == 'success' %}<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>{% endif %}
+    <span class="text-sm font-medium">{{ message }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<main class="flex-grow pt-[60px]">{% block content %}{% endblock %}</main>
+
+
+{% include "components/modal.html" with id="logout-modal" title="Sign Out" content='<div class="text-center"><div class="w-11 h-11 mx-auto mb-4 rounded-full bg-red-50 flex items-center justify-center"><svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg></div><p class="text-sm text-ink-muted mb-5">Are you sure you want to sign out?</p><div class="flex gap-3"><button onclick="hideLogoutModal()" class="flex-1 py-2.5 bg-surface-raised hover:bg-surface-border text-ink-muted rounded-xl text-sm font-semibold transition-colors">Cancel</button><button onclick="confirmLogout()" class="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-semibold transition-colors">Sign Out</button></div></div>' %}
+<script>
+  function showLogoutModal(){ openModal('logout-modal'); }
+  function hideLogoutModal(){ closeModal('logout-modal'); }
+  function confirmLogout(){ document.getElementById('logout-form').submit(); }
+</script>
+</body>
+</html>

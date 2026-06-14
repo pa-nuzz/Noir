@@ -1,0 +1,49 @@
+{% comment %}
+Shared preview builder helpers for campaign and template previews.
+Usage: {% include 'campaigns/_preview_helpers.html' %}
+{% endcomment %}
+<script>
+var PREVIEW_FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+var PREVIEW_IMG_STYLE = 'display:block;outline:none;border:0;max-width:100%;height:auto';
+var PREVIEW_SAMPLE_DATA = {
+  first_name: 'John', last_name: 'Doe', email: 'john@example.com',
+  company_name: 'Acme Inc.', company: 'Acme Inc.',
+  name: 'John Doe', full_name: 'John Doe',
+  year: new Date().getFullYear().toString(),
+  month: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
+  date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+  voucher: 'WELCOME20', client_name: 'John Doe',
+};
+
+function previewReplacePlaceholders(str, extra) {
+  var data = {};
+  for (var k in PREVIEW_SAMPLE_DATA) data[k] = PREVIEW_SAMPLE_DATA[k];
+  if (extra) { for (var k in extra) data[k] = extra[k]; }
+  for (var key in data) {
+    str = str.replace(new RegExp('\\{\\{\\s*' + key + '\\s*\\}\\}', 'g'), data[key]);
+  }
+  return str;
+}
+
+function previewFixImages(html) {
+  return html.replace(/<img\s(?![^>]*style=)/g, '<img style="' + PREVIEW_IMG_STYLE + '" ');
+}
+
+function previewEmailShell(opts) {
+  var title = opts.title || 'Preview';
+  var headRows = opts.headerRows || '';
+  var bodyRows = opts.bodyRows || '';
+  var footerRows = opts.footerRows || '';
+  return '<!DOCTYPE html>'
+    + '<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+    + '<title>' + title + '</title></head>'
+    + '<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:' + PREVIEW_FONT + ';line-height:1.6;color:#1e293b">'
+    + '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;background-color:#f4f4f5">'
+    + '<tr><td align="center" style="padding:24px 16px">'
+    + '<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse;max-width:600px;width:100%;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,0.06)">'
+    + headRows
+    + bodyRows
+    + footerRows
+    + '</table></td></tr></table></body></html>';
+}
+</script>

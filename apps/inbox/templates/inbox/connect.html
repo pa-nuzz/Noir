@@ -1,0 +1,199 @@
+{% extends 'base_dashboard.html' %}
+{% load widget_tweaks %}
+{% block title %}Connect Inbox — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}AI Email Agent{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none space-y-6">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <p class="eyebrow">Inbox Intelligence</p>
+      <h1 class="page-title mt-2">Connect Inbox</h1>
+      <p class="page-lead">Connect your email and let AI manage replies</p>
+    </div>
+    <div class="flex gap-3">
+      {% url 'inbox:dashboard' as inbox_dashboard_url %}
+      {% include "components/button.html" with label="Dashboard" variant="secondary" href=inbox_dashboard_url icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" class="whitespace-nowrap" %}
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+    <div class="glass-card p-5">
+      <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">Auto-Draft</p>
+      <p class="text-sm text-slate-600 mt-1">AI generates reply drafts based on email context and your tone preference</p>
+    </div>
+    <div class="glass-card p-5">
+      <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">Smart Summaries</p>
+      <p class="text-sm text-slate-600 mt-1">Long threads condensed into key points, intent, and urgency</p>
+    </div>
+    <div class="glass-card p-5">
+      <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">Priority Flag</p>
+      <p class="text-sm text-slate-600 mt-1">Urgent messages are automatically flagged for immediate attention</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+    <div class="lg:col-span-3 space-y-6">
+      <div class="glass-card p-6">
+        <h2 class="text-base font-bold text-slate-800 mb-4">{% if reconnect_inbox %}Reconnect Inbox{% else %}Connect an Inbox{% endif %}</h2>
+        {% if reconnect_inbox %}
+        <div class="mb-5 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-3">
+          <svg class="w-5 h-5 text-blue-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <div>
+            <p class="text-sm font-semibold text-blue-700">Reconnecting {{ reconnect_inbox.email_address }}</p>
+            <p class="text-xs text-blue-600 mt-0.5">Your password was lost (likely due to a key rotation). Enter it again to restore sync.</p>
+          </div>
+        </div>
+        {% endif %}
+        <form method="post" id="connectForm" class="space-y-5">
+          {% csrf_token %}
+          {% for field in form %}
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1.5">{{ field.label }}</label>
+            {{ field }}
+            {% for error in field.errors %}
+            <p class="text-xs text-red-500 mt-1">{{ error }}</p>
+            {% endfor %}
+          </div>
+          {% endfor %}
+          {% include 'campaigns/_button.html' with type='primary' text=reconnect_inbox|yesno:'Reconnect Inbox,Connect Inbox' button_type='submit' id='connectSubmitBtn' extra_class='w-full justify-center' %}
+        </form>
+
+        <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+          <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div>
+              <p class="text-xs font-semibold text-amber-700">OAuth2 auto-connect coming soon</p>
+              <p class="text-xs text-amber-600 mt-1">For now, add your inbox manually. Full OAuth with auto-token refresh for Gmail and Outlook will be available in the next update.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card p-6">
+        <h2 class="text-base font-bold text-slate-800 mb-4">How It Works</h2>
+        <div class="space-y-4">
+          <div class="flex gap-3">
+            <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <span class="text-xs font-bold text-primary">1</span>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-slate-800">Connect Your Inbox</h3>
+              <p class="text-xs text-slate-500 mt-0.5">Add your Gmail or Outlook email address. The AI agent monitors your inbox for new messages.</p>
+            </div>
+          </div>
+          <div class="flex gap-3">
+            <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <span class="text-xs font-bold text-primary">2</span>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-slate-800">AI Analyzes Incoming Emails</h3>
+              <p class="text-xs text-slate-500 mt-0.5">Each message is analyzed for intent, urgency, and sentiment. Threads are summarized automatically.</p>
+            </div>
+          </div>
+          <div class="flex gap-3">
+            <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <span class="text-xs font-bold text-primary">3</span>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-slate-800">Draft Replies Generated</h3>
+              <p class="text-xs text-slate-500 mt-0.5">The AI drafts context-aware replies. Review, edit, and approve drafts before sending.</p>
+            </div>
+          </div>
+          <div class="flex gap-3">
+            <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <span class="text-xs font-bold text-primary">4</span>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-slate-800">Review &amp; Send</h3>
+              <p class="text-xs text-slate-500 mt-0.5">Approve or edit drafts from the dashboard. Approved drafts are sent through your connected SMTP sender.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="lg:col-span-2 space-y-6">
+      <div class="glass-card p-6">
+        <h2 class="text-base font-bold text-slate-800 mb-4">Connected Inboxes</h2>
+        {% if existing_inboxes %}
+        <div class="space-y-3">
+          {% for inbox in existing_inboxes %}
+          <div class="flex items-center justify-between p-4 rounded-xl bg-slate-50">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold
+                {% if inbox.provider == 'gmail' %}bg-red-50 text-red-600{% else %}bg-blue-50 text-blue-600{% endif %}">
+                {{ inbox.get_provider_display|slice:':2'|upper }}
+              </div>
+              <div>
+                <p class="text-sm font-semibold text-slate-800">{{ inbox.email_address }}</p>
+                <p class="text-xs text-slate-400">{{ inbox.get_provider_display }}
+                  {% if inbox.last_sync_status == 'error' %}
+                    <span class="text-red-600 font-semibold"> · Sync failed</span>
+                  {% elif inbox.last_synced_at %}
+                    · Synced {{ inbox.last_synced_at|timesince }} ago
+                  {% endif %}
+                </p>
+                {% if inbox.last_sync_error %}
+                  <p class="text-[10px] text-red-500 mt-1">{{ inbox.last_sync_error|truncatechars:80 }}</p>
+                {% endif %}
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              {% if inbox.last_sync_status == 'error' and 'password' in inbox.last_sync_error|lower %}
+              <a href="{% url 'inbox:connect' %}?reconnect={{ inbox.id }}" class="btn-action btn-action-secondary btn-sm" title="Reconnect">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              </a>
+              {% endif %}
+              <a href="{% url 'inbox:sync' inbox.id %}" class="btn-action btn-action-secondary btn-sm" title="Sync now">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              </a>
+              <form method="post" action="{% url 'inbox:disconnect' inbox.id %}" class="inline" data-confirm="Disconnect this inbox?">{% csrf_token %}<button type="submit" class="p-2 rounded-lg hover:bg-white text-slate-400 hover:text-red-500 transition-colors cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button></form>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        {% include "components/empty_state.html" with title="No inboxes connected yet" description="Connect an email account to get started." icon="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" %}
+        {% endif %}
+      </div>
+
+      <div class="glass-card p-6">
+        <h2 class="text-base font-bold text-slate-800 mb-4">Key Features</h2>
+        <div class="space-y-3">
+          <div class="flex gap-3">
+            <svg class="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <p class="text-sm text-slate-600">Automated drafting based on email context and tone</p>
+          </div>
+          <div class="flex gap-3">
+            <svg class="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <p class="text-sm text-slate-600">Thread summarization with intent and urgency detection</p>
+          </div>
+          <div class="flex gap-3">
+            <svg class="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <p class="text-sm text-slate-600">Review and approve drafts before sending</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function() {
+  var form = document.getElementById('connectForm');
+  if (!form) return;
+  form.addEventListener('submit', function(e) {
+    var btn = document.getElementById('connectSubmitBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<svg class="w-4 h-4 animate-spin inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Connecting...';
+    }
+  });
+})();
+</script>
+{% endblock %}

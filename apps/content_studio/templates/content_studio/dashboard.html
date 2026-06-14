@@ -1,0 +1,101 @@
+{% extends 'base_dashboard.html' %}
+{% load workspace_tags %}
+{% block title %}AI Content Studio — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Content Studio{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none space-y-6">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">AI Content Studio</h1>
+      <p class="text-sm text-slate-500 mt-1">Generate, refine, and manage AI-powered content</p>
+    </div>
+    <div class="flex gap-3">
+      {% can_create 'content_studio' as can_create_content %}{% if can_create_content %}
+      {% url 'content_studio:generate' as content_studio_generate_url %}
+      {% include "components/button.html" with label="Generate Content" variant="primary" href=content_studio_generate_url icon="M13 10V3L4 14h7v7l9-11h-7z" %}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+    <div class="premium-surface rounded-2xl p-5">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Total Items</p>
+      <p class="text-2xl font-bold text-slate-900 mt-1">{{ stats.total }}</p>
+    </div>
+    <div class="premium-surface rounded-2xl p-5">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Drafts</p>
+      <p class="text-2xl font-bold text-slate-900 mt-1">{{ stats.drafts }}</p>
+    </div>
+    <div class="premium-surface rounded-2xl p-5">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Approved</p>
+      <p class="text-2xl font-bold text-slate-900 mt-1">{{ stats.approved }}</p>
+    </div>
+    <div class="premium-surface rounded-2xl p-5">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Published</p>
+      <p class="text-2xl font-bold text-slate-900 mt-1">{{ stats.published }}</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 premium-surface rounded-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h2 class="text-base font-bold text-slate-800">Recent Content</h2>
+        <a href="{% url 'content_studio:history' %}" class="text-xs font-semibold text-primary hover:text-primary-dark transition-colors">View All</a>
+      </div>
+      {% if items %}
+      <div class="divide-y divide-slate-50">
+        {% for item in items %}
+        <a href="{% url 'content_studio:detail' item.id %}" class="flex items-center gap-4 px-6 py-3.5 hover:bg-slate-50/50 transition-colors">
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold
+            {% if item.content_type == 'caption' %}bg-blue-50 text-blue-600
+            {% elif item.content_type == 'hashtag_set' %}bg-indigo-50 text-indigo-600
+            {% elif item.content_type == 'carousel' %}bg-amber-50 text-amber-600
+            {% elif item.content_type == 'script' %}bg-emerald-50 text-emerald-600
+            {% elif item.content_type == 'image_prompt' %}bg-violet-50 text-violet-600
+            {% elif item.content_type == 'cta' %}bg-rose-50 text-rose-600
+            {% else %}bg-slate-100 text-slate-600{% endif %}">
+            {{ item.get_content_type_display|slice:':2'|upper }}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-slate-900 truncate">{{ item.title|default:item.body|truncatechars:60 }}</p>
+            <p class="text-xs text-gray-400 mt-0.5">
+              {{ item.get_content_type_display }} · {{ item.created_at|date:'M d, Y' }}
+              {% if item.platform %} · {{ item.platform|title }}{% endif %}
+            </p>
+          </div>
+          {% if item.status == 'draft' %}{% include "components/badge.html" with label=item.get_status_display variant="gray" %}
+          {% elif item.status == 'pending_review' %}{% include "components/badge.html" with label=item.get_status_display variant="yellow" %}
+          {% elif item.status == 'approved' %}{% include "components/badge.html" with label=item.get_status_display variant="green" %}
+          {% elif item.status == 'published' %}{% include "components/badge.html" with label=item.get_status_display variant="blue" %}
+          {% elif item.status == 'archived' %}{% include "components/badge.html" with label=item.get_status_display variant="gray" %}
+          {% endif %}
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="px-6 py-12 text-center">
+        <div class="w-12 h-12 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+          <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+        </div>
+        <p class="text-sm text-slate-500">No content yet. Generate your first piece.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="premium-surface rounded-2xl p-6">
+      <h2 class="text-base font-bold text-slate-800 mb-4">Content Generators</h2>
+      <div class="space-y-2">
+        {% for gen in generators %}
+        <a href="{% url 'content_studio:generate' %}?type={{ gen.key }}" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 transition-colors group">
+          <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+            <svg class="w-4 h-4 text-slate-500 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+          <span class="text-sm font-semibold text-slate-700 group-hover:text-primary transition-colors">{{ gen.name }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

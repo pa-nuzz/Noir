@@ -1,0 +1,3178 @@
+# Intelligent Digital Automation — Architecture & Implementation Plan
+
+> **Platform**: AI-Powered Communication & Social Media Automation  
+> **Framework**: Django 6.0 + DRF  
+> **Status**: Architecture v1.0
+
+---
+
+## Table of Contents
+
+1. [Phased Roadmap](#1-phased-roadmap)
+2. [Technical Architecture](#2-technical-architecture)
+3. [Django App Structure](#3-django-app-structure)
+4. [Database Schema](#4-database-schema)
+5. [API Structure](#5-api-structure)
+6. [Celery Workflow Design](#6-celery-workflow-design)
+7. [AI Workflow Design](#7-ai-workflow-design)
+8. [Deployment Plan](#8-deployment-plan)
+9. [Scaling Recommendations](#9-scaling-recommendations)
+10. [Development Priority Order](#10-development-priority-order)
+11. [Estimated Complexity Per Module](#11-estimated-complexity-per-module)
+12. [Recommended Third-Party Services](#12-recommended-third-party-services)
+13. [Recommended Package Dependencies](#13-recommended-package-dependencies)
+14. [Suggested Coding Standards](#14-suggested-coding-standards)
+15. [Suggested Testing Strategy](#15-suggested-testing-strategy)
+
+---
+
+## 1. Phased Roadmap
+
+### Phase 0 — Foundation (Weeks 1-2)
+- Fix existing code issues (duplicate ENCRYPTION_KEY, missing templates, .gitignore cleanup)
+- Wire up Celery (`core/celery.py`, `core/__init__.py`)
+- Switch to PostgreSQL
+- Add missing templates for existing views
+- Add DRF + JWT auth
+- Implement contact/subscriber management
+- Add `.env` to `.gitignore` and rotate secrets
+
+### Phase 1 — Email Engine (Weeks 3-5)
+- Actual campaign sending via Celery workers
+- Email tracking (open/click pixels)
+- Bounce handling
+- Template editor (drag-drop + raw HTML)
+- Contact lists with import/export (CSV)
+- Subscriber management with segments
+- Gmail API + Microsoft Graph API integration
+
+### Phase 2 — AI Email Reply Agent (Weeks 5-7)
+- AI provider abstraction layer (OpenAI, Claude, Gemini)
+- Gmail inbox monitoring
+- Email summarization + intent detection
+- Reply generation with draft saving
+- Human approval workflow
+- Prompt template management
+- AI memory/context per conversation thread
+
+### Phase 3 — Social Media Management (Weeks 7-10)
+- OAuth2 connections for all platforms
+- Token refresh system
+- Content publishing pipeline
+- Scheduling with Celery Beat
+- Analytics sync
+- Multi-account dashboard
+
+### Phase 4 — AI Content Studio (Weeks 9-12)
+- Platform-specific content generation
+- Caption/hashtag/CTA generation
+- Carousel + video script generation
+- Image prompt generation (DALL-E, Midjourney)
+- Content review → approve → publish workflow
+- Trend research agent
+
+### Phase 5 — Media Asset Management (Weeks 11-13)
+- Upload pipeline with CDN integration
+- Folder/tag organization
+- AI auto-tagging
+- Image optimization pipeline
+- Search/filter
+
+### Phase 6 — Analytics & Scheduling (Weeks 13-15)
+- Content calendar view
+- Queue-based scheduling with timezone support
+- Analytics aggregation pipeline
+- Dashboard APIs + charts
+- Campaign performance reports
+- AI-powered insights
+
+### Phase 7 — Notifications & Real-Time (Weeks 15-16)
+- WebSocket infrastructure via Django Channels
+- In-app notification center
+- Email + Slack notification channels
+- Real-time dashboard updates
+
+### Phase 8 — Multi-Agent Orchestration (Weeks 16-18)
+- Agent communication bus
+- Shared context memory
+- Workflow orchestration engine
+- Prompt versioning + A/B testing
+- Agent monitoring dashboard
+
+### Phase 9 — SaaS Polish (Weeks 18-20)
+- Subscription plans with Stripe
+- Usage metering + rate limiting
+- Tenant isolation hardening
+- Audit log system
+- API key management
+- Developer documentation
+- Performance optimization
+
+---
+
+## 2. Technical Architecture
+
+### 2.1 High-Level Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                           Client Layer                               │
+│  ┌──────────┐  ┌──────────┐  ┌─────────┐  ┌───────────────────┐    │
+│  │ Django   │  │ Next.js  │  │ Mobile  │  │ External APIs     │    │
+│  │ Templates│  │ Frontend │  │ Apps    │  │ (webhooks, etc.)   │    │
+│  └────┬─────┘  └────┬─────┘  └────┬────┘  └─────────┬─────────┘    │
+│       │              │             │                  │              │
+└───────┼──────────────┼─────────────┼──────────────────┼──────────────┘
+        │              │             │                  │
+┌───────┼──────────────┼─────────────┼──────────────────┼──────────────┐
+│       ▼              ▼             ▼                  ▼              │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │                    API Gateway (Nginx)                        │    │
+│  │  Rate Limiting │ Auth │ Routing │ Request Validation          │    │
+│  └──────────┬───────────────────────────────────────────────────┘    │
+│             │                                                        │
+│  ┌──────────▼───────────────────────────────────────────────────┐    │
+│  │                    Django Application                         │    │
+│  │                                                              │    │
+│  │  ┌────────────────────────────────────────────────────────┐  │    │
+│  │  │                  REST API (DRF)                        │  │    │
+│  │  │  v1/accounts  v1/email  v1/social  v1/content          │  │    │
+│  │  │  v1/media     v1/analytics  v1/agents  v1/notifications│  │    │
+│  │  └──────────────────────┬─────────────────────────────────┘  │    │
+│  │                         │                                    │    │
+│  │  ┌──────────────────────▼─────────────────────────────────┐  │    │
+│  │  │                   Service Layer                         │  │    │
+│  │  │  EmailService │ SocialService │ ContentService          │  │    │
+│  │  │  MediaService │ AnalyticsService │ AgentService         │  │    │
+│  │  └──────────────────────┬─────────────────────────────────┘  │    │
+│  │                         │                                    │    │
+│  │  ┌──────────────────────▼─────────────────────────────────┐  │    │
+│  │  │              Integration Layer                          │  │    │
+│  │  │  GmailAPI │ GraphAPI │ TwitterAPI │ LinkedInAPI         │  │    │
+│  │  │  FBAPI │ TikTokAPI │ YouTubeAPI │ StripeAPI             │  │    │
+│  │  └────────────────────────────────────────────────────────┘  │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│  ┌────────────────┐  ┌────────────────┐  ┌──────────────────────┐    │
+│  │   PostgreSQL   │  │     Redis      │  │        S3/R2         │    │
+│  │  (Primary DB)  │  │  Cache/Queue   │  │   (File Storage)    │    │
+│  └────────────────┘  └────────────────┘  └──────────────────────┘    │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │                    Celery Workers                             │    │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌───────────────┐   │    │
+│  │  │ Email    │ │ Social   │ │ Media    │ │ Analytics     │   │    │
+│  │  │ Worker   │ │ Worker   │ │ Worker   │ │ Worker        │   │    │
+│  │  └──────────┘ └──────────┘ └──────────┘ └───────────────┘   │    │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────────────────────┐     │    │
+│  │  │ AI Agent │ │ Notif.   │ │ Celery Beat Scheduler    │     │    │
+│  │  │ Worker   │ │ Worker   │ │ (Periodic Tasks)         │     │    │
+│  │  └──────────┘ └──────────┘ └──────────────────────────┘     │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │                    AI Provider Layer                           │    │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────┐    │    │
+│  │  │ OpenAI   │ │ Claude   │ │ Gemini   │ │ Prompt Mgr   │    │    │
+│  │  │ API      │ │ API      │ │ API      │ │ Versioning   │    │    │
+│  │  └──────────┘ └──────────┘ └──────────┘ └──────────────┘    │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │                    Django Channels (WebSocket)                 │    │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────────────┐  │    │
+│  │  │ Notif.   │ │ Dashboard│ │ Live     │ │ Agent Status   │  │    │
+│  │  │ Consumer │ │ Consumer │ │ Feed     │ │ Consumer       │  │    │
+│  │  └──────────┘ └──────────┘ └──────────┘ └────────────────┘  │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### 2.2 Queue Architecture
+
+```
+                    ┌─────────────────────┐
+                    │   Celery Beat        │
+                    │   (Scheduler)        │
+                    └──────────┬──────────┘
+                               │
+    ┌──────────────────────────┼──────────────────────────┐
+    │                          │                          │
+    ▼                          ▼                          ▼
+┌───────────┐          ┌──────────────┐          ┌──────────────┐
+│  Email    │          │  Social       │          │  Analytics   │
+│  Queue    │          │  Queue        │          │  Queue       │
+│ (high)    │          │  (medium)     │          │  (low)       │
+└─────┬─────┘          └──────┬───────┘          └──────┬───────┘
+      │                       │                         │
+      ▼                       ▼                         ▼
+┌─────────────┐        ┌─────────────┐          ┌─────────────┐
+│ Email Worker│        │ Social      │          │ Analytics   │
+│ (5-10 pods) │        │ Worker      │          │ Worker      │
+│             │        │ (3-5 pods)  │          │ (2-3 pods)  │
+└─────────────┘        └─────────────┘          └─────────────┘
+
+Queue Priorities:
+  high:     Campaign sends, transactional emails
+  medium:   Social publishing, AI content generation
+  low:      Analytics sync, data aggregation, cleanup tasks
+
+Priority via separate Celery queues (not routing keys):
+  CELERY_TASK_QUEUES = {
+      'high':   {'exchange': 'high',   'routing_key': 'high'},
+      'medium': {'exchange': 'medium', 'routing_key': 'medium'},
+      'low':    {'exchange': 'low',    'routing_key': 'low'},
+  }
+```
+
+### 2.3 Data Flow — Email Campaign Send
+
+```
+User clicks "Send Campaign"
+  → View validates + creates CampaignTask record
+  → Celery task enqueued on 'high' queue
+  → Email Worker picks up task
+  → Worker resolves recipients (pagination, 500/batch)
+  → For each batch:
+      → Render email template with context
+      → Inject tracking pixel (1x1 transparent GIF with unique ID)
+      → Wrap links with click-tracking redirect
+      → Send via SMTP/GmailAPI/GraphAPI (per sender config)
+      → Record SentEvent per recipient
+  → On delivery failure:
+      → Record BounceEvent
+      → Update campaign stats
+      → Retry with exponential backoff (max 3)
+  → After all batches:
+      → Mark campaign as 'sent'
+      → Trigger analytics aggregation
+```
+
+### 2.4 Data Flow — AI Email Reply
+
+```
+Incoming Email (webhook/poll)
+  → Gmail API push notification OR Celery Beat poll
+  → Ingest email → store as InboundEmail
+  → Enqueue AI processing task (medium queue)
+  → AI Agent Worker:
+      1. Summarize email content
+      2. Detect intent (question, complaint, sales, support)
+      3. Detect urgency (low/medium/high/critical)
+      4. Fetch conversation history from AI memory
+      5. Generate contextual reply via AI provider
+      6. Store as DraftReply (status: needs_review)
+  → Notify user via WebSocket + in-app notification
+  → User reviews draft in dashboard
+  → User edits (optional) → approves
+  → Reply saved to Gmail drafts via Gmail Draft API
+  → User sends from Gmail interface OR platform sends via SMTP
+```
+
+---
+
+## 3. Django App Structure
+
+```
+ida/
+├── apps/
+│   ├── accounts/          # EXISTING — needs refactor
+│   │   ├── models.py      # User model, Workspace, Team, Invitation
+│   │   ├── backends.py    # Email + Username authentication backends
+│   │   ├── adapters.py    # AllAuth adapters
+│   │   ├── signals.py     # Post-save signals for profile/workspace
+│   │   ├── managers.py    # Custom UserManager
+│   │   ├── serializers.py # DRF serializers
+│   │   ├── views.py       # Auth views (register, login, verify, profile)
+│   │   ├── views_api.py   # DRF ViewSets (UserViewSet, WorkspaceViewSet)
+│   │   ├── urls.py        # URL patterns
+│   │   ├── permissions.py # IsWorkspaceMember, IsWorkspaceAdmin, etc.
+│   │   ├── throttle.py    # Auth-specific rate limiting
+│   │   ├── admin.py       # Admin config
+│   │   ├── tests/
+│   │   │   ├── test_models.py
+│   │   │   ├── test_views.py
+│   │   │   ├── test_api.py
+│   │   │   └── test_auth.py
+│   │   └── migrations/
+│   │
+│   ├── workspaces/        # NEW — extracted from accounts
+│   │   ├── models.py      # Workspace, WorkspaceMember, SubscriptionPlan
+│   │   ├── serializers.py
+│   │   ├── views_api.py   # WorkspaceViewSet, InvitationViewSet
+│   │   ├── urls.py
+│   │   ├── permissions.py # Role-based permissions
+│   │   └── tests/
+│   │
+│   ├── senders/           # EXISTING — needs refactor
+│   │   ├── models.py      # Sender, SenderProvider (enum)
+│   │   ├── serializers.py
+│   │   ├── views_api.py   # SenderViewSet (CRUD + verify)
+│   │   ├── services.py    # SenderService (connection test, quota check)
+│   │   ├── encrypt.py     # Fernet encryption utilities
+│   │   ├── validators.py  # SMTP validation
+│   │   └── tests/
+│   │
+│   ├── contacts/          # NEW
+│   │   ├── models.py      # Contact, ContactList, ContactListMember, Segment
+│   │   ├── serializers.py
+│   │   ├── views_api.py   # ContactViewSet, ContactListViewSet
+│   │   ├── services.py    # ImportService (CSV), SegmentService
+│   │   ├── imports.py     # CSV/Excel import parser
+│   │   ├── filters.py     # ContactFilter, SegmentFilter
+│   │   └── tests/
+│   │
+│   ├── campaigns/         # EXISTING — needs major expansion
+│   │   ├── models.py      # Campaign, CampaignEvent, CampaignLink, CampaignTemplate
+│   │   ├── serializers.py
+│   │   ├── views_api.py   # CampaignViewSet
+│   │   ├── services.py    # CampaignService (send, schedule, pause, resume)
+│   │   ├── tasks.py       # Celery tasks (send_campaign, track_open, track_click)
+│   │   ├── tracking.py    # Tracking pixel generator, click redirect
+│   │   ├── renderer.py    # Template rendering with context injection
+│   │   ├── analytics.py   # Campaign stats calculation
+│   │   └── tests/
+│   │
+│   ├── email_integrations/  # NEW — Gmail/MS Graph
+│   │   ├── models.py      # EmailAccount, EmailMessage, DraftReply
+│   │   ├── serializers.py
+│   │   ├── views_api.py   # EmailAccountViewSet, DraftReplyViewSet
+│   │   ├── services.py    # EmailSyncService, DraftService
+│   │   ├── integrations/
+│   │   │   ├── base.py        # BaseEmailIntegration
+│   │   │   ├── gmail.py       # GmailAPI integration
+│   │   │   └── outlook.py     # Microsoft Graph integration
+│   │   ├── tasks.py       # Poll inbox, sync messages
+│   │   ├── webhooks.py    # Incoming email webhooks
+│   │   └── tests/
+│   │
+│   ├── social_accounts/   # NEW
+│   │   ├── models.py      # SocialAccount, SocialPost, SocialAnalytics
+│   │   ├── serializers.py
+│   │   ├── views_api.py   # SocialAccountViewSet, SocialPostViewSet
+│   │   ├── services.py    # SocialService (publish, schedule, analytics)
+│   │   ├── platforms/
+│   │   │   ├── base.py        # BaseSocialPlatform
+│   │   │   ├── facebook.py    # FB + Instagram (Meta Graph API)
+│   │   │   ├── twitter.py     # X/Twitter API v2
+│   │   │   ├── linkedin.py    # LinkedIn API
+│   │   │   ├── tiktok.py      # TikTok API
+│   │   │   └── youtube.py     # YouTube Data API v3
+│   │   ├── oauth.py       # OAuth2 flow handler, token refresh
+│   │   ├── tasks.py       # Publish post, sync analytics
+│   │   ├── rate_limiter.py # Platform-specific rate limiting
+│   │   └── tests/
+│   │
+│   ├── content_studio/    # NEW
+│   │   ├── models.py      # ContentItem, ContentVersion, ContentApproval
+│   │   ├── serializers.py
+│   │   ├── views_api.py   # ContentItemViewSet, ContentGeneratorView
+│   │   ├── generators/
+│   │   │   ├── base.py        # BaseContentGenerator
+│   │   │   ├── caption.py     # Caption generator
+│   │   │   ├── hashtag.py     # Hashtag generator
+│   │   │   ├── carousel.py    # Carousel content generator
+│   │   │   ├── script.py      # Video script generator
+│   │   │   ├── prompt.py      # Image prompt generator
+│   │   │   └── cta.py         # CTA generator
+│   │   ├── adapters.py    # Platform-specific content adaptation
+│   │   ├── tasks.py       # Async content generation
+│   │   ├── services.py    # ContentService, ApprovalService
+│   │   └── tests/
+│   │
+│   ├── media_assets/      # NEW
+│   │   ├── models.py      # MediaAsset, MediaFolder, MediaTag
+│   │   ├── serializers.py
+│   │   ├── views_api.py   # MediaAssetViewSet (upload, list, search)
+│   │   ├── services.py    # MediaService, StorageService
+│   │   ├── storage.py     # Storage abstraction (S3, R2, local)
+│   │   ├── processing.py  # Image optimization, thumbnails, video processing
+│   │   ├── tagging.py     # AI auto-tagging service
+│   │   ├── tasks.py       # Async processing (optimize, tag, transcode)
+│   │   └── tests/
+│   │
+│   ├── scheduling/        # NEW
+│   │   ├── models.py      # Schedule, ContentQueue, QueueItem
+│   │   ├── serializers.py
+│   │   ├── views_api.py   # ScheduleViewSet, CalendarView
+│   │   ├── services.py    # SchedulerService, QueueService
+│   │   ├── tasks.py       # Celery Beat tasks (publish_scheduled)
+│   │   ├── calendar.py    # Calendar generation, timezone handling
+│   │   └── tests/
+│   │
+│   ├── analytics/         # NEW
+│   │   ├── models.py      # AnalyticsEvent, CampaignReport, SocialReport
+│   │   ├── serializers.py
+│   │   ├── views_api.py   # AnalyticsViewSet, DashboardView
+│   │   ├── services.py    # AnalyticsService, ReportService
+│   │   ├── aggregation.py # Data aggregation pipelines
+│   │   ├── tasks.py       # Periodic aggregation tasks
+│   │   └── tests/
+│   │
+│   ├── notifications/     # NEW
+│   │   ├── models.py      # Notification, NotificationPreference
+│   │   ├── serializers.py
+│   │   ├── views_api.py   # NotificationViewSet
+│   │   ├── consumers.py   # WebSocket consumers (Django Channels)
+│   │   ├── services.py    # NotificationService
+│   │   ├── channels.py    # Email, Slack, WebSocket backends
+│   │   ├── events.py      # Event definitions (campaign_done, draft_ready, etc.)
+│   │   └── tests/
+│   │
+│   ├── ai_agents/         # NEW
+│   │   ├── models.py      # Agent, AgentRun, PromptTemplate, AIMemory
+│   │   ├── serializers.py
+│   │   ├── views_api.py   # AgentViewSet, PromptTemplateViewSet
+│   │   ├── agents/
+│   │   │   ├── base.py            # BaseAgent
+│   │   │   ├── email_reply.py     # EmailReplyAgent
+│   │   │   ├── content_gen.py     # ContentGeneratorAgent
+│   │   │   ├── trend_research.py  # TrendResearchAgent
+│   │   │   ├── prompt_engineer.py # PromptEngineeringAgent
+│   │   │   └── engagement.py      # EngagementAnalyzerAgent
+│   │   ├── orchestrator.py  # Agent orchestrator (workflow engine)
+│   │   ├── memory.py        # Shared context memory system
+│   │   ├── router.py        # AI provider router (OpenAI, Claude, Gemini)
+│   │   ├── tasks.py         # Celery tasks for agent execution
+│   │   └── tests/
+│   │
+│   ├── billing/           # NEW — Phase 9
+│   │   ├── models.py      # Subscription, Invoice, UsageRecord
+│   │   ├── serializers.py
+│   │   ├── views_api.py   # SubscriptionViewSet, WebhookView
+│   │   ├── services.py    # BillingService (Stripe integration)
+│   │   ├── metering.py    # Usage metering
+│   │   └── tests/
+│   │
+│   └── webhooks/          # NEW
+│       ├── models.py      # WebhookEndpoint, WebhookEvent
+│       ├── serializers.py
+│       ├── views_api.py   # WebhookViewSet, WebhookDeliveryView
+│       ├── services.py    # WebhookService, signature verification
+│       └── tests/
+│
+├── core/                  # EXISTING — needs updates
+│   ├── __init__.py        # Import Celery app
+│   ├── asgi.py            # Channels ASGI config
+│   ├── celery.py          # Celery app definition
+│   ├── settings.py        # Main settings (refactored)
+│   ├── urls.py            # Root URLconf
+│   ├── wsgi.py            # WSGI config
+│   ├── middleware/
+│   │   ├── __init__.py
+│   │   ├── tenant.py          # Tenant identification middleware
+│   │   ├── audit.py           # Audit logging middleware
+│   │   └── api_logging.py     # API request logging
+│   └── routing.py             # Channels routing
+│
+├── services/              # Shared service layer
+│   ├── __init__.py
+│   ├── ai_service.py          # AI provider abstraction
+│   ├── storage_service.py     # File storage abstraction
+│   ├── template_service.py    # Email template rendering
+│   ├── encryption_service.py  # Encryption utilities
+│   └── cache_service.py       # Redis caching wrapper
+│
+├── integrations/          # Shared integration layer
+│   ├── __init__.py
+│   ├── base.py                # BaseOAuthIntegration
+│   ├── oauth.py               # OAuth2 utilities
+│   └── rate_limiter.py        # Token bucket rate limiter
+│
+├── templates/
+│   ├── base.html              # EXISTING
+│   ├── base_dashboard.html    # EXISTING — needs update for apps
+│   ├── account/               # Auth pages
+│   │   ├── login.html
+│   │   ├── register.html
+│   │   ├── password_reset.html
+│   │   └── ...
+│   ├── dashboard/
+│   │   ├── home.html
+│   │   ├── settings.html
+│   │   ├── profile.html
+│   │   ├── campaigns/
+│   │   ├── contacts/
+│   │   ├── social/
+│   │   ├── content/
+│   │   ├── media/
+│   │   ├── analytics/
+│   │   └── agents/
+│   ├── email/
+│   │   └── campaign_templates/
+│   └── notifications/
+│
+├── static/
+│   ├── css/
+│   ├── js/
+│   └── img/
+│
+├── ai_workflows/          # Workflow definitions (YAML/JSON)
+│   ├── email_reply.yaml
+│   ├── content_generation.yaml
+│   ├── trend_research.yaml
+│   └── social_publishing.yaml
+│
+├── ml_models/             # ML model files
+│   └── .gitkeep
+│
+├── docs/                  # API documentation
+│   └── api/
+│
+├── docker/                # Docker configuration
+│   ├── Dockerfile
+│   ├── Dockerfile.worker
+│   ├── nginx.conf
+│   └── docker-compose.yml
+│
+├── .github/
+│   └── workflows/
+│       ├── ci.yml
+│       └── deploy.yml
+│
+├── manage.py
+├── requirements.txt
+├── requirements-dev.txt
+├── pyproject.toml
+├── .env.example
+├── .gitignore
+└── ARCHITECTURE.md        # This file
+```
+
+---
+
+## 4. Database Schema
+
+### 4.1 Entity-Relationship Overview
+
+```
+User(1)───WorkspaceMember(∞)───Workspace(1)
+  │                                │
+  │                    ┌───────────┼────────────┐
+  │                    │           │            │
+  ▼                    ▼           ▼            ▼
+Sender(∞)        ContactList(∞)  Campaign(∞)  SocialAccount(∞)
+  │                    │           │            │
+  │                    ▼           ▼            ▼
+  │               Contact(∞)  CampaignEvent(∞) SocialPost(∞)
+  │                    │           │                │
+  │                    ▼           ▼                ▼
+  │               Segment(∞)   CampaignLink(∞)  SocialAnalytics(∞)
+  │
+  ├──EmailAccount(∞)──EmailMessage(∞)──DraftReply(∞)
+  │
+  ├──MediaAsset(∞)──MediaFolder(∞)──MediaTag(∞)
+  │
+  ├──ContentItem(∞)──ContentVersion(∞)──ContentApproval(∞)
+  │
+  ├──Schedule(∞)──QueueItem(∞)
+  │
+  ├──Agent(∞)──AgentRun(∞)──AIMemory(∞)──PromptTemplate(∞)
+  │
+  ├──Notification(∞)
+  │
+  └──Subscription(1)──UsageRecord(∞)
+```
+
+### 4.2 Core Models
+
+
+# ─── Accounts ───────────────────────────────────────────────────────
+
+class User(AbstractUser):
+    """Extend existing User model with workspace fields."""
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    email = EmailField(unique=True)
+    phone = CharField(max_length=20, blank=True)
+    company = CharField(max_length=255, blank=True)
+    avatar = ImageField(upload_to='avatars/', blank=True)
+    bio = TextField(blank=True)
+    email_verified = BooleanField(default=False)
+    is_onboarded = BooleanField(default=False)
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+    last_active_at = DateTimeField(null=True)
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
+
+    class Meta:
+        db_table = 'accounts_user'
+        indexes = [
+            Index(fields=['email']),
+            Index(fields=['company']),
+        ]
+
+
+class Workspace(models.Model):
+    """Multi-tenant workspace."""
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    name = CharField(max_length=255)
+    slug = SlugField(unique=True)
+    owner = ForeignKey(User, on_delete=CASCADE, related_name='owned_workspaces')
+    plan = CharField(max_length=50, choices=PlanChoices.choices, default='free')
+    is_active = BooleanField(default=True)
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'workspaces_workspace'
+        indexes = [Index(fields=['slug']), Index(fields=['owner'])]
+
+
+class WorkspaceMember(models.Model):
+    """Membership with roles."""
+    ROLE_CHOICES = [('admin', 'Admin'), ('editor', 'Editor')]
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, on_delete=CASCADE, related_name='members')
+    user = ForeignKey(User, on_delete=CASCADE, related_name='workspace_memberships')
+    role = CharField(max_length=20, choices=ROLE_CHOICES, default='editor')
+    invited_by = ForeignKey(User, null=True, on_delete=SET_NULL)
+    joined_at = DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['workspace', 'user']
+        db_table = 'workspaces_member'
+        indexes = [Index(fields=['workspace', 'role'])]
+
+
+class Invitation(models.Model):
+    """Workspace invitation."""
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, on_delete=CASCADE, related_name='invitations')
+    email = EmailField()
+    role = CharField(max_length=20, choices=WorkspaceMember.ROLE_CHOICES)
+    token = CharField(max_length=64, unique=True)
+    accepted = BooleanField(default=False)
+    expires_at = DateTimeField()
+    created_at = DateTimeField(auto_now_add=True)
+
+
+class AuditLog(models.Model):
+    """Immutable audit trail."""
+    id = BigAutoField(primary_key=True)
+    workspace = ForeignKey(Workspace, null=True, on_delete=SET_NULL)
+    user = ForeignKey(User, null=True, on_delete=SET_NULL)
+    action = CharField(max_length=100)
+    resource_type = CharField(max_length=100)
+    resource_id = CharField(max_length=100, blank=True)
+    details = JSONField(default=dict)
+    ip_address = GenericIPAddressField(null=True)
+    user_agent = TextField(blank=True)
+    created_at = DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            Index(fields=['workspace', 'created_at']),
+            Index(fields=['user', 'created_at']),
+            Index(fields=['action']),
+        ]
+
+
+# ─── Senders (SMTP) ─────────────────────────────────────────────────
+
+class Sender(models.Model):
+    """EXISTING — extend with workspace FK and provider type."""
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, on_delete=CASCADE, related_name='senders')
+    user = ForeignKey(User, on_delete=CASCADE, related_name='senders')
+    display_name = CharField(max_length=255)
+    from_email = EmailField()
+    provider = CharField(max_length=20, choices=ProviderChoices, default='custom')
+    smtp_host = CharField(max_length=255, blank=True)
+    smtp_port = IntegerField(default=587)
+    username = CharField(max_length=255, blank=True)
+    _password = CharField(max_length=512, db_column='password')
+    use_tls = BooleanField(default=True)
+    daily_limit = IntegerField(default=500)
+    emails_sent_today = IntegerField(default=0)
+    last_reset_date = DateField(auto_now_add=True)
+    is_active = BooleanField(default=True)
+    is_verified = BooleanField(default=False)
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [['workspace', 'from_email']]
+        indexes = [Index(fields=['workspace', 'is_active'])]
+
+
+# ─── Contacts ──────────────────────────────────────────────────────
+
+class ContactList(models.Model):
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, on_delete=CASCADE, related_name='contact_lists')
+    name = CharField(max_length=255)
+    description = TextField(blank=True)
+    contact_count = IntegerField(default=0)
+    created_by = ForeignKey(User, on_delete=SET_NULL, null=True)
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+
+class Contact(models.Model):
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, on_delete=CASCADE, related_name='contacts')
+    lists = ManyToManyField(ContactList, through='ContactListMember', related_name='contacts')
+    email = EmailField()
+    first_name = CharField(max_length=255, blank=True)
+    last_name = CharField(max_length=255, blank=True)
+    phone = CharField(max_length=50, blank=True)
+    company = CharField(max_length=255, blank=True)
+    custom_fields = JSONField(default=dict)
+    is_subscribed = BooleanField(default=True)
+    unsubscribed_at = DateTimeField(null=True)
+    bounce_count = IntegerField(default=0)
+    last_opened_at = DateTimeField(null=True)
+    last_clicked_at = DateTimeField(null=True)
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [['workspace', 'email']]
+        indexes = [
+            Index(fields=['workspace', 'is_subscribed']),
+            Index(fields=['email']),
+        ]
+
+
+class ContactListMember(models.Model):
+    contact = ForeignKey(Contact, on_delete=CASCADE)
+    contact_list = ForeignKey(ContactList, on_delete=CASCADE)
+    added_at = DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [['contact', 'contact_list']]
+
+
+class Segment(models.Model):
+    """Dynamic contact segment based on filters."""
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, on_delete=CASCADE, related_name='segments')
+    name = CharField(max_length=255)
+    filters = JSONField(default=dict)  # {"field": "op", "value": ...}
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+
+# ─── Campaigns ─────────────────────────────────────────────────────
+
+class Campaign(models.Model):
+    """EXISTING — extend with workspace FK and additional fields."""
+    STATUS_CHOICES = [
+        ('draft', 'Draft'), ('scheduled', 'Scheduled'),
+        ('sending', 'Sending'), ('sent', 'Sent'),
+        ('paused', 'Paused'), ('failed', 'Failed'),
+    ]
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, on_delete=CASCADE, related_name='campaigns')
+    user = ForeignKey(User, on_delete=CASCADE, related_name='campaigns')
+    sender = ForeignKey(Sender, on_delete=SET_NULL, null=True, related_name='campaigns')
+    contact_lists = ManyToManyField(ContactList, blank=True)
+    name = CharField(max_length=255)
+    subject = CharField(max_length=998)
+    preheader = CharField(max_length=255, blank=True)
+    body_html = TextField()
+    body_text = TextField(blank=True)
+    template = ForeignKey('CampaignTemplate', null=True, on_delete=SET_NULL)
+    from_name = CharField(max_length=255, blank=True)
+    reply_to = EmailField(blank=True)
+    status = CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    scheduled_at = DateTimeField(null=True)
+    sent_at = DateTimeField(null=True)
+    completed_at = DateTimeField(null=True)
+    total_recipients = IntegerField(default=0)
+    sent_count = IntegerField(default=0)
+    open_count = IntegerField(default=0)
+    click_count = IntegerField(default=0)
+    bounce_count = IntegerField(default=0)
+    complaint_count = IntegerField(default=0)
+    unsubscribe_count = IntegerField(default=0)
+    spam_score = FloatField(default=0.0)
+    spam_risk = CharField(max_length=20, choices=RiskChoices, default='low')
+    is_archived = BooleanField(default=False)
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            Index(fields=['workspace', 'status']),
+            Index(fields=['workspace', 'created_at']),
+            Index(fields=['scheduled_at']),
+        ]
+
+    @property
+    def open_rate(self):
+        return round((self.open_count / self.sent_count * 100), 2) if self.sent_count else 0
+
+    @property
+    def click_rate(self):
+        return round((self.click_count / self.sent_count * 100), 2) if self.sent_count else 0
+
+
+class CampaignTemplate(models.Model):
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, on_delete=CASCADE, related_name='email_templates')
+    name = CharField(max_length=255)
+    body_html = TextField()
+    body_text = TextField(blank=True)
+    is_drag_drop = BooleanField(default=False)
+    thumbnail = ImageField(upload_to='template_thumbs/', blank=True)
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+
+class CampaignEvent(models.Model):
+    """Individual recipient events."""
+    EVENT_TYPES = [
+        ('sent', 'Sent'), ('delivered', 'Delivered'),
+        ('opened', 'Opened'), ('clicked', 'Clicked'),
+        ('bounced', 'Bounced'), ('complained', 'Complained'),
+        ('unsubscribed', 'Unsubscribed'), ('failed', 'Failed'),
+    ]
+    id = BigAutoField(primary_key=True)
+    campaign = ForeignKey(Campaign, on_delete=CASCADE, related_name='events')
+    contact = ForeignKey(Contact, on_delete=CASCADE, null=True)
+    email = EmailField()
+    event_type = CharField(max_length=20, choices=EVENT_TYPES)
+    metadata = JSONField(default=dict)  # user_agent, ip, link_url, bounce_msg
+    created_at = DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            Index(fields=['campaign', 'event_type']),
+            Index(fields=['campaign', 'created_at']),
+            Index(fields=['email', 'event_type']),
+        ]
+
+
+class CampaignLink(models.Model):
+    """Trackable links in campaign."""
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    campaign = ForeignKey(Campaign, on_delete=CASCADE, related_name='links')
+    url = URLField()
+    alias = CharField(max_length=255, blank=True)
+    click_count = IntegerField(default=0)
+    unique_click_count = IntegerField(default=0)
+
+
+# ─── Email Integrations (Gmail/MS Graph) ───────────────────────────
+
+class EmailAccount(models.Model):
+    """Connected email account for inbox sync."""
+    PROVIDER_CHOICES = [('gmail', 'Gmail'), ('outlook', 'Outlook')]
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, on_delete=CASCADE, related_name='email_accounts')
+    user = ForeignKey(User, on_delete=CASCADE, related_name='email_accounts')
+    email = EmailField()
+    provider = CharField(max_length=20, choices=PROVIDER_CHOICES)
+    access_token = TextField(encrypted=True)
+    refresh_token = TextField(encrypted=True)
+    token_expires_at = DateTimeField()
+    is_active = BooleanField(default=True)
+    last_synced_at = DateTimeField(null=True)
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [['workspace', 'email']]
+
+
+class EmailMessage(models.Model):
+    """Synced email messages."""
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    account = ForeignKey(EmailAccount, on_delete=CASCADE, related_name='messages')
+    message_id = CharField(max_length=512)  # Provider's message ID
+    thread_id = CharField(max_length=512)
+    from_email = EmailField()
+    from_name = CharField(max_length=255, blank=True)
+    to_email = EmailField()
+    subject = CharField(max_length=998)
+    body_text = TextField(blank=True)
+    body_html = TextField(blank=True)
+    is_read = BooleanField(default=False)
+    is_replied = BooleanField(default=False)
+    received_at = DateTimeField()
+    created_at = DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [['account', 'message_id']]
+        indexes = [
+            Index(fields=['account', 'thread_id']),
+            Index(fields=['account', 'is_read']),
+            Index(fields=['received_at']),
+        ]
+
+
+class DraftReply(models.Model):
+    """AI-generated reply drafts requiring approval."""
+    STATUS_CHOICES = [
+        ('draft', 'Draft'), ('needs_review', 'Needs Review'),
+        ('approved', 'Approved'), ('rejected', 'Rejected'),
+        ('sent', 'Sent'), ('failed', 'Failed'),
+    ]
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, on_delete=CASCADE)
+    user = ForeignKey(User, on_delete=CASCADE, related_name='draft_replies')
+    original_email = ForeignKey(EmailMessage, on_delete=CASCADE, related_name='replies')
+    reply_body = TextField()
+    subject = CharField(max_length=998, blank=True)
+    status = CharField(max_length=20, choices=STATUS_CHOICES, default='needs_review')
+    ai_model = CharField(max_length=50)
+    intent = CharField(max_length=50, blank=True)
+    urgency = CharField(max_length=20, default='low')
+    confidence_score = FloatField(default=0.0)
+    reviewed_by = ForeignKey(User, null=True, on_delete=SET_NULL, related_name='reviewed_drafts')
+    reviewed_at = DateTimeField(null=True)
+    provider_draft_id = CharField(max_length=512, blank=True)  # Gmail draft ID
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            Index(fields=['workspace', 'status']),
+            Index(fields=['user', 'status']),
+        ]
+
+
+# ─── Social Accounts ──────────────────────────────────────────────
+
+class SocialAccount(models.Model):
+    PLATFORM_CHOICES = [
+        ('facebook', 'Facebook'), ('instagram', 'Instagram'),
+        ('tiktok', 'TikTok'), ('youtube', 'YouTube'),
+        ('twitter', 'X/Twitter'), ('linkedin', 'LinkedIn'),
+    ]
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, on_delete=CASCADE, related_name='social_accounts')
+    user = ForeignKey(User, on_delete=CASCADE, related_name='social_accounts')
+    platform = CharField(max_length=20, choices=PLATFORM_CHOICES)
+    account_id = CharField(max_length=255)  # Platform user/page ID
+    account_name = CharField(max_length=255)
+    account_email = EmailField(blank=True)
+    avatar_url = URLField(blank=True)
+    access_token = TextField(encrypted=True)
+    refresh_token = TextField(encrypted=True)
+    token_expires_at = DateTimeField()
+    token_scopes = JSONField(default=list)
+    is_active = BooleanField(default=True)
+    last_synced_at = DateTimeField(null=True)
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [['workspace', 'platform', 'account_id']]
+        indexes = [Index(fields=['workspace', 'platform'])]
+
+
+class SocialPost(models.Model):
+    STATUS_CHOICES = [
+        ('draft', 'Draft'), ('scheduled', 'Scheduled'),
+        ('approval_pending', 'Approval Pending'), ('approved', 'Approved'),
+        ('publishing', 'Publishing'), ('published', 'Published'),
+        ('failed', 'Failed'),
+    ]
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, on_delete=CASCADE, related_name='social_posts')
+    account = ForeignKey(SocialAccount, on_delete=CASCADE, related_name='posts')
+    content_item = ForeignKey('content_studio.ContentItem', null=True, on_delete=SET_NULL)
+    content = JSONField(default=dict)  # Platform-specific content body
+    media = ManyToManyField('media_assets.MediaAsset', blank=True)
+    status = CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    scheduled_at = DateTimeField(null=True)
+    published_at = DateTimeField(null=True)
+    platform_post_id = CharField(max_length=512, blank=True)
+    platform_post_url = URLField(blank=True)
+    error_message = TextField(blank=True)
+    created_by = ForeignKey(User, on_delete=SET_NULL, null=True)
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            Index(fields=['workspace', 'status']),
+            Index(fields=['account', 'scheduled_at']),
+            Index(fields=['scheduled_at']),
+        ]
+
+
+class SocialAnalytics(models.Model):
+    """Per-post social analytics snapshot."""
+    id = BigAutoField(primary_key=True)
+    post = ForeignKey(SocialPost, on_delete=CASCADE, related_name='analytics')
+    account = ForeignKey(SocialAccount, on_delete=CASCADE)
+    platform = CharField(max_length=20)
+    impressions = IntegerField(default=0)
+    reach = IntegerField(default=0)
+    likes = IntegerField(default=0)
+    comments = IntegerField(default=0)
+    shares = IntegerField(default=0)
+    clicks = IntegerField(default=0)
+    engagement_rate = FloatField(default=0.0)
+    followers_gained = IntegerField(default=0)
+    followers_lost = IntegerField(default=0)
+    snapshot_date = DateField()
+    raw_data = JSONField(default=dict)
+    created_at = DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [['post', 'snapshot_date']]
+        indexes = [Index(fields=['account', 'snapshot_date'])]
+
+
+# ─── Media Assets ──────────────────────────────────────────────────
+
+class MediaFolder(models.Model):
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, on_delete=CASCADE, related_name='media_folders')
+    parent = ForeignKey('self', null=True, on_delete=CASCADE, related_name='children')
+    name = CharField(max_length=255)
+    created_by = ForeignKey(User, on_delete=SET_NULL, null=True)
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [['workspace', 'parent', 'name']]
+
+
+class MediaTag(models.Model):
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, on_delete=CASCADE, related_name='media_tags')
+    name = CharField(max_length=100)
+    is_auto_generated = BooleanField(default=False)
+    created_at = DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [['workspace', 'name']]
+
+
+class MediaAsset(models.Model):
+    TYPE_CHOICES = [
+        ('image', 'Image'), ('video', 'Video'),
+        ('document', 'Document'), ('audio', 'Audio'), ('other', 'Other'),
+    ]
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, on_delete=CASCADE, related_name='media_assets')
+    folder = ForeignKey(MediaFolder, null=True, on_delete=SET_NULL, related_name='assets')
+    tags = ManyToManyField(MediaTag, blank=True, related_name='assets')
+    original_filename = CharField(max_length=512)
+    stored_filename = CharField(max_length=512)
+    file_type = CharField(max_length=20, choices=TYPE_CHOICES)
+    mime_type = CharField(max_length=100)
+    file_size = IntegerField()  # bytes
+    width = IntegerField(null=True)
+    height = IntegerField(null=True)
+    duration = FloatField(null=True)  # seconds (video/audio)
+    url = URLField()
+    thumbnail_url = URLField(blank=True)
+    alt_text = CharField(max_length=512, blank=True)
+    ai_description = TextField(blank=True)
+    ai_tags = JSONField(default=list)
+    storage_provider = CharField(max_length=20, default='s3')
+    storage_path = CharField(max_length=1024)
+    uploaded_by = ForeignKey(User, on_delete=SET_NULL, null=True)
+    is_processing = BooleanField(default=False)
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            Index(fields=['workspace', 'file_type']),
+            Index(fields=['workspace', 'created_at']),
+            Index(fields=['folder']),
+        ]
+
+
+# ─── Content Studio ────────────────────────────────────────────────
+
+class ContentItem(models.Model):
+    CONTENT_TYPES = [
+        ('caption', 'Caption'), ('hashtag_set', 'Hashtag Set'),
+        ('carousel', 'Carousel'), ('video_script', 'Video Script'),
+        ('image_prompt', 'Image Prompt'), ('cta', 'CTA'),
+        ('blog_post', 'Blog Post'), ('social_post', 'Social Post'),
+    ]
+    PLATFORM_TARGETS = [
+        ('instagram', 'Instagram'), ('linkedin', 'LinkedIn'),
+        ('tiktok', 'TikTok'), ('youtube', 'YouTube'),
+        ('facebook', 'Facebook'), ('twitter', 'X/Twitter'),
+        ('all', 'All Platforms'), ('multi', 'Multi-Platform'),
+    ]
+    STATUS_CHOICES = [
+        ('draft', 'Draft'), ('generated', 'Generated'),
+        ('needs_review', 'Needs Review'), ('approved', 'Approved'),
+        ('rejected', 'Rejected'), ('scheduled', 'Scheduled'),
+        ('published', 'Published'), ('archived', 'Archived'),
+    ]
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, on_delete=CASCADE, related_name='content_items')
+    user = ForeignKey(User, on_delete=CASCADE, related_name='content_items')
+    content_type = CharField(max_length=20, choices=CONTENT_TYPES)
+    platform = CharField(max_length=20, choices=PLATFORM_TARGETS)
+    title = CharField(max_length=255, blank=True)
+    content = JSONField(default=dict)  # Structured content per type
+    status = CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    ai_model = CharField(max_length=50, blank=True)
+    prompt_used = TextField(blank=True)
+    is_ai_generated = BooleanField(default=True)
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            Index(fields=['workspace', 'content_type']),
+            Index(fields=['workspace', 'status']),
+            Index(fields=['user', 'created_at']),
+        ]
+
+
+class ContentVersion(models.Model):
+    """Version history for content items."""
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    content_item = ForeignKey(ContentItem, on_delete=CASCADE, related_name='versions')
+    version_number = IntegerField()
+    content = JSONField()
+    edited_by = ForeignKey(User, on_delete=SET_NULL, null=True)
+    edit_notes = TextField(blank=True)
+    created_at = DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [['content_item', 'version_number']]
+        ordering = ['-version_number']
+
+
+class ContentApproval(models.Model):
+    """Approval workflow records."""
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    content_item = ForeignKey(ContentItem, on_delete=CASCADE, related_name='approvals')
+    approved_by = ForeignKey(User, on_delete=SET_NULL, null=True)
+    status = CharField(max_length=20, choices=ApprovalChoices)
+    comments = TextField(blank=True)
+    created_at = DateTimeField(auto_now_add=True)
+
+
+# ─── Scheduling ────────────────────────────────────────────────────
+
+class Schedule(models.Model):
+    """Content schedule/calendar entry."""
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, on_delete=CASCADE, related_name='schedules')
+    name = CharField(max_length=255)
+    timezone = CharField(max_length=50, default='UTC')
+    is_active = BooleanField(default=True)
+    created_by = ForeignKey(User, on_delete=SET_NULL, null=True)
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+
+class ContentQueue(models.Model):
+    """Scheduling queue."""
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, on_delete=CASCADE, related_name='content_queues')
+    name = CharField(max_length=255)
+    schedule = ForeignKey(Schedule, null=True, on_delete=SET_NULL)
+    is_active = BooleanField(default=True)
+    created_at = DateTimeField(auto_now_add=True)
+
+
+class QueueItem(models.Model):
+    """Individual item in a publishing queue."""
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    queue = ForeignKey(ContentQueue, on_delete=CASCADE, related_name='items')
+    content_item = ForeignKey(ContentItem, null=True, on_delete=SET_NULL)
+    social_post = ForeignKey(SocialPost, null=True, on_delete=SET_NULL)
+    scheduled_at = DateTimeField()
+    published_at = DateTimeField(null=True)
+    status = CharField(max_length=20, choices=QueueStatusChoices, default='pending')
+    retry_count = IntegerField(default=0)
+    max_retries = IntegerField(default=3)
+    error_message = TextField(blank=True)
+    priority = IntegerField(default=0)  # Higher = more urgent
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            Index(fields=['queue', 'status']),
+            Index(fields=['scheduled_at', 'status']),
+        ]
+        ordering = ['scheduled_at']
+
+
+# ─── AI Agents ─────────────────────────────────────────────────────
+
+class AIProvider(models.Model):
+    """Configured AI provider instance."""
+    PROVIDER_CHOICES = [('openai', 'OpenAI'), ('claude', 'Claude'), ('gemini', 'Gemini')]
+    workspace = ForeignKey(Workspace, on_delete=CASCADE, related_name='ai_providers')
+    provider = CharField(max_length=20, choices=PROVIDER_CHOICES)
+    api_key = TextField(encrypted=True)
+    model = CharField(max_length=100, default='gpt-4')
+    is_active = BooleanField(default=True)
+    created_at = DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [['workspace', 'provider']]
+
+
+class PromptTemplate(models.Model):
+    """Versioned prompt templates."""
+    CATEGORY_CHOICES = [
+        ('email_reply', 'Email Reply'), ('content_gen', 'Content Generation'),
+        ('hashtag', 'Hashtag Generation'), ('caption', 'Caption Generation'),
+        ('summarize', 'Summarization'), ('intent', 'Intent Detection'),
+        ('image_prompt', 'Image Prompt'), ('custom', 'Custom'),
+    ]
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, null=True, on_delete=CASCADE, related_name='prompt_templates')
+    name = CharField(max_length=255)
+    category = CharField(max_length=20, choices=CATEGORY_CHOICES)
+    system_prompt = TextField()
+    user_prompt_template = TextField()
+    version = IntegerField(default=1)
+    model = CharField(max_length=100, blank=True)
+    temperature = FloatField(default=0.7)
+    max_tokens = IntegerField(default=1024)
+    is_active = BooleanField(default=True)
+    is_global = BooleanField(default=False)  # System prompt vs custom
+    created_by = ForeignKey(User, null=True, on_delete=SET_NULL)
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [Index(fields=['workspace', 'category'])]
+
+
+class AIMemory(models.Model):
+    """Conversation/context memory for AI agents."""
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, on_delete=CASCADE)
+    agent_type = CharField(max_length=50)
+    conversation_id = CharField(max_length=255)  # Thread/email thread ID
+    context = JSONField(default=dict)
+    summary = TextField(blank=True)
+    token_count = IntegerField(default=0)
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [['agent_type', 'conversation_id']]
+        indexes = [Index(fields=['workspace', 'agent_type'])]
+
+
+class Agent(models.Model):
+    """AI Agent configuration."""
+    AGENT_TYPES = [
+        ('email_reply', 'Email Reply Agent'),
+        ('content_gen', 'Content Generator Agent'),
+        ('trend_research', 'Trend Research Agent'),
+        ('prompt_engineer', 'Prompt Engineering Agent'),
+        ('engagement', 'Engagement Analyzer Agent'),
+    ]
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, on_delete=CASCADE, related_name='agents')
+    agent_type = CharField(max_length=20, choices=AGENT_TYPES)
+    name = CharField(max_length=255)
+    is_active = BooleanField(default=True)
+    configuration = JSONField(default=dict)  # Agent-specific config
+    prompt_template = ForeignKey(PromptTemplate, null=True, on_delete=SET_NULL)
+    created_by = ForeignKey(User, on_delete=SET_NULL, null=True)
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [['workspace', 'agent_type']]
+
+
+class AgentRun(models.Model):
+    """Execution record for an agent."""
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    agent = ForeignKey(Agent, on_delete=CASCADE, related_name='runs')
+    status = CharField(max_length=20, choices=RunStatusChoices, default='pending')
+    input_data = JSONField(default=dict)
+    output_data = JSONField(default=dict)
+    error_message = TextField(blank=True)
+    started_at = DateTimeField(null=True)
+    completed_at = DateTimeField(null=True)
+    duration_ms = IntegerField(null=True)
+    tokens_used = IntegerField(default=0)
+    cost = DecimalField(max_digits=10, decimal_places=6, default=0)
+    created_at = DateTimeField(auto_now_add=True)
+
+
+# ─── Notifications ─────────────────────────────────────────────────
+
+class Notification(models.Model):
+    TYPE_CHOICES = [
+        ('draft_ready', 'Draft Ready'), ('campaign_done', 'Campaign Completed'),
+        ('campaign_failed', 'Campaign Failed'), ('approval_needed', 'Approval Needed'),
+        ('content_approved', 'Content Approved'), ('content_rejected', 'Content Rejected'),
+        ('social_published', 'Social Post Published'), ('social_failed', 'Social Post Failed'),
+        ('mention', 'Mention'), ('system', 'System Notification'),
+        ('weekly_report', 'Weekly Report'), ('billing', 'Billing'),
+    ]
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, on_delete=CASCADE)
+    recipient = ForeignKey(User, on_delete=CASCADE, related_name='notifications')
+    type = CharField(max_length=30, choices=TYPE_CHOICES)
+    title = CharField(max_length=255)
+    message = TextField()
+    data = JSONField(default=dict)  # Metadata for deep linking
+    is_read = BooleanField(default=False)
+    read_at = DateTimeField(null=True)
+    created_at = DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            Index(fields=['recipient', 'is_read']),
+            Index(fields=['recipient', 'created_at']),
+        ]
+        ordering = ['-created_at']
+
+
+class NotificationPreference(models.Model):
+    """Per-user notification channel preferences."""
+    user = ForeignKey(User, on_delete=CASCADE, related_name='notification_prefs')
+    channel = CharField(max_length=20, choices=[('in_app', 'In-App'), ('email', 'Email')])
+    notification_type = CharField(max_length=30, choices=Notification.TYPE_CHOICES)
+    enabled = BooleanField(default=True)
+
+    class Meta:
+        unique_together = [['user', 'channel', 'notification_type']]
+
+
+# ─── Billing ───────────────────────────────────────────────────────
+
+class SubscriptionPlan(models.Model):
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    name = CharField(max_length=100)
+    slug = SlugField(unique=True)
+    description = TextField(blank=True)
+    monthly_price = DecimalField(max_digits=10, decimal_places=2)
+    yearly_price = DecimalField(max_digits=10, decimal_places=2)
+    max_workspace_members = IntegerField(default=1)
+    max_email_sends_monthly = IntegerField(default=0)
+    max_social_accounts = IntegerField(default=0)
+    max_contacts = IntegerField(default=0)
+    ai_generations_monthly = IntegerField(default=0)
+    storage_limit_mb = IntegerField(default=0)
+    features = JSONField(default=list)  # Feature flags
+    is_active = BooleanField(default=True)
+    sort_order = IntegerField(default=0)
+
+
+class Subscription(models.Model):
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    workspace = ForeignKey(Workspace, on_delete=CASCADE, related_name='subscriptions')
+    plan = ForeignKey(SubscriptionPlan, on_delete=PROTECT)
+    stripe_customer_id = CharField(max_length=255, blank=True)
+    stripe_subscription_id = CharField(max_length=255, blank=True)
+    status = CharField(max_length=20, choices=SubscriptionStatusChoices)
+    current_period_start = DateTimeField()
+    current_period_end = DateTimeField()
+    cancel_at_period_end = BooleanField(default=False)
+    trial_end = DateTimeField(null=True)
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+
+class UsageRecord(models.Model):
+    """Metered usage for billing."""
+    METER_CATEGORIES = [
+        ('email_send', 'Email Send'), ('social_post', 'Social Post'),
+        ('ai_generation', 'AI Generation'), ('storage', 'Storage (MB)'),
+        ('api_call', 'API Call'),
+    ]
+    workspace = ForeignKey(Workspace, on_delete=CASCADE)
+    category = CharField(max_length=20, choices=METER_CATEGORIES)
+    quantity = IntegerField(default=1)
+    recorded_at = DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [Index(fields=['workspace', 'category', 'recorded_at'])]
+```
+
+---
+
+## 5. API Structure
+
+### 5.1 API Versioning
+
+All APIs under `/api/v1/`. Version in URL path. Accept header versioning optional for future.
+
+### 5.2 Authentication
+
+- **Primary**: JWT (access + refresh tokens) via `djangorestframework-simplejwt`
+- **Alternative**: Session auth for Django template views
+- **API Keys**: For external integrations, hashed API keys stored in DB
+
+### 5.3 Endpoint Map
+
+```
+# ─── Auth & Accounts ───────────────────────────────────────────────
+POST   /api/v1/auth/register/                    # Register new user
+POST   /api/v1/auth/login/                       # Login (returns JWT)
+POST   /api/v1/auth/refresh/                     # Refresh JWT token
+POST   /api/v1/auth/logout/                      # Blacklist token
+POST   /api/v1/auth/password-reset/              # Request password reset
+POST   /api/v1/auth/password-reset/confirm/      # Confirm password reset
+GET    /api/v1/auth/verify-email/{token}/         # Verify email
+GET    /api/v1/auth/me/                          # Get current user profile
+PATCH  /api/v1/auth/me/                          # Update profile
+PUT    /api/v1/auth/me/avatar/                   # Upload avatar
+
+# ─── Workspaces ────────────────────────────────────────────────────
+GET    /api/v1/workspaces/                       # List user's workspaces
+POST   /api/v1/workspaces/                       # Create workspace
+GET    /api/v1/workspaces/{id}/                  # Workspace details
+PATCH  /api/v1/workspaces/{id}/                  # Update workspace
+DELETE /api/v1/workspaces/{id}/                  # Delete workspace
+GET    /api/v1/workspaces/{id}/members/          # List members
+POST   /api/v1/workspaces/{id}/members/          # Add member
+PATCH  /api/v1/workspaces/{id}/members/{uid}/    # Update role
+DELETE /api/v1/workspaces/{id}/members/{uid}/    # Remove member
+POST   /api/v1/workspaces/{id}/invitations/      # Invite user
+GET    /api/v1/workspaces/{id}/invitations/      # List invitations
+POST   /api/v1/invitations/{token}/accept/       # Accept invitation
+
+# ─── Senders (SMTP) ────────────────────────────────────────────────
+GET    /api/v1/senders/                          # List senders
+POST   /api/v1/senders/                          # Create sender
+GET    /api/v1/senders/{id}/                     # Sender details
+PATCH  /api/v1/senders/{id}/                     # Update sender
+DELETE /api/v1/senders/{id}/                     # Delete sender
+POST   /api/v1/senders/{id}/verify/              # Test SMTP connection
+
+# ─── Contacts & Lists ──────────────────────────────────────────────
+GET    /api/v1/contacts/                         # List contacts (paginated)
+POST   /api/v1/contacts/                         # Create contact
+GET    /api/v1/contacts/{id}/                    # Contact details
+PATCH  /api/v1/contacts/{id}/                    # Update contact
+DELETE /api/v1/contacts/{id}/                    # Delete contact
+POST   /api/v1/contacts/bulk/                    # Bulk create/update
+POST   /api/v1/contacts/import/                  # Import CSV
+
+GET    /api/v1/contact-lists/                    # List contact lists
+POST   /api/v1/contact-lists/                    # Create list
+GET    /api/v1/contact-lists/{id}/               # List details
+PATCH  /api/v1/contact-lists/{id}/               # Update list
+DELETE /api/v1/contact-lists/{id}/               # Delete list
+GET    /api/v1/contact-lists/{id}/contacts/      # List contacts in list
+POST   /api/v1/contact-lists/{id}/contacts/      # Add contact to list
+DELETE /api/v1/contact-lists/{id}/contacts/{cid}/ # Remove from list
+POST   /api/v1/contact-lists/{id}/merge/         # Merge with another list
+
+GET    /api/v1/segments/                         # List segments
+POST   /api/v1/segments/                         # Create segment
+GET    /api/v1/segments/{id}/contacts/           # Resolve segment members
+
+# ─── Campaigns ─────────────────────────────────────────────────────
+GET    /api/v1/campaigns/                        # List campaigns
+POST   /api/v1/campaigns/                        # Create campaign
+GET    /api/v1/campaigns/{id}/                   # Campaign details
+PATCH  /api/v1/campaigns/{id}/                   # Update campaign
+DELETE /api/v1/campaigns/{id}/                   # Delete campaign
+POST   /api/v1/campaigns/{id}/duplicate/         # Duplicate campaign
+POST   /api/v1/campaigns/{id}/send/              # Send campaign
+POST   /api/v1/campaigns/{id}/schedule/          # Schedule campaign
+POST   /api/v1/campaigns/{id}/pause/             # Pause sending
+POST   /api/v1/campaigns/{id}/resume/            # Resume sending
+POST   /api/v1/campaigns/{id}/test/              # Send test email
+GET    /api/v1/campaigns/{id}/events/            # Get campaign events
+GET    /api/v1/campaigns/{id}/stats/             # Campaign statistics
+GET    /api/v1/campaigns/{id}/links/             # Tracked links
+
+GET    /api/v1/email-templates/                  # List templates
+POST   /api/v1/email-templates/                  # Create template
+GET    /api/v1/email-templates/{id}/             # Template details
+PATCH  /api/v1/email-templates/{id}/             # Update template
+DELETE /api/v1/email-templates/{id}/             # Delete template
+
+GET    /api/v1/campaigns/{id}/preview/           # Preview campaign
+
+# ─── Email Integrations ────────────────────────────────────────────
+GET    /api/v1/email-accounts/                   # List connected accounts
+POST   /api/v1/email-accounts/                   # Connect account (OAuth)
+DELETE /api/v1/email-accounts/{id}/              # Disconnect
+POST   /api/v1/email-accounts/{id}/sync/         # Force sync inbox
+
+GET    /api/v1/email-messages/                   # List messages
+GET    /api/v1/email-messages/{id}/              # Message details
+GET    /api/v1/email-messages/{id}/thread/       # Get thread
+PATCH  /api/v1/email-messages/{id}/read/         # Mark as read
+
+GET    /api/v1/draft-replies/                    # List AI drafts
+GET    /api/v1/draft-replies/{id}/               # Draft details
+PATCH  /api/v1/draft-replies/{id}/               # Edit draft
+POST   /api/v1/draft-replies/{id}/approve/       # Approve → save to drafts
+POST   /api/v1/draft-replies/{id}/reject/        # Reject draft
+POST   /api/v1/draft-replies/{id}/regenerate/    # Regenerate with AI
+
+# ─── Social Media ──────────────────────────────────────────────────
+GET    /api/v1/social-accounts/                  # List connected accounts
+POST   /api/v1/social-accounts/                  # Initiate OAuth flow
+GET    /api/v1/social-accounts/{id}/             # Account details
+PATCH  /api/v1/social-accounts/{id}/             # Update account
+DELETE /api/v1/social-accounts/{id}/             # Disconnect
+POST   /api/v1/social-accounts/{id}/refresh/     # Refresh token
+GET    /api/v1/social-accounts/{id}/analytics/   # Account analytics
+
+GET    /api/v1/social-posts/                     # List posts
+POST   /api/v1/social-posts/                     # Create post
+GET    /api/v1/social-posts/{id}/                # Post details
+PATCH  /api/v1/social-posts/{id}/                # Update post
+DELETE /api/v1/social-posts/{id}/                # Delete post
+POST   /api/v1/social-posts/{id}/publish/        # Publish now
+POST   /api/v1/social-posts/{id}/schedule/       # Schedule
+POST   /api/v1/social-posts/{id}/approve/        # Approve for publishing
+POST   /api/v1/social-posts/{id}/cancel/         # Cancel scheduled
+
+# ─── Content Studio ────────────────────────────────────────────────
+GET    /api/v1/content/                          # List content items
+POST   /api/v1/content/                          # Create content
+GET    /api/v1/content/{id}/                     # Content details
+PATCH  /api/v1/content/{id}/                     # Update content
+DELETE /api/v1/content/{id}/                     # Delete content
+POST   /api/v1/content/generate/                 # AI generate content
+POST   /api/v1/content/{id}/approve/             # Approve content
+POST   /api/v1/content/{id}/reject/              # Reject content
+POST   /api/v1/content/{id}/regenerate/          # Regenerate
+GET    /api/v1/content/{id}/versions/            # Version history
+POST   /api/v1/content/{id}/versions/            # Create new version
+GET    /api/v1/content/{id}/versions/{vno}/      # Get specific version
+
+POST   /api/v1/content/generate-caption/         # Generate caption only
+POST   /api/v1/content/generate-hashtags/        # Generate hashtags
+POST   /api/v1/content/generate-carousel/        # Generate carousel content
+POST   /api/v1/content/generate-script/          # Generate video script
+POST   /api/v1/content/generate-image-prompt/    # Generate image prompt
+POST   /api/v1/content/generate-cta/             # Generate CTA
+
+# ─── Media Assets ──────────────────────────────────────────────────
+GET    /api/v1/media/                            # List assets
+POST   /api/v1/media/upload/                     # Upload file(s)
+GET    /api/v1/media/{id}/                       # Asset details
+PATCH  /api/v1/media/{id}/                       # Update metadata
+DELETE /api/v1/media/{id}/                       # Delete asset
+GET    /api/v1/media/{id}/download/              # Download URL
+POST   /api/v1/media/{id}/reprocess/             # Re-run processing
+GET    /api/v1/media/search/?q=...               # Search assets
+
+GET    /api/v1/media/folders/                    # List folders
+POST   /api/v1/media/folders/                    # Create folder
+PATCH  /api/v1/media/folders/{id}/               # Rename/move
+DELETE /api/v1/media/folders/{id}/               # Delete folder
+
+GET    /api/v1/media/tags/                       # List tags
+POST   /api/v1/media/tags/                       # Create tag
+DELETE /api/v1/media/tags/{id}/                  # Delete tag
+POST   /api/v1/media/{id}/auto-tag/              # AI auto-tag
+
+# ─── Scheduling ────────────────────────────────────────────────────
+GET    /api/v1/schedules/                        # List schedules
+POST   /api/v1/schedules/                        # Create schedule
+PATCH  /api/v1/schedules/{id}/                   # Update schedule
+DELETE /api/v1/schedules/{id}/                   # Delete schedule
+
+GET    /api/v1/queues/                           # List content queues
+POST   /api/v1/queues/                           # Create queue
+PATCH  /api/v1/queues/{id}/                      # Update queue
+DELETE /api/v1/queues/{id}/                      # Delete queue
+
+GET    /api/v1/queue-items/                      # List queue items
+POST   /api/v1/queue-items/                      # Add to queue
+PATCH  /api/v1/queue-items/{id}/                 # Update item
+DELETE /api/v1/queue-items/{id}/                 # Remove from queue
+POST   /api/v1/queue-items/{id}/reorder/         # Change position
+
+GET    /api/v1/calendar/                         # Get content calendar
+    ?start=2026-01-01&end=2026-01-31
+    &platform=instagram&status=scheduled
+
+# ─── Analytics ─────────────────────────────────────────────────────
+GET    /api/v1/analytics/dashboard/              # Main dashboard stats
+GET    /api/v1/analytics/email/                  # Email analytics overview
+    ?period=7d|30d|90d|custom&start=&end=
+GET    /api/v1/analytics/email/{campaign_id}/    # Campaign-specific analytics
+GET    /api/v1/analytics/social/                 # Social analytics overview
+GET    /api/v1/analytics/social/{account_id}/    # Per-account analytics
+GET    /api/v1/analytics/social/{account_id}/posts/  # Post-level analytics
+GET    /api/v1/analytics/reports/                # Saved reports
+POST   /api/v1/analytics/reports/                # Generate report
+GET    /api/v1/analytics/reports/{id}/export/    # Export as PDF/CSV
+GET    /api/v1/analytics/insights/               # AI-powered insights
+
+# ─── AI Agents ─────────────────────────────────────────────────────
+GET    /api/v1/agents/                           # List agents
+POST   /api/v1/agents/                           # Create agent config
+GET    /api/v1/agents/{id}/                      # Agent details
+PATCH  /api/v1/agents/{id}/                      # Update agent
+DELETE /api/v1/agents/{id}/                      # Delete agent
+POST   /api/v1/agents/{id}/execute/              # Manual agent run
+GET    /api/v1/agents/{id}/runs/                 # Agent execution history
+GET    /api/v1/agents/{id}/runs/{run_id}/        # Run details
+
+GET    /api/v1/prompt-templates/                 # List prompt templates
+POST   /api/v1/prompt-templates/                 # Create template
+GET    /api/v1/prompt-templates/{id}/            # Template details
+PATCH  /api/v1/prompt-templates/{id}/            # Update template
+DELETE /api/v1/prompt-templates/{id}/            # Delete template
+POST   /api/v1/prompt-templates/{id}/test/       # Test prompt
+
+# ─── Notifications ─────────────────────────────────────────────────
+GET    /api/v1/notifications/                    # List notifications
+GET    /api/v1/notifications/unread-count/       # Unread count
+PATCH  /api/v1/notifications/{id}/read/          # Mark as read
+POST   /api/v1/notifications/read-all/           # Mark all as read
+GET    /api/v1/notifications/preferences/        # Get preferences
+PATCH  /api/v1/notifications/preferences/        # Update preferences
+
+# ─── Billing ───────────────────────────────────────────────────────
+GET    /api/v1/billing/plans/                    # List subscription plans
+GET    /api/v1/billing/subscription/             # Current subscription
+POST   /api/v1/billing/subscription/             # Create/change subscription
+POST   /api/v1/billing/subscription/cancel/      # Cancel subscription
+POST   /api/v1/billing/portal/                   # Stripe customer portal
+GET    /api/v1/billing/invoices/                 # Invoice history
+GET    /api/v1/billing/usage/                    # Current usage
+
+# ─── Webhooks ──────────────────────────────────────────────────────
+GET    /api/v1/webhooks/                         # List webhook endpoints
+POST   /api/v1/webhooks/                         # Create endpoint
+PATCH  /api/v1/webhooks/{id}/                    # Update endpoint
+DELETE /api/v1/webhooks/{id}/                    # Delete endpoint
+GET    /api/v1/webhooks/{id}/deliveries/         # Delivery history
+
+# ─── External-facing Webhooks (no auth / provider-specific auth) ───
+POST   /api/webhooks/stripe/                     # Stripe events
+POST   /api/webhooks/email/bounce/               # Bounce notifications
+POST   /api/webhooks/email/complaint/            # Complaint notifications
+POST   /api/webhooks/email/open/                 # Open tracking (pixel)
+POST   /api/webhooks/email/click/                # Click tracking
+POST   /api/webhooks/social/{platform}/          # Platform callbacks
+
+# ─── Utilities ─────────────────────────────────────────────────────
+GET    /api/v1/health/                           # Health check
+GET    /api/v1/health/redis/                     # Redis health
+GET    /api/v1/health/celery/                    # Celery health
+GET    /api/v1/health/ai/                        # AI provider health
+GET    /api/v1/health/storage/                   # Storage health
+```
+
+### 5.4 Response Envelope
+
+```json
+{
+  "success": true,
+  "data": { ... },
+  "meta": {
+    "page": 1,
+    "per_page": 50,
+    "total": 1000,
+    "pages": 20
+  },
+  "errors": null
+}
+```
+
+### 5.5 Error Format
+
+```json
+{
+  "success": false,
+  "data": null,
+  "errors": [
+    {
+      "code": "validation_error",
+      "field": "email",
+      "message": "Enter a valid email address."
+    }
+  ]
+}
+```
+
+---
+
+## 6. Celery Workflow Design
+
+### 6.1 Celery App Configuration
+
+```python
+# core/celery.py
+import os
+from celery import Celery
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
+
+app = Celery('ida')
+app.config_from_object('django.conf:settings', namespace='CELERY')
+app.autodiscover_tasks()
+
+
+# core/__init__.py
+from .celery import app as celery_app
+__all__ = ('celery_app',)
+
+
+# settings.py additions
+CELERY_BROKER_URL = 'redis://redis:6379/0'
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_CACHE_BACKEND = 'django-cache'
+
+CELERY_TASK_QUEUES = {
+    'high':   {'exchange': 'high',   'routing_key': 'high'},
+    'medium': {'exchange': 'medium', 'routing_key': 'medium'},
+    'low':    {'exchange': 'low',    'routing_key': 'low'},
+}
+CELERY_TASK_DEFAULT_QUEUE = 'medium'
+CELERY_TASK_ROUTES = {
+    'apps.campaigns.tasks.*':          {'queue': 'high'},
+    'apps.email_integrations.tasks.*': {'queue': 'medium'},
+    'apps.social_accounts.tasks.*':    {'queue': 'medium'},
+    'apps.content_studio.tasks.*':     {'queue': 'medium'},
+    'apps.media_assets.tasks.*':       {'queue': 'low'},
+    'apps.analytics.tasks.*':          {'queue': 'low'},
+    'apps.ai_agents.tasks.*':          {'queue': 'medium'},
+}
+
+CELERY_TASK_ACKS_LATE = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TASK_SOFT_TIME_LIMIT = 600  # 10 minutes
+CELERY_TASK_TIME_LIMIT = 900       # 15 minutes
+
+CELERY_BEAT_SCHEDULE = {
+    'sync-email-inboxes': {
+        'task': 'apps.email_integrations.tasks.sync_all_inboxes',
+        'schedule': 300,  # 5 minutes
+    },
+    'sync-social-analytics': {
+        'task': 'apps.social_accounts.tasks.sync_all_analytics',
+        'schedule': 3600,  # 1 hour
+    },
+    'process-scheduled-content': {
+        'task': 'apps.scheduling.tasks.process_scheduled_queue',
+        'schedule': 60,  # 1 minute
+    },
+    'aggregate-campaign-stats': {
+        'task': 'apps.analytics.tasks.aggregate_campaign_stats',
+        'schedule': 600,  # 10 minutes
+    },
+    'reset-daily-sender-limits': {
+        'task': 'apps.senders.tasks.reset_daily_limits',
+        'schedule': 86400,  # 24 hours
+    },
+    'cleanup-expired-tokens': {
+        'task': 'core.tasks.cleanup_expired_tokens',
+        'schedule': 86400,
+    },
+    'send-weekly-report': {
+        'task': 'apps.analytics.tasks.send_weekly_reports',
+        'schedule': 604800,  # 7 days
+    },
+    'check-bounced-emails': {
+        'task': 'apps.campaigns.tasks.process_bounce_feedbacks',
+        'schedule': 600,
+    },
+}
+```
+
+### 6.2 Key Task Definitions
+
+```python
+# apps/campaigns/tasks.py
+
+@shared_task(queue='high', bind=True, max_retries=3)
+def send_campaign(self, campaign_id):
+    """Send a campaign to all recipients in batches."""
+    campaign = Campaign.objects.get(id=campaign_id)
+    campaign.status = 'sending'
+    campaign.save(update_fields=['status'])
+
+    try:
+        sender = campaign.sender
+        contacts = Contact.objects.filter(
+            contactlistmember__contact_list__in=campaign.contact_lists.all(),
+            is_subscribed=True
+        ).distinct()
+
+        total = contacts.count()
+        campaign.total_recipients = total
+        campaign.save(update_fields=['total_recipients'])
+
+        batch_size = 100
+        for offset in range(0, total, batch_size):
+            batch = contacts[offset:offset + batch_size]
+            send_batch.delay(campaign_id, [c.id for c in batch])
+
+    except Exception as exc:
+        campaign.status = 'failed'
+        campaign.save(update_fields=['status'])
+        raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1))
+
+
+@shared_task(queue='high', max_retries=3)
+def send_batch(self, campaign_id, contact_ids):
+    """Send a batch of emails."""
+    campaign = Campaign.objects.get(id=campaign_id)
+    sender = campaign.sender
+
+    for contact_id in contact_ids:
+        contact = Contact.objects.get(id=contact_id)
+        try:
+            # Inject tracking pixel
+            html = campaign.body_html
+            event = CampaignEvent.objects.create(
+                campaign=campaign, contact=contact,
+                email=contact.email, event_type='sent'
+            )
+            tracking_pixel = (
+                f'<img src="https://api.ida.ai/t/open/{event.id}" '
+                f'width="1" height="1" alt="" />'
+            )
+            html = html.replace('</body>', f'{tracking_pixel}</body>')
+
+            # Wrap links
+            for link in campaign.links.all():
+                tracked_url = f'https://api.ida.ai/t/click/{event.id}/{link.id}'
+                html = html.replace(link.url, tracked_url)
+
+            # Send via sender's SMTP
+            send_single_email(sender, contact.email, campaign.subject, html)
+
+            campaign.sent_count += 1
+            campaign.save(update_fields=['sent_count'])
+
+        except Exception as exc:
+            CampaignEvent.objects.create(
+                campaign=campaign, contact=contact,
+                email=contact.email, event_type='failed',
+                metadata={'error': str(exc)}
+            )
+            self.retry(exc=exc, countdown=60)
+
+
+@shared_task(queue='low')
+def track_open_event(event_id):
+    """Process open tracking events."""
+    event = CampaignEvent.objects.get(id=event_id)
+    event.event_type = 'opened'
+    event.save(update_fields=['event_type'])
+    event.campaign.open_count += 1
+    event.campaign.save(update_fields=['open_count'])
+
+
+@shared_task(queue='low')
+def track_click_event(event_id, link_id):
+    """Process click tracking events."""
+    event = CampaignEvent.objects.get(id=event_id)
+    campaign_event = CampaignEvent.objects.create(
+        campaign=event.campaign, contact=event.contact,
+        email=event.email, event_type='clicked',
+        metadata={'link_id': link_id}
+    )
+    event.campaign.click_count += 1
+    event.campaign.save(update_fields=['click_count'])
+    Link.objects.filter(id=link_id).update(
+        click_count=F('click_count') + 1
+    )
+```
+
+### 6.3 Retry Policies
+
+| Task Type | Max Retries | Backoff | Deadline |
+|-----------|-------------|---------|----------|
+| Send batch email | 3 | Exponential (60s, 120s, 240s) | 300s |
+| Publish social post | 3 | Linear (30s, 60s, 90s) | 120s |
+| AI content generation | 2 | Exponential (10s, 20s) | 120s |
+| Analytics sync | 3 | Exponential (60s, 120s, 240s) | 600s |
+| Media processing | 2 | Exponential (30s, 60s) | 300s |
+
+### 6.4 Monitoring
+
+- Flower dashboard for Celery monitoring (`/flower/`)
+- Prometheus metrics exported from Celery
+- Task success/failure rate tracked in `django_celery_results`
+- Alerts on task failure rate > 5%
+
+---
+
+## 7. AI Workflow Design
+
+### 7.1 AI Provider Abstraction Layer
+
+```python
+# services/ai_service.py
+
+class AIProviderRouter:
+    """Route AI requests to configured provider."""
+
+    def __init__(self, workspace=None):
+        self.workspace = workspace
+
+    def get_provider(self, preferred=None):
+        """Get the best available AI provider for workspace."""
+        if preferred:
+            return self._init_provider(preferred)
+        # Default: OpenAI, fallback to workspace config
+        return self._init_provider('openai')
+
+    def _init_provider(self, provider_name):
+        providers = {
+            'openai': OpenAIProvider,
+            'claude': ClaudeProvider,
+            'gemini': GeminiProvider,
+        }
+        cls = providers.get(provider_name)
+        if not cls:
+            raise ValueError(f'Unknown provider: {provider_name}')
+        config = self._get_provider_config(provider_name)
+        return cls(**config)
+
+    def _get_provider_config(self, provider_name):
+        if self.workspace:
+            try:
+                provider = AIProvider.objects.get(
+                    workspace=self.workspace,
+                    provider=provider_name,
+                    is_active=True
+                )
+                return {
+                    'api_key': provider.get_decrypted_key(),
+                    'model': provider.model,
+                }
+            except AIProvider.DoesNotExist:
+                pass
+        # Fallback to global API key from settings
+        return {
+            'api_key': settings.AI_PROVIDERS[provider_name]['api_key'],
+            'model': settings.AI_PROVIDERS[provider_name]['default_model'],
+        }
+
+
+class BaseAIProvider(ABC):
+    """Abstract base for AI providers."""
+
+    @abstractmethod
+    def generate(self, prompt, system_prompt=None, **kwargs):
+        ...
+
+    @abstractmethod
+    def generate_stream(self, prompt, system_prompt=None, **kwargs):
+        ...
+
+    def count_tokens(self, text):
+        ...
+
+
+class OpenAIProvider(BaseAIProvider):
+    def __init__(self, api_key, model='gpt-4'):
+        self.client = OpenAI(api_key=api_key)
+        self.model = model
+
+    def generate(self, prompt, system_prompt=None, **kwargs):
+        messages = []
+        if system_prompt:
+            messages.append({'role': 'system', 'content': system_prompt})
+        messages.append({'role': 'user', 'content': prompt})
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            temperature=kwargs.get('temperature', 0.7),
+            max_tokens=kwargs.get('max_tokens', 1024),
+        )
+        return {
+            'content': response.choices[0].message.content,
+            'model': self.model,
+            'tokens': {
+                'prompt': response.usage.prompt_tokens,
+                'completion': response.usage.completion_tokens,
+                'total': response.usage.total_tokens,
+            },
+            'cost': self._calculate_cost(response.usage),
+        }
+```
+
+### 7.2 Agent Architecture
+
+```python
+# apps/ai_agents/agents/base.py
+
+class BaseAgent(ABC):
+    """Base class for all AI agents."""
+
+    def __init__(self, workspace, agent_config=None):
+        self.workspace = workspace
+        self.config = agent_config or {}
+        self.router = AIProviderRouter(workspace)
+        self.memory = AgentMemory(workspace)
+
+    @abstractmethod
+    def execute(self, input_data):
+        """Execute agent task. Returns AgentRun result."""
+        ...
+
+    def get_prompt_template(self, category):
+        """Get the appropriate prompt template."""
+        template = PromptTemplate.objects.filter(
+            Q(workspace=self.workspace) | Q(is_global=True),
+            category=category,
+            is_active=True,
+        ).order_by('-is_global', '-version').first()
+        return template
+
+    def record_run(self, agent, input_data, output_data, status, duration_ms, tokens_used, cost):
+        """Record agent execution."""
+        AgentRun.objects.create(
+            agent=agent,
+            status=status,
+            input_data=input_data,
+            output_data=output_data,
+            duration_ms=duration_ms,
+            tokens_used=tokens_used,
+            cost=cost,
+        )
+
+
+# apps/ai_agents/agents/email_reply.py
+
+class EmailReplyAgent(BaseAgent):
+    """Generate email replies with context awareness."""
+
+    def execute(self, input_data):
+        email_id = input_data.get('email_id')
+        email = EmailMessage.objects.get(id=email_id)
+
+        # Step 1: Summarize
+        summary = self._summarize_email(email)
+
+        # Step 2: Detect intent & urgency
+        intent = self._detect_intent(email, summary)
+        urgency = self._detect_urgency(email, summary)
+
+        # Step 3: Get conversation context
+        context = self.memory.get_context(
+            agent_type='email_reply',
+            conversation_id=email.thread_id
+        )
+
+        # Step 4: Generate reply
+        provider = self.router.get_provider()
+        template = self.get_prompt_template('email_reply')
+
+        system_prompt = template.system_prompt.format(
+            intent=intent,
+            urgency=urgency,
+            sender_name=email.from_name or email.from_email,
+            subject=email.subject,
+        )
+        user_prompt = template.user_prompt_template.format(
+            summary=summary,
+            email_body=email.body_text[:2000],
+            conversation_context=context.get('summary', ''),
+        )
+
+        result = provider.generate(
+            prompt=user_prompt,
+            system_prompt=system_prompt,
+            temperature=0.7,
+        )
+
+        # Step 5: Save context to memory
+        self.memory.update_context(
+            agent_type='email_reply',
+            conversation_id=email.thread_id,
+            new_content={
+                'email_id': email_id,
+                'reply': result['content'],
+                'intent': intent,
+                'urgency': urgency,
+            }
+        )
+
+        return {
+            'reply_body': result['content'],
+            'subject': f"Re: {email.subject}",
+            'intent': intent,
+            'urgency': urgency,
+            'confidence_score': 0.85,
+            'ai_model': result['model'],
+            'tokens_used': result['tokens']['total'],
+            'cost': result['cost'],
+        }
+
+    def _summarize_email(self, email):
+        provider = self.router.get_provider()
+        prompt = f"Summarize this email in 2-3 sentences:\n\n{email.body_text[:2000]}"
+        result = provider.generate(prompt, system_prompt='You are an email assistant.', max_tokens=200)
+        return result['content']
+
+    def _detect_intent(self, email, summary):
+        provider = self.router.get_provider()
+        prompt = f"Classify the intent of this email: question, complaint, support, sales, introduction, follow_up,或者其他"
+        result = provider.generate(prompt, system_prompt='Classify into exactly one category.', max_tokens=50)
+        return result['content'].strip().lower()
+
+    def _detect_urgency(self, email, summary):
+        # Keyword-based pre-filter + AI confirmation
+        urgent_keywords = ['urgent', 'asap', 'critical', 'deadline', 'emergency']
+        if any(kw in email.body_text.lower() for kw in urgent_keywords):
+            return 'high'
+        return 'medium'
+```
+
+### 7.3 Agent Workflow — Email Reply
+
+```
+┌──────────────────┐
+│  Incoming Email   │
+│  (Webhook/Poll)   │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│  Store in DB      │
+│  EmailMessage     │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────────────┐
+│  Enqueue AI Processing (medium)  │
+│  process_incoming_email.delay()  │
+└────────┬─────────────────────────┘
+         │
+    ┌────┴────┐
+    ▼         ▼
+┌────────┐ ┌────────┐
+│ Summarize│ │Detect  │
+│ Email   │ │Intent  │
+└────┬───┘ └───┬────┘
+     │         │
+     ▼         ▼
+┌──────────────────┐
+│  Detect Urgency   │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────┐
+│  Fetch Conversation   │
+│  Context (AI Memory)  │
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  Generate Reply      │
+│  (AI Provider)       │
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  Save as DraftReply  │
+│  status=needs_review │
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  Notify User         │
+│  (WebSocket + In-App)│
+└──────────┬───────────┘
+           │
+      ┌────┴────┐
+      ▼         ▼
+┌─────────┐ ┌─────────┐
+│ Approve │ │ Reject   │
+└────┬────┘ └────┬────┘
+     │           │
+     ▼           ▼
+┌──────────┐  ┌──────────┐
+│Save to   │  │Discard   │
+│Gmail     │  │or Archive│
+│Drafts API│  └──────────┘
+└──────────┘
+```
+
+### 7.4 Agent Workflow — Content Generation
+
+```
+┌─────────────────────┐
+│  User Prompt Input  │
+│  + Platform Target  │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  ContentGenerator   │
+│  Agent Execution    │
+└──────────┬──────────┘
+           │
+     ┌─────┴─────┐
+     │           │
+     ▼           ▼
+┌─────────┐ ┌─────────┐
+│ Platform│ │ Content │
+│ Research│ │ Type    │
+│ (limits,│ │ Rules   │
+│  best   │ │ (char   │
+│  practices)│ limits) │
+└────┬────┘ └────┬────┘
+     │           │
+     └─────┬─────┘
+           │
+           ▼
+┌─────────────────────┐
+│  Format Prompt      │
+│  + Inject Context   │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  AI Provider Call   │
+│  (OpenAI/Claude/    │
+│   Gemini)           │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  Post-Process       │
+│  - Validate length  │
+│  - Check platform   │
+│    compliance       │
+│  - Add hashtags     │
+│    (if applicable)  │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  Save ContentItem   │
+│  status=needs_review│
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  Notify User        │
+└──────────┬──────────┘
+           │
+      ┌────┴────┐
+      ▼         ▼
+┌─────────┐ ┌─────────┐
+│ Approve │ │ Edit &  │
+│ + Send  │ │ Regenerate
+│ to Queue│ │         │
+└─────────┘ └─────────┘
+```
+
+### 7.5 Prompt Management System
+
+**Template Structure (YAML-based storage in ai_workflows/):**
+
+```yaml
+# ai_workflows/email_reply.yaml
+name: email_reply_v2
+category: email_reply
+version: 2
+model: gpt-4
+temperature: 0.7
+max_tokens: 1024
+system_prompt: |
+  You are a professional email assistant for {sender_name}.
+  The email has been classified as: {intent} with {urgency} urgency.
+  
+  Rules:
+  - Respond professionally and concisely
+  - Match the sender's tone
+  - Do NOT include placeholders like [Your Name]
+  - Keep under 200 words
+  - Address the main points directly
+  
+user_prompt_template: |
+  Original Email Subject: {subject}
+  
+  Email Summary: {summary}
+  
+  Email Content:
+  {email_body}
+  
+  Conversation Context:
+  {conversation_context}
+  
+  Generate a professional reply email. Format as plain text with proper greeting and signature.
+```
+
+**Versioning:**
+- Each template has a `version` integer
+- When updated, version increments
+- Old versions preserved for audit
+- A/B testing via agent configuration pointing to specific versions
+
+### 7.6 AI Memory/Context System
+
+```python
+# apps/ai_agents/memory.py
+
+class AgentMemory:
+    """Shared context memory for AI agents."""
+
+    def __init__(self, workspace):
+        self.workspace = workspace
+        self.redis = redis.Redis.from_url(settings.REDIS_URL)
+
+    def get_context(self, agent_type, conversation_id):
+        """Get conversation memory."""
+        # Check Redis first (hot cache)
+        cache_key = f'memory:{agent_type}:{conversation_id}'
+        cached = self.redis.get(cache_key)
+        if cached:
+            return json.loads(cached)
+
+        # Fall back to DB
+        try:
+            memory = AIMemory.objects.get(
+                workspace=self.workspace,
+                agent_type=agent_type,
+                conversation_id=conversation_id
+            )
+            # Cache in Redis for 1 hour
+            self.redis.setex(cache_key, 3600, json.dumps(memory.context))
+            return memory.context
+        except AIMemory.DoesNotExist:
+            return {'summary': '', 'history': [], 'metadata': {}}
+
+    def update_context(self, agent_type, conversation_id, new_content):
+        """Update conversation memory with new exchange."""
+        memory, created = AIMemory.objects.get_or_create(
+            workspace=self.workspace,
+            agent_type=agent_type,
+            conversation_id=conversation_id,
+            defaults={'context': {'history': [], 'summary': '', 'metadata': {}}}
+        )
+
+        # Append to history (keep last 10 exchanges)
+        history = memory.context.get('history', [])
+        history.append(new_content)
+        if len(history) > 10:
+            history = history[-10:]
+
+        # Regenerate summary if history changed significantly
+        summary = memory.context.get('summary', '')
+        if len(history) % 3 == 0:  # Every 3 exchanges
+            summary = self._generate_summary(history)
+
+        memory.context = {
+            'history': history,
+            'summary': summary,
+            'metadata': memory.context.get('metadata', {}),
+        }
+        memory.save(update_fields=['context', 'summary', 'updated_at'])
+
+        # Invalidate cache
+        cache_key = f'memory:{agent_type}:{conversation_id}'
+        self.redis.delete(cache_key)
+
+    def _generate_summary(self, history):
+        """Generate a summary of conversation history using AI."""
+        provider = AIProviderRouter(self.workspace).get_provider()
+        text = '\n'.join([f"{h.get('intent', '')}: {h.get('summary', '')[:200]}" for h in history])
+        result = provider.generate(
+            prompt=f"Summarize this conversation thread:\n\n{text}",
+            system_prompt="Provide a 2-3 sentence summary.",
+            max_tokens=150,
+        )
+        return result['content']
+```
+
+---
+
+## 8. Deployment Plan
+
+### 8.1 Docker Structure
+
+```dockerfile
+# Dockerfile (Django App + API)
+
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DJANGO_SETTINGS_MODULE=core.settings
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc libpq-dev curl && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+RUN python manage.py collectstatic --noinput
+
+EXPOSE 8000
+
+CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--threads", "2"]
+```
+
+```dockerfile
+# Dockerfile.worker (Celery Worker)
+
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DJANGO_SETTINGS_MODULE=core.settings \
+    C_FORCE_ROOT=true
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc libpq-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+CMD ["celery", "-A", "core", "worker", "-l", "info", "--concurrency=4", "--queues=high,medium,low"]
+```
+
+```yaml
+# docker-compose.yml
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${DB_NAME:-ida}
+      POSTGRES_USER: ${DB_USER:-ida}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 10s
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    ports:
+      - "8000:8000"
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "python manage.py migrate &&
+             gunicorn core.wsgi:application --bind 0.0.0.0:8000
+             --workers 4 --threads 2 --timeout 120
+             --access-logfile - --error-logfile -"
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    volumes:
+      - .:/app
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A core worker -l info --concurrency=4 --queues=high,medium,low
+
+  beat:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    volumes:
+      - .:/app
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A core beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+
+  nginx:
+    image: nginx:1.25-alpine
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf
+      - static_volume:/static
+      - media_volume:/media
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - app
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_volume:
+  media_volume:
+```
+
+### 8.2 Nginx Configuration
+
+```nginx
+# docker/nginx.conf
+upstream django_app {
+    server app:8000;
+}
+
+server {
+    listen 80;
+    server_name api.ida.ai;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name api.ida.ai;
+
+    ssl_certificate /etc/letsencrypt/live/api.ida.ai/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.ida.ai/privkey.pem;
+
+    client_max_body_size 50M;
+
+    location /static/ {
+        alias /static/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location /media/ {
+        alias /media/;
+        expires 7d;
+    }
+
+    location /ws/ {
+        proxy_pass http://daphne:9000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_read_timeout 86400;
+    }
+
+    location / {
+        proxy_pass http://django_app;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120;
+    }
+}
+```
+
+### 8.3 CI/CD Pipeline
+
+```yaml
+# .github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install ruff mypy
+      - run: ruff check apps/ core/ services/
+      - run: mypy apps/ core/ services/ --ignore-missing-imports
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: dia_test
+          POSTGRES_USER: ida
+          POSTGRES_PASSWORD: dia_test
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - run: pip install -r requirements-dev.txt
+      - run: python manage.py test --settings=core.settings_test
+        env:
+          DATABASE_URL: postgres://dia:dia_test@localhost:5432/dia_test
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key
+          SMTP_ENCRYPTION_KEY: test-encryption-key-for-testing-only=
+
+  build:
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Build successful"
+
+```
+
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and push Docker images
+        run: |
+          docker build -t registry.ida.ai/app:${GITHUB_SHA} .
+          docker build -f Dockerfile.worker -t registry.ida.ai/worker:${GITHUB_SHA} .
+          docker push registry.ida.ai/app:${GITHUB_SHA}
+          docker push registry.ida.ai/worker:${GITHUB_SHA}
+      - name: Deploy to production
+        run: |
+          ssh deploy@${{ secrets.DEPLOY_HOST }} "
+            cd /opt/ida &&
+            docker compose pull &&
+            docker compose up -d --remove-orphans &&
+            docker system prune -f
+          "
+```
+
+### 8.4 Scaling Strategy
+
+| Component | Scale Method | Initial | Growth |
+|-----------|-------------|---------|--------|
+| Web (Gunicorn) | Horizontal (containers) | 2 × 4 workers | 10+ containers behind LB |
+| Celery Workers | Horizontal (per queue) | 3 workers | 5 high + 3 medium + 2 low |
+| PostgreSQL | Vertical → Read replicas | 1 instance | 1 primary + 2 read replicas |
+| Redis | Vertical → Cluster | 1 instance | Redis Cluster (3 nodes) |
+| Media Storage | S3/R2 (inherently scalable) | 1 bucket | Multi-region buckets |
+| Nginx | Load balancer | 1 instance | 2+ behind AWS ALB |
+| Django Channels | Redis pub/sub + Daphne | 1 Daphne process | 3+ Daphne processes |
+
+---
+
+## 9. Scaling Recommendations
+
+### 9.1 Database
+
+- **Partitioning**: Partition `CampaignEvent` by month (`created_at`). This table grows fastest.
+- **Read Replicas**: Route analytics/read queries to replicas. Writes to primary.
+- **Connection Pooling**: Use PgBouncer between Django and PostgreSQL.
+- **Index Maintenance**: Weekly `REINDEX` during low traffic.
+
+### 9.2 Caching Strategy
+
+```
+Redis Usage:
+  ├── Celery Broker (queue:high,medium,low)
+  ├── Cache:
+  │   ├── User sessions (TTL: 24h)
+  │   ├── API responses (TTL: 5m)
+  │   ├── Template fragments (TTL: 1h)
+  │   ├── OAuth tokens (TTL: until expiry)
+  │   └── AI memory context (TTL: 1h)
+  └── Rate Limiting (sliding window counters)
+```
+
+### 9.3 Application
+
+- **Stateless**: All Django nodes are stateless. Sessions in Redis.
+- **DB Transactions**: Keep short. Use `select_for_update()` for critical sections.
+- **Bulk Operations**: Always use `bulk_create()` and `bulk_update()` for batch processing.
+- **Async First**: Long operations → Celery. Synchronous only for CRUD.
+- **Connection Pooling**: Reuse HTTP connections to AI providers (`httpx` client pool).
+
+### 9.4 Microservice Migration Path
+
+When monolith needs splitting:
+
+```
+Current:    Django Monolith (all apps)
+            │
+Phase 1:    Extract `ai_agents` → standalone AI service
+            │
+Phase 2:    Extract `campaigns` + `email_integrations` → Email Service
+            │
+Phase 3:    Extract `social_accounts` → Social Service
+            │
+Phase 4:    Extract `media_assets` → Media Service
+```
+
+Each migration step:
+1. Extract app into new Django project (or FastAPI for AI service)
+2. Copy shared models or create service-specific DB views
+3. Add internal REST/gRPC communication
+4. Migrate Celery tasks to service-specific workers
+5. Update API gateway routing
+
+---
+
+## 10. Development Priority Order
+
+| Priority | Module | Phase | Justification |
+|----------|--------|-------|---------------|
+| P0 | Fix existing codebase | 0 | Foundation must be solid |
+| P0 | Celery wiring + core tasks | 0 | Async infrastructure needed by everything |
+| P0 | PostgreSQL migration | 0 | SQLite will not scale |
+| P0 | Missing templates | 0 | App crashes without them |
+| P0 | Contact management | 0 | Email campaigns need recipients |
+| P1 | Campaign sending + tracking | 1 | Core product feature |
+| P1 | AI provider abstraction | 2 | Foundation for all AI features |
+| P1 | Email reply agent | 2 | Differentiator |
+| P2 | Social account OAuth | 3 | Multi-platform support |
+| P2 | Social publishing | 3 | Core feature |
+| P2 | AI content generation | 4 | Growth driver |
+| P2 | Media asset management | 5 | Content needs assets |
+| P3 | Scheduling + calendar | 6 | Automation |
+| P3 | Analytics dashboard | 6 | Visibility |
+| P3 | WebSocket notifications | 7 | Real-time UX |
+| P4 | Multi-agent orchestration | 8 | Advanced AI workflows |
+| P4 | Billing + subscriptions | 9 | Monetization |
+| P4 | API keys + webhooks | 9 | Developer ecosystem |
+| P4 | Performance optimization | 9 | Production readiness |
+
+---
+
+## 11. Estimated Complexity Per Module
+
+| Module | Complexity | Effort (w-days) | Risk | Dependencies |
+|--------|-----------|-----------------|------|-------------|
+| Auth & Workspace | Medium | 10 | Low | None |
+| Senders (SMTP) | Low | 3 | Low | Auth |
+| Contacts | Low | 5 | Low | Auth |
+| Campaign Sending | High | 15 | High | Senders, Contacts |
+| Email Tracking | Medium | 8 | Medium | Campaigns |
+| Email Integrations (Gmail/Graph) | High | 15 | High | Auth, OAuth infra |
+| AI Reply Agent | Very High | 20 | High | AI Provider, Email Integrations |
+| Social OAuth | High | 12 | Medium | Auth, OAuth infra |
+| Social Publishing | High | 15 | High | Social OAuth, Content |
+| AI Content Studio | Very High | 20 | High | AI Provider, Media |
+| Media Assets | Medium | 10 | Low | Storage abstraction |
+| Scheduling | Medium | 8 | Medium | Content, Social |
+| Analytics | High | 15 | Medium | All modules |
+| Notifications | Medium | 8 | Low | Channels, WebSocket |
+| AI Agent Orchestration | Very High | 20 | High | AI Provider |
+| Billing | Medium | 10 | Medium | Auth |
+| Webhooks | Low | 5 | Low | Auth |
+
+**Total estimated effort**: ~185 developer-days (~9 months for a 2-person team)
+
+---
+
+## 12. Recommended Third-Party Services
+
+| Service | Purpose | Cost | Alternative |
+|---------|---------|------|-------------|
+| **Postmark** / **SendGrid** | Transactional email delivery | $15-150/mo | AWS SES ($0.10/1k emails) |
+| **AWS S3** or **Cloudflare R2** | File storage + CDN | $0.023/GB | DigitalOcean Spaces |
+| **OpenAI API** | AI content generation | $0.03/1K tokens | Self-hosted LLM (vLLM) |
+| **Redis Cloud** or **Upstash** | Managed Redis | $10-50/mo | Self-hosted Redis |
+| **TimescaleDB** | Time-series analytics | $30-200/mo | PostgreSQL + partitioning |
+| **Stripe** | Subscription billing | 2.9% + $0.30 | Paddle, LemonSqueezy |
+| **Sentry** | Error monitoring | Free tier | Self-hosted Glitchtip |
+| **Datadog** / **Grafana Cloud** | Observability | $15-100/mo | Self-hosted Grafana + Prometheus |
+| **Cloudflare** | CDN + DDoS protection | $20/mo | AWS CloudFront |
+| **Auth0** or **Clerk** (optional) | Auth as service | $0-250/mo | django-allauth (self-managed) |
+
+---
+
+## 13. Recommended Package Dependencies
+
+```python
+# requirements.txt — additions to existing
+
+# --- Core ---
+Django>=6.0,<6.1
+djangorestframework>=3.15
+djangorestframework-simplejwt>=5.3
+django-cors-headers>=4.3
+django-filter>=24.1
+django-guardian>=2.5          # Object-level permissions
+django-mptt>=0.16             # Folder hierarchy (media)
+
+# --- Async / Real-Time ---
+channels>=4.1
+channels-redis>=4.2
+daphne>=4.1                   # ASGI server for Channels
+
+# --- Celery ---
+celery>=5.6
+redis>=7.2
+django-celery-beat>=2.6       # Periodic tasks from DB
+django-celery-results>=2.6
+
+# --- AI Providers ---
+openai>=1.30
+anthropic>=0.40               # Claude API
+google-generativeai>=0.8      # Gemini API
+tiktoken>=0.7                 # Token counting
+
+# --- Social Integrations ---
+httpx>=0.27                   # Async HTTP client
+requests-oauthlib>=2.0
+PyJWT>=2.8
+
+# --- Storage ---
+boto3>=1.34                   # AWS S3
+django-storages>=1.14
+s3fs>=2024.3                  # S3 filesystem abstraction
+
+# --- Media Processing ---
+Pillow>=10.3                  # Image processing
+python-magic>=0.4             # MIME type detection
+moviepy>=1.0                  # Video processing (optional)
+
+# --- Analytics ---
+django-pandas>=0.7            # DataFrame utilities
+openpyxl>=3.1                 # Excel export
+reportlab>=4.1                # PDF reports
+
+# --- Email ---
+django-anymail>=12            # Multi-backend email sending (SendGrid, Mailgun, etc.)
+google-api-python-client>=2.130  # Gmail API
+google-auth-oauthlib>=1.2
+msal>=1.28                    # Microsoft Graph API
+
+# --- Billing ---
+stripe>=9.0
+
+# --- Security ---
+django-ratelimit>=4.1         # Rate limiting (existing)
+django-axes>=6.0              # Brute force protection
+django-otp>=1.5               # 2FA support
+
+# --- Dev / Tooling ---
+ruff>=0.4                     # Linting (replaces flake8)
+mypy>=1.10                    # Static typing
+pytest>=8.0
+pytest-django>=4.8
+pytest-cov>=5.0
+model_bakery>=1.17            # Test data factories
+factory-boy>=3.3
+sphinx>=7.3                   # API documentation
+drf-spectacular>=0.28         # OpenAPI schema generation
+```
+
+**requirements-dev.txt:**
+```
+-r requirements.txt
+ruff
+mypy
+pytest
+pytest-django
+pytest-cov
+model-bakery
+factory-boy
+drf-spectacular
+sphinx
+sphinx-rtd-theme
+watchfiles
+```
+
+---
+
+## 14. Suggested Coding Standards
+
+### 14.1 Python Style
+
+- **Linter**: `ruff` with line length 100
+- **Formatter**: `ruff format`
+- **Type Checking**: `mypy --strict` for all new code
+- **Docstrings**: Google-style for all public functions/classes
+- **Imports**: `ruff` will sort (I followed ruff's import sorting)
+
+**ruff.toml:**
+```toml
+target-version = "py312"
+line-length = 100
+
+[lint]
+select = ["E", "F", "I", "N", "W", "UP", "ANN", "ARG", "BLE", "COM", "D", "LOG", "PTH", "RET", "SIM", "TCH", "YTT"]
+ignore = ["D203", "D213", "D406", "D407", "ANN101"]
+```
+
+**mypy.ini:**
+```ini
+[mypy]
+python_version = 3.12
+strict = true
+ignore_missing_imports = true
+disallow_any_unimported = false
+warn_return_any = false
+```
+
+### 14.2 Project Conventions
+
+- **Naming**: `snake_case` for Python, `camelCase` for JSON API fields, `PascalCase` for classes
+- **ViewSets**: One ViewSet per model. Use `mixins` over `ModelViewSet` for non-standard CRUD
+- **Serializers**: Full serializer per model + light serializer for nested/list views
+- **Services**: Stateless service classes with `@classmethod` or instance methods
+- **Migrations**: One migration file per logical change. Squash before production.
+- **Fixtures**: Never commit auto-generated fixtures. Use factories in tests.
+- **Settings**: Environment-specific settings files (`settings/base.py`, `settings/prod.py`, `settings/test.py`)
+
+### 14.3 Git Conventions
+
+- **Branch naming**: `feature/email-tracking`, `fix/campaign-crash`, `refactor/ai-service`
+- **Commit messages**: Conventional commits — `feat:`, `fix:`, `refactor:`, `test:`, `docs:`
+- **PR size**: Max 400 lines changes per PR
+
+### 14.4 Code Organization — Service Layer Pattern
+
+```python
+# ✅ GOOD — Service Layer Pattern
+
+# apps/campaigns/services.py
+class CampaignService:
+    """Business logic for campaigns."""
+
+    @staticmethod
+    def create_campaign(user, workspace, data) -> Campaign:
+        """Create campaign with validation."""
+        ...
+
+    @staticmethod
+    def send_campaign(campaign_id: UUID) -> None:
+        """Initiate campaign sending via Celery."""
+        ...
+
+    @staticmethod
+    def get_campaign_stats(campaign_id: UUID) -> Dict[str, Any]:
+        """Calculate aggregated campaign statistics."""
+        ...
+
+
+# apps/campaigns/views_api.py
+class CampaignViewSet(ModelViewSet):
+    """API endpoints for campaigns."""
+
+    def perform_create(self, serializer):
+        campaign = CampaignService.create_campaign(
+            user=self.request.user,
+            workspace=self.request.workspace,
+            data=serializer.validated_data,
+        )
+        return campaign
+
+    @action(detail=True, methods=['post'])
+    def send(self, request, pk=None):
+        campaign = self.get_object()
+        CampaignService.send_campaign(campaign.id)
+        return Response({'status': 'sending_started'})
+```
+
+---
+
+## 15. Suggested Testing Strategy
+
+### 15.1 Test Pyramid
+
+```
+        ╱╲
+       ╱ E2E ╲          5% of tests — critical user journeys
+      ╱────────╲
+     ╱ Integration ╲   25% of tests — API endpoints, service integration
+    ╱────────────────╲
+   ╱   Unit Tests     ╲  70% of tests — models, services, utils, serializers
+```
+
+### 15.2 Testing Tools
+
+- **pytest + pytest-django** — Primary test framework
+- **model_bakery** — Test data factories (lighter than factory_boy)
+- **pytest-cov** — Coverage reporting (target: 85%+)
+- **drf-spectacular** — OpenAPI schema validation in CI
+
+### 15.3 Test Structure
+
+```
+apps/campaigns/tests/
+├── conftest.py              # Fixtures (user, workspace, sender, campaign)
+├── test_models.py           # Model validation, properties
+├── test_services.py         # Service method tests (mocked external calls)
+├── test_views_api.py        # API endpoint tests (DRF test client)
+├── test_tasks.py            # Celery task tests (with task_always_eager)
+├── test_serializers.py      # Serializer validation
+├── test_tracking.py         # Tracking pixel, click redirect
+└── factories.py             # Model factories (if using factory_boy)
+```
+
+### 15.4 Key Test Scenarios
+
+```python
+# Example: Campaign send test (conftest.py)
+
+@pytest.fixture
+def user(db):
+    return UserFactory()
+
+@pytest.fixture
+def workspace(db, user):
+    return WorkspaceFactory(owner=user)
+
+@pytest.fixture
+def sender(db, workspace):
+    return SenderFactory(workspace=workspace)
+
+@pytest.fixture
+def contact_list(db, workspace):
+    return ContactListFactory(workspace=workspace)
+
+@pytest.fixture
+def campaign(db, workspace, sender, contact_list):
+    campaign = CampaignFactory(
+        workspace=workspace,
+        sender=sender,
+        status='draft',
+    )
+    campaign.contact_lists.add(contact_list)
+    return campaign
+
+
+# test_services.py
+@pytest.mark.django_db
+class TestCampaignService:
+
+    def test_send_campaign_creates_events(self, campaign, contact_list):
+        """Sending a campaign creates CampaignEvent records."""
+        contacts = ContactFactory.create_batch(5, workspace=campaign.workspace)
+        contact_list.contacts.add(*contacts)
+
+        with mock.patch('apps.campaigns.tasks.send_batch.delay') as mock_send:
+            CampaignService.send_campaign(campaign.id)
+
+        campaign.refresh_from_db()
+        assert campaign.status == 'sending'
+        mock_send.assert_called_once()
+
+    def test_campaign_with_no_contacts_fails_gracefully(self, campaign):
+        """Campaign with no contacts returns validation error."""
+        with pytest.raises(ValidationError):
+            CampaignService.send_campaign(campaign.id)
+
+    def test_open_rate_property(self, campaign):
+        """Open rate calculates correctly."""
+        campaign.sent_count = 100
+        campaign.open_count = 25
+        assert campaign.open_rate == 25.0
+
+
+# test_views_api.py
+@pytest.mark.django_db
+class TestCampaignAPI:
+
+    def test_create_campaign(self, auth_client, contact_list):
+        """POST /api/v1/campaigns/ creates a campaign."""
+        data = {
+            'name': 'Test Campaign',
+            'subject': 'Hello {{ first_name }}',
+            'body_html': '<p>Hi {{ first_name }},</p>',
+            'contact_lists': [str(contact_list.id)],
+        }
+        response = auth_client.post('/api/v1/campaigns/', data, format='json')
+        assert response.status_code == 201
+        assert response.data['status'] == 'draft'
+
+    def test_unauthenticated_access(self, client):
+        """Unauthenticated requests return 401."""
+        response = client.get('/api/v1/campaigns/')
+        assert response.status_code == 401
+```
+
+### 15.5 What to Mock
+
+| External Service | Mock Strategy |
+|-----------------|---------------|
+| SMTP server | Mock `smtplib.SMTP` |
+| OpenAI/Claude/Gemini APIs | `responses` library or `unittest.mock` |
+| Gmail API | Mock `googleapiclient` calls |
+| Microsoft Graph API | Mock `msal` + `httpx` calls |
+| Social platform APIs | Mock `httpx` responses |
+| S3/R2 storage | `moto` library (S3 mock) |
+| Redis | `fakeredis` library |
+| Stripe | Mock Stripe SDK calls |
+| Celery tasks | `task_always_eager = True` in test settings |
+
+### 15.6 CI Test Execution
+
+```yaml
+# Run in CI (GitHub Actions)
+pytest \
+  --cov=apps \
+  --cov=services \
+  --cov-report=term-missing \
+  --cov-report=xml \
+  --reuse-db \
+  -n auto \
+  --timeout=60
+```
+
+---
+
+## Immediate Next Steps (Phase 0)
+
+### Week 1 — Fix Existing Codebase
+
+1. **Security**: Add `.env` to `.gitignore`, rotate all secrets, generate new `SECRET_KEY` and `ENCRYPTION_KEY`
+2. **Bugfix**: Deduplicate the `ENCRYPTION_KEY` block in `settings.py`
+3. **Celery**: Implement `core/celery.py` and `core/__init__.py`
+4. **Templates**: Create all missing templates in `templates/account/`, `templates/dashboard/`, `templates/campaigns/`
+5. **Database**: Create PostgreSQL database, update settings to use it
+6. **DRF + JWT**: Install DRF and `simplejwt`, configure authentication classes
+7. **Workspace**: Implement `apps/workspaces/` with basic model, one workspace per user on registration
+
+### Week 2 — Contact Management + Campaign Refactor
+
+1. **Contacts**: Implement `apps/contacts/` with models, APIs, CSV import
+2. **Campaigns**: Extend `apps/campaigns/` with proper status management, link existing sender
+3. **Celery Tasks**: Write first Celery task (`send_test_email`) to validate the pipeline
+4. **Tracking**: Implement basic tracking pixel endpoint
+5. **Dashboard**: Fix dashboard to show real data from DB
+6. **Docker**: Set up `docker-compose.yml` with Django, Celery, Redis, PostgreSQL, Nginx
+
+---
+
+*End of Architecture Document*

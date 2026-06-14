@@ -1,0 +1,24 @@
+<!-- Usage: include "components/skeleton.html" with type="card" count=3 -->
+{% for _ in "x"|ljust:count|default:"1" %}
+  {% if type == "card" %}
+    <div class="skeleton skeleton-card w-full"></div>
+  {% elif type == "table_row" %}
+    <div class="flex gap-4 p-4 border-b border-gray-100">
+      <div class="skeleton skeleton-avatar"></div>
+      <div class="flex-1 space-y-2">
+        <div class="skeleton skeleton-text w60"></div>
+        <div class="skeleton skeleton-text w40"></div>
+      </div>
+    </div>
+  {% elif type == "text_block" %}
+    <div class="space-y-2">
+      <div class="skeleton skeleton-text w80"></div>
+      <div class="skeleton skeleton-text w60"></div>
+      <div class="skeleton skeleton-text w40"></div>
+    </div>
+  {% elif type == "chip" %}
+    <div class="skeleton skeleton-chip inline-block"></div>
+  {% else %}
+    <div class="skeleton skeleton-block w-full"></div>
+  {% endif %}
+{% endfor %}

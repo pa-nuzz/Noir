@@ -1,0 +1,562 @@
+{% extends 'base_dashboard.html' %}
+{% load workspace_tags %}
+{% block title %}Strategy Studio — Creative Suite{% endblock %}
+{% block page_title %}Strategy Studio{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none space-y-5">
+
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Strategy Studio</h1>
+      <p class="text-sm text-slate-500 mt-1">Generate AI-powered campaign strategies tailored for the Nepal market</p>
+    </div>
+    <div class="flex gap-2">
+      {% if not has_context %}
+      <a href="{% url 'creative:company_context' %}" class="px-4 py-2 rounded-xl text-xs font-semibold bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors flex items-center gap-1.5">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        No context set
+      </a>
+      {% endif %}
+      {% include "components/button.html" with label="New Strategy" onclick="openChatbot()" icon="M12 4v16m8-8H4" %}
+    </div>
+  </div>
+
+  <!-- Status Tabs -->
+  <div class="flex flex-wrap gap-2">
+    <a href="{% url 'creative:strategy_studio' %}" class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if not current_status %}bg-primary text-white shadow-sm{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">
+      All <span class="ml-1 opacity-70 text-xs">({{ strategy_counts.all }})</span>
+    </a>
+    {% for status_key, status_label in status_choices %}
+    <a href="?status={{ status_key }}" class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-1.5 {% if current_status == status_key %}bg-primary text-white shadow-sm{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">
+      <span class="w-2 h-2 rounded-full
+        {% if status_key == 'draft' %}bg-slate-400
+        {% elif status_key == 'pending_review' %}bg-amber-400
+        {% elif status_key == 'approved' %}bg-emerald-400
+        {% elif status_key == 'rejected' %}bg-red-400
+        {% elif status_key == 'published' %}bg-blue-400
+        {% elif status_key == 'archived' %}bg-slate-300{% endif %}"></span>
+      {{ status_label }}
+      <span class="ml-0.5 opacity-70 text-xs">({{ strategy_counts|dictget:status_key }})</span>
+    </a>
+    {% endfor %}
+  </div>
+
+  <!-- Main: Cards Grid + Preview Panel -->
+  <div class="flex gap-6">
+    <!-- Left: Cards -->
+    <div class="flex-1 min-w-0">
+      {% if strategies %}
+      <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+        {% for strategy in strategies %}
+        <div class="premium-surface rounded-2xl overflow-hidden hover:shadow-md transition-all cursor-pointer group relative {% if strategy.status == 'approved' %}ring-2 ring-emerald-400 ring-offset-1{% endif %}" onclick="openStrategy({{ strategy.id }})">
+
+          <div class="p-4 border-b border-slate-100">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex-1 min-w-0">
+                <h3 class="text-sm font-bold text-slate-800 truncate">{{ strategy.title }}</h3>
+                <p class="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                  <span>{{ strategy.get_strategy_type_display }}</span>
+                  <span class="text-slate-300">&middot;</span>
+                  <span>{{ strategy.created_at|date:'M d, Y' }}</span>
+                </p>
+              </div>
+              {% include "components/badge.html" with label=strategy.get_status_display variant=strategy.status %}
+            </div>
+          </div>
+
+          <div class="p-4 min-h-[5rem]">
+            {% if strategy.generated_output %}
+            <div class="text-xs text-slate-600 leading-relaxed line-clamp-4">{{ strategy.generated_output|striptags|truncatewords:50 }}</div>
+            {% else %}
+            <p class="text-xs text-slate-400 italic">{{ strategy.campaign_goal|truncatewords:30 }}</p>
+            {% endif %}
+            {% if strategy.rejection_reason %}
+            <div class="mt-2 p-2 bg-red-50 rounded-lg border border-red-100">
+              <p class="text-[10px] font-semibold text-red-600 uppercase">Rejection Reason</p>
+              <p class="text-xs text-red-700 mt-0.5">{{ strategy.rejection_reason }}</p>
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="px-4 py-3 border-t border-slate-100 flex gap-2 relative z-10" onclick="event.stopPropagation()">
+            {% if strategy.status == 'draft' %}
+            <form method="post" class="flex-1">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="update_status">
+              <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
+              <input type="hidden" name="status" value="pending_review">
+              {% include "components/button.html" with label="Submit for Review" type="submit" primary_start="#D97706" primary_end="#F59E0B" class="!text-xs !py-2 w-full" %}
+            </form>
+            {% elif strategy.status == 'pending_review' %}
+            {% include "components/button.html" with label="Approve" onclick="event.stopPropagation();openApproveModal({{ strategy.id }}, '{{ strategy.title|escapejs }}')" primary_start="#059669" primary_end="#10B981" class="!text-xs !py-2 flex-1" %}
+            {% include "components/button.html" with label="Reject" onclick="event.stopPropagation();openRejectModal({{ strategy.id }}, '{{ strategy.title|escapejs }}')" primary_start="#DC2626" primary_end="#EF4444" class="!text-xs !py-2 flex-1" %}
+            {% elif strategy.status == 'approved' %}
+            <form method="post" class="flex-1">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="update_status">
+              <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
+              <input type="hidden" name="status" value="published">
+              {% include "components/button.html" with label="Publish" type="submit" icon="M5 13l4 4L19 7" primary_start="#2563EB" primary_end="#3B82F6" class="!text-xs !py-2" %}
+            </form>
+            <form method="post">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="update_status">
+              <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
+              <input type="hidden" name="status" value="draft">
+              {% include "components/button.html" with label="Send Back" type="submit" class="!bg-slate-100 !text-slate-600 hover:!bg-slate-200 !bg-none !rounded-xl !text-xs !py-2 !px-3" %}
+            </form>
+            {% elif strategy.status == 'rejected' %}
+            <form method="post" class="flex-1">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="update_status">
+              <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
+              <input type="hidden" name="status" value="draft">
+              {% include "components/button.html" with label="Back to Draft" type="submit" class="!bg-slate-100 !text-slate-600 hover:!bg-slate-200 !bg-none !rounded-xl !text-xs !py-2 flex-1" %}
+            </form>
+            <form method="post">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="delete_strategy">
+              <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
+              {% include "components/button.html" with label="Delete" type="submit" onclick="return confirm('Delete this strategy permanently?')" class="!bg-red-50 !text-red-600 hover:!bg-red-100 !bg-none !rounded-xl !text-xs !py-2 !px-3" %}
+            </form>
+            {% elif strategy.status == 'published' or strategy.status == 'archived' %}
+            <span class="px-3 py-2 bg-slate-50 text-slate-400 rounded-xl text-xs font-semibold">
+              {{ strategy.get_status_display }}
+            </span>
+            {% endif %}
+          </div>
+
+          {% if strategy.scheduled_platforms %}
+          <div class="px-4 py-2 border-t border-slate-50 flex flex-wrap gap-1.5">
+            {% for platform in strategy.scheduled_platforms %}
+            <span class="px-2 py-0.5 bg-slate-50 rounded text-[10px] font-medium text-slate-500">{{ platform|title }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="premium-surface rounded-2xl p-8">
+        <div class="text-center">
+          <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-primary/10 to-purple-100 flex items-center justify-center">
+            <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-slate-800 mb-1">No strategies yet</h3>
+          <p class="text-sm text-slate-500 mb-6 max-w-md mx-auto">Create your first Nepal-focused campaign strategy. Our AI will help you craft culturally-relevant content with just a few questions.</p>
+          {% include "components/button.html" with label="Create Your First Strategy" onclick="openChatbot()" icon="M12 4v16m8-8H4" %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Right: Preview Panel -->
+    <div id="previewPanel" class="hidden xl:block w-96 flex-shrink-0">
+      <div class="premium-surface rounded-2xl sticky top-6 overflow-hidden" style="max-height: calc(100vh - 8rem);">
+        <div id="preview-empty" class="p-6 text-center text-slate-400">
+          <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-slate-100 flex items-center justify-center">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+          </div>
+          <p class="text-sm font-medium">Select a strategy</p>
+          <p class="text-xs mt-1">Click any strategy card to preview its full content here.</p>
+        </div>
+        <div id="preview-loaded" class="hidden flex flex-col" style="max-height: calc(100vh - 8rem);">
+          <div class="p-4 border-b border-slate-100">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex-1 min-w-0">
+                <h3 class="text-sm font-bold text-slate-800 truncate" id="preview-title"></h3>
+                <p class="text-xs text-slate-400 mt-0.5" id="preview-meta"></p>
+              </div>
+              <span id="preview-badge"></span>
+            </div>
+          </div>
+          <div class="p-4 overflow-y-auto flex-1 text-xs text-slate-600 leading-relaxed space-y-4" id="preview-body">
+          </div>
+          <div class="p-4 border-t border-slate-100 space-y-2" id="preview-actions">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chatbot Modal -->
+<div id="chatbotModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/40 backdrop-blur-sm">
+  <div class="bg-white rounded-2xl shadow-2xl w-full mx-4 overflow-hidden flex flex-col" style="max-width: 560px; max-height: 85vh;" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between p-4 border-b border-slate-200">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-slate-800">New Strategy</h3>
+          <p class="text-[10px] text-slate-400" id="chatbot-step-label">Let's build your strategy</p>
+        </div>
+      </div>
+      <button onclick="closeChatbot()" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
+        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-4 space-y-4" id="chatbot-messages">
+      <div class="flex gap-3 message-bot">
+        <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+        </div>
+        <div>
+          <p class="text-sm text-slate-700 font-medium">Hi! Let's create a powerful strategy for the Nepal market. First, what type of strategy do you need?</p>
+          <div class="mt-2 grid grid-cols-2 gap-1.5" id="chat-step-1-options">
+            {% for key, label in strategy_types %}
+            <button onclick="chatAnswer(1, '{{ key }}')" class="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-primary hover:text-white text-slate-700 transition-colors text-left">{{ label }}</button>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-4 border-t border-slate-200" id="chatbot-input-area">
+      <div class="flex gap-2">
+        <input type="text" id="chatbot-input" placeholder="Type your answer..." class="input-field flex-1 hidden" onkeydown="if(event.key==='Enter')chatInputSubmit()">
+        <button id="chatbot-input-btn" class="hidden" onclick="chatInputSubmit()">
+        </button>
+      </div>
+    </div>
+
+    <div id="chatbot-loading" class="hidden px-4 py-3 border-t border-slate-200">
+      <div class="flex items-center gap-3 text-sm text-slate-500">
+        <svg class="animate-spin h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+        Generating your strategy with AI...
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Strategy Result Modal -->
+<div id="strategyResultModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/40 backdrop-blur-sm">
+  <div class="bg-white rounded-2xl shadow-2xl w-full mx-4 overflow-hidden" style="max-width: 720px; max-height: 85vh;" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between p-5 border-b border-slate-200">
+      <div>
+        <h3 class="text-lg font-bold text-slate-800" id="result-title"></h3>
+        <p class="text-xs text-slate-400 mt-0.5" id="result-meta"></p>
+      </div>
+      <button onclick="closeModal('strategyResultModal')" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
+        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="p-5 overflow-y-auto text-sm text-slate-600 leading-relaxed" id="result-body" style="max-height: 50vh;"></div>
+    <div class="p-5 border-t border-slate-200 flex justify-between items-center">
+      <span class="text-xs text-slate-400">Status: <span class="font-semibold text-slate-600">Draft</span></span>
+      <div class="flex gap-2">
+        <form method="post" id="result-push-form">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="update_status">
+          <input type="hidden" name="strategy_id" id="result-strategy-id" value="">
+          <input type="hidden" name="status" value="pending_review">
+          {% include "components/button.html" with label="Push to Draft" type="submit" id="result-push-btn" primary_start="#D97706" primary_end="#F59E0B" %}
+        </form>
+        <a href="#" onclick="closeModal('strategyResultModal');return false" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">Close</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Approve Modal -->
+{% include "components/modal.html" with id="approveModal" title="Approve Strategy" form_action="." content='<input type="hidden" name="action" value="update_status"><input type="hidden" name="strategy_id" id="approve-strategy-id" value=""><input type="hidden" name="status" value="approved"><p class="text-sm text-slate-600">Approve "<span id="approve-strategy-name" class="font-semibold"></span>"? This strategy will be ready for publishing.</p><div class="flex justify-end gap-3 pt-2"><button type="button" onclick="closeModal("approveModal")" class="!bg-slate-100 !text-slate-700 hover:!bg-slate-200 !bg-none btn-action btn-action-secondary" style="background:none!important;color:#475569!important">Cancel</button><button type="submit" style="background:linear-gradient(135deg,#059669,#10B981)" class="btn-action">Approve</button></div>' %}
+
+<!-- Reject Modal -->
+{% include "components/modal.html" with id="rejectModal" title="Reject Strategy" form_action="." content='<input type="hidden" name="action" value="update_status"><input type="hidden" name="strategy_id" id="reject-strategy-id" value=""><input type="hidden" name="status" value="rejected"><p class="text-sm font-semibold text-slate-700">Reject "<span id="reject-strategy-name"></span>"</p><div><label class="block text-sm font-semibold text-slate-700 mb-1.5">Reason for Rejection</label><textarea name="rejection_reason" rows="3" class="input-field w-full" placeholder="Provide feedback so the creator can improve this strategy..." required></textarea></div><div class="flex justify-end gap-3 pt-2"><button type="button" onclick="closeModal("rejectModal")" class="!bg-slate-100 !text-slate-700 hover:!bg-slate-200 !bg-none btn-action btn-action-secondary" style="background:none!important;color:#475569!important">Cancel</button><button type="submit" style="background:linear-gradient(135deg,#DC2626,#EF4444)" class="btn-action">Reject</button></div>' %}
+
+<script>
+// ──────────────────────────────────────────────
+// Chatbot State Machine
+// ──────────────────────────────────────────────
+var chatState = { step: 0, data: {} };
+var steps = [
+  { key: 'strategy_type', label: 'Strategy Type', type: 'option', options: {{ strategy_types_json|safe }} },
+  { key: 'title', label: 'Title', type: 'input', placeholder: 'e.g., Dashain 2082 Campaign' },
+  { key: 'description', label: 'Campaign Goals', type: 'textarea', placeholder: 'Describe your campaign goals, objectives, and any specific requirements...' },
+  { key: 'target_audience', label: 'Target Audience', type: 'input', placeholder: 'e.g., Urban millennials, SME owners, Gen Z in Kathmandu' },
+  { key: 'tone', label: 'Tone', type: 'option', options: [['professional','Professional'], ['casual','Casual'], ['creative','Creative'], ['urgent','Urgent']] },
+  { key: 'platforms', label: 'Platforms', type: 'multi', options: [['facebook','Facebook'],['instagram','Instagram'],['linkedin','LinkedIn'],['twitter','X (Twitter)'],['tiktok','TikTok'],['youtube','YouTube']] },
+  { key: 'scheduled_at', label: 'Schedule', type: 'datetime', placeholder: 'Optional — pick a publish date' },
+];
+
+function openChatbot() {
+  chatState = { step: 0, data: {} };
+  document.getElementById('chatbotModal').classList.remove('hidden');
+  document.getElementById('chatbot-messages').innerHTML = '';
+  document.getElementById('chatbot-loading').classList.add('hidden');
+  document.getElementById('chatbot-input').classList.add('hidden');
+  document.getElementById('chatbot-input-btn').classList.add('hidden');
+  document.getElementById('chatbot-step-label').textContent = "Let's build your strategy";
+  chatAsk(0);
+}
+
+function closeChatbot() {
+  document.getElementById('chatbotModal').classList.add('hidden');
+}
+
+document.getElementById('chatbotModal').addEventListener('click', closeChatbot);
+
+function chatAsk(stepIdx) {
+  if (stepIdx >= steps.length) {
+    chatGenerate();
+    return;
+  }
+  var s = steps[stepIdx];
+  document.getElementById('chatbot-step-label').textContent = 'Step ' + (stepIdx+1) + ' of ' + steps.length;
+  var msg = document.getElementById('chatbot-messages');
+  var div = document.createElement('div');
+  div.className = 'flex gap-3 message-bot';
+  div.innerHTML = '<div class="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center flex-shrink-0 mt-0.5"><svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg></div><div>';
+  msg.appendChild(div);
+
+  if (s.type === 'option' || s.type === 'multi') {
+    var p = document.createElement('p');
+    p.className = 'text-sm text-slate-700 font-medium';
+    p.textContent = s.type === 'multi' ? 'Select platforms:' : (stepIdx === 0 ? 'What type of strategy do you need?' : 'Choose ' + s.label + ':');
+    div.lastChild.appendChild(p);
+    var grid = document.createElement('div');
+    grid.className = 'mt-2 ' + (s.type === 'multi' ? 'flex flex-wrap gap-2' : 'grid grid-cols-2 gap-1.5');
+    s.options.forEach(function(o) {
+      var btn = document.createElement('button');
+      var key = Array.isArray(o) ? o[0] : o[0];
+      var label = Array.isArray(o) ? o[1] : o[1];
+      btn.textContent = label;
+      btn.dataset.value = key;
+      btn.className = 'px-3 py-2 rounded-xl text-xs font-semibold ';
+      if (s.type === 'multi') {
+        btn.className += 'bg-slate-100 hover:bg-primary hover:text-white text-slate-700 transition-colors';
+        btn.onclick = function() {
+          this.classList.toggle('bg-primary');
+          this.classList.toggle('text-white');
+          this.classList.toggle('bg-slate-100');
+          this.classList.toggle('text-slate-700');
+        };
+      } else {
+        btn.className += 'bg-slate-100 hover:bg-primary hover:text-white text-slate-700 transition-colors text-left';
+        btn.onclick = function() { chatAnswer(stepIdx, key); };
+      }
+      grid.appendChild(btn);
+    });
+    if (s.type === 'multi') {
+      var okBtn = document.createElement('button');
+      okBtn.textContent = 'Done';
+      okBtn.className = 'mt-2 px-4 py-2 rounded-xl text-xs font-semibold bg-primary text-white hover:opacity-90 transition-opacity';
+      okBtn.onclick = function() {
+        var sel = [];
+        grid.querySelectorAll('.bg-primary').forEach(function(b) { sel.push(b.dataset.value); });
+        chatAnswer(stepIdx, sel);
+      };
+      var wrap = document.createElement('div');
+      wrap.appendChild(grid);
+      wrap.appendChild(okBtn);
+      div.lastChild.appendChild(wrap);
+    } else {
+      div.lastChild.appendChild(grid);
+    }
+  } else if (s.type === 'input') {
+    var p = document.createElement('p');
+    p.className = 'text-sm text-slate-700 font-medium';
+    p.textContent = 'Give it a ' + s.label + ':';
+    div.lastChild.appendChild(p);
+    var inp = document.getElementById('chatbot-input');
+    inp.classList.remove('hidden');
+    inp.placeholder = s.placeholder || 'Type your answer...';
+    inp.value = '';
+    inp.dataset.step = stepIdx;
+    inp.focus();
+  } else if (s.type === 'textarea') {
+    var p = document.createElement('p');
+    p.className = 'text-sm text-slate-700 font-medium';
+    p.textContent = 'Tell me about your ' + s.label + ':';
+    div.lastChild.appendChild(p);
+    var inp = document.getElementById('chatbot-input');
+    inp.classList.remove('hidden');
+    inp.placeholder = s.placeholder || 'Type your answer...';
+    inp.value = '';
+    inp.dataset.step = stepIdx;
+    inp.focus();
+  } else if (s.type === 'datetime') {
+    var p = document.createElement('p');
+    p.className = 'text-sm text-slate-700 font-medium';
+    p.textContent = 'Would you like to schedule publishing?';
+    div.lastChild.appendChild(p);
+    var wrap = document.createElement('div');
+    wrap.className = 'mt-2 space-y-2';
+    var inp = document.createElement('input');
+    inp.type = 'datetime-local';
+    inp.id = 'chat-datetime';
+    inp.className = 'input-field w-full';
+    var btnWrap = document.createElement('div');
+    btnWrap.className = 'flex gap-2';
+    var skip = document.createElement('button');
+    skip.textContent = 'Skip';
+    skip.className = 'px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors';
+    skip.onclick = function() { chatAnswer(stepIdx, ''); };
+    var ok = document.createElement('button');
+    ok.textContent = 'Next';
+    ok.className = 'px-4 py-2 rounded-xl text-xs font-semibold bg-primary text-white hover:opacity-90 transition-opacity';
+    ok.onclick = function() { chatAnswer(stepIdx, document.getElementById('chat-datetime').value); };
+    btnWrap.appendChild(skip);
+    btnWrap.appendChild(ok);
+    wrap.appendChild(inp);
+    wrap.appendChild(btnWrap);
+    div.lastChild.appendChild(wrap);
+  }
+  msg.scrollTop = msg.scrollHeight;
+}
+
+function chatInputSubmit() {
+  var inp = document.getElementById('chatbot-input');
+  var stepIdx = parseInt(inp.dataset.step);
+  var val = inp.value.trim();
+  if (!val) return;
+  inp.classList.add('hidden');
+  chatAnswer(stepIdx, val);
+}
+
+function chatAnswer(stepIdx, val) {
+  var s = steps[stepIdx];
+
+  // Show user's answer
+  var msg = document.getElementById('chatbot-messages');
+  var udiv = document.createElement('div');
+  udiv.className = 'flex gap-3 justify-end message-user';
+  var label = val;
+  if (Array.isArray(val)) label = val.join(', ');
+  else if (s.type === 'option') {
+    var found = (s.options || []).find(function(o) { return (Array.isArray(o) ? o[0] : o) === val; });
+    if (found) label = Array.isArray(found) ? found[1] : found;
+  }
+  udiv.innerHTML = '<div class="bg-primary/10 rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-xs"><p class="text-sm text-primary font-medium">' + label + '</p></div>';
+  msg.appendChild(udiv);
+
+  // Store
+  chatState.data[s.key] = val;
+  chatState.step = stepIdx + 1;
+
+  // Hide input
+  document.getElementById('chatbot-input').classList.add('hidden');
+
+  // Next
+  msg.scrollTop = msg.scrollHeight;
+  setTimeout(function() { chatAsk(stepIdx + 1); }, 400);
+}
+
+function chatGenerate() {
+  document.getElementById('chatbot-loading').classList.remove('hidden');
+  document.getElementById('chatbot-input-area').classList.add('hidden');
+  document.getElementById('chatbot-step-label').textContent = 'Generating...';
+
+  fetch('{% url "creative:api_chat_generate" %}', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+    body: JSON.stringify(chatState.data)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    document.getElementById('chatbot-loading').classList.add('hidden');
+    if (d.success) {
+      closeChatbot();
+      // Show result in a modal
+      document.getElementById('result-title').textContent = d.title;
+      document.getElementById('result-meta').textContent = d.strategy_type + ' \u00b7 ' + new Date(d.created_at).toLocaleDateString();
+      document.getElementById('result-body').innerHTML = d.generated_output;
+      document.getElementById('result-strategy-id').value = d.strategy_id;
+      document.getElementById('result-push-btn').textContent = 'Push to Draft';
+      document.getElementById('result-push-btn').onclick = function() {
+        document.getElementById('result-push-form').submit();
+      };
+      openModal('strategyResultModal');
+      // Reload to show new strategy
+      setTimeout(function() { location.reload(); }, 1000);
+    } else {
+      showChatError(d.error || 'Generation failed');
+    }
+  })
+  .catch(function(e) {
+    document.getElementById('chatbot-loading').classList.add('hidden');
+    showChatError('Network error: ' + e.message);
+  });
+}
+
+function showChatError(msg) {
+  var msgDiv = document.getElementById('chatbot-messages');
+  var div = document.createElement('div');
+  div.className = 'flex gap-3 message-bot';
+  div.innerHTML = '<div class="w-7 h-7 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0"><svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div><p class="text-sm text-red-600 font-medium">Error</p><p class="text-xs text-red-500 mt-1">' + msg + '</p><button onclick="openChatbot()" class="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-700 hover:bg-red-100">Try Again</button></div>';
+  msgDiv.appendChild(div);
+  msgDiv.scrollTop = msgDiv.scrollHeight;
+  document.getElementById('chatbot-input-area').classList.remove('hidden');
+  document.getElementById('chatbot-step-label').textContent = 'Something went wrong';
+}
+
+// ──────────────────────────────────────────────
+// Strategy Preview (Desktop side panel)
+// ──────────────────────────────────────────────
+var strategiesData = {};
+{% for s in strategies %}
+strategiesData[{{ s.id }}] = {
+  id: {{ s.id }},
+  title: '{{ s.title|escapejs }}',
+  type: '{{ s.get_strategy_type_display|escapejs }}',
+  status: '{{ s.status|escapejs }}',
+  status_label: '{{ s.get_status_display|escapejs }}',
+  created: '{{ s.created_at|date:"M d, Y"|escapejs }}',
+  output: '{{ s.generated_output|escapejs }}',
+  goal: '{{ s.campaign_goal|escapejs }}',
+  rejection: '{{ s.rejection_reason|escapejs }}',
+  platforms: {{ s.scheduled_platforms|safe|default:"[]" }},
+};
+{% endfor %}
+
+function openStrategy(id) {
+  var d = strategiesData[id];
+  if (!d) return;
+  document.getElementById('preview-empty').classList.add('hidden');
+  document.getElementById('preview-loaded').classList.remove('hidden');
+  document.getElementById('preview-title').textContent = d.title;
+  document.getElementById('preview-meta').textContent = d.type + ' \u00b7 ' + d.created;
+  var badgeColors = {draft:'bg-slate-100 text-slate-600', pending_review:'bg-amber-100 text-amber-700', approved:'bg-emerald-100 text-emerald-700', rejected:'bg-red-100 text-red-700', published:'bg-blue-100 text-blue-700', archived:'bg-slate-100 text-slate-500'};
+  document.getElementById('preview-badge').innerHTML = '<span class="px-2.5 py-1 rounded-lg text-[10px] font-semibold ' + (badgeColors[d.status]||'bg-slate-100 text-slate-600') + '">' + d.status_label + '</span>';
+  var body = d.output || d.goal || '<span class="text-slate-400 italic">No content yet</span>';
+  document.getElementById('preview-body').innerHTML = '<div class="prose prose-xs max-w-none">' + body + '</div>';
+  if (d.rejection) {
+    document.getElementById('preview-body').innerHTML += '<div class="p-3 bg-red-50 rounded-xl border border-red-100"><p class="text-[10px] font-semibold text-red-600 uppercase">Rejection Reason</p><p class="text-xs text-red-700 mt-1">' + d.rejection + '</p></div>';
+  }
+
+  var actions = document.getElementById('preview-actions');
+  actions.innerHTML = '';
+  if (d.status === 'draft') {
+    actions.innerHTML = '<form method="post">{% csrf_token %}<input type="hidden" name="action" value="update_status"><input type="hidden" name="strategy_id" value="' + d.id + '"><input type="hidden" name="status" value="pending_review"><button type="submit" class="w-full px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all" style="background:linear-gradient(135deg,#D97706,#F59E0B)">Submit for Review</button></form><form method="post">{% csrf_token %}<input type="hidden" name="action" value="delete_strategy"><input type="hidden" name="strategy_id" value="' + d.id + '"><button type="submit" onclick="return confirm(\'Delete permanently?\')" class="w-full px-4 py-2 rounded-xl text-sm font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-colors">Delete</button></form>';
+  } else if (d.status === 'pending_review') {
+    actions.innerHTML = '<div class="flex gap-2"><button onclick="openApproveModal(' + d.id + ',\'' + d.title.replace(/'/g,"\\'") + '\')" class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all" style="background:linear-gradient(135deg,#059669,#10B981)">Approve</button><button onclick="openRejectModal(' + d.id + ',\'' + d.title.replace(/'/g,"\\'") + '\')" class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all" style="background:linear-gradient(135deg,#DC2626,#EF4444)">Reject</button></div>';
+  } else if (d.status === 'approved') {
+    actions.innerHTML = '<form method="post">{% csrf_token %}<input type="hidden" name="action" value="update_status"><input type="hidden" name="strategy_id" value="' + d.id + '"><input type="hidden" name="status" value="published"><button type="submit" class="w-full px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all" style="background:linear-gradient(135deg,#2563EB,#3B82F6)">Publish</button></form><form method="post">{% csrf_token %}<input type="hidden" name="action" value="update_status"><input type="hidden" name="strategy_id" value="' + d.id + '"><input type="hidden" name="status" value="draft"><button type="submit" class="w-full px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">Send Back to Draft</button></form>';
+  } else if (d.status === 'rejected') {
+    actions.innerHTML = '<form method="post">{% csrf_token %}<input type="hidden" name="action" value="update_status"><input type="hidden" name="strategy_id" value="' + d.id + '"><input type="hidden" name="status" value="draft"><button type="submit" class="w-full px-4 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">Move to Draft</button></form><form method="post">{% csrf_token %}<input type="hidden" name="action" value="delete_strategy"><input type="hidden" name="strategy_id" value="' + d.id + '"><button type="submit" onclick="return confirm(\'Delete permanently?\')" class="w-full px-4 py-2 rounded-xl text-sm font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-colors">Delete</button></form>';
+  } else {
+    actions.innerHTML = '<span class="block text-center px-4 py-2 rounded-xl text-sm font-semibold bg-slate-50 text-slate-400">' + d.status_label + '</span>';
+  }
+  if (d.platforms && d.platforms.length) {
+    actions.innerHTML = '<div class="flex flex-wrap gap-1.5">' + d.platforms.map(function(p) { return '<span class="px-2 py-0.5 bg-slate-50 rounded text-[10px] font-medium text-slate-500">' + p[0].toUpperCase()+p.slice(1) + '</span>'; }).join('') + '</div>' + actions.innerHTML;
+  }
+}
+
+// ──────────────────────────────────────────────
+// Approve / Reject modals
+// ──────────────────────────────────────────────
+function openApproveModal(id, name) {
+  document.getElementById('approve-strategy-id').value = id;
+  document.getElementById('approve-strategy-name').textContent = name;
+  openModal('approveModal');
+}
+function openRejectModal(id, name) {
+  document.getElementById('reject-strategy-id').value = id;
+  document.getElementById('reject-strategy-name').textContent = name;
+  openModal('rejectModal');
+}
+</script>
+{% endblock %}

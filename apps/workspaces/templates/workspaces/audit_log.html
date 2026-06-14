@@ -1,0 +1,237 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Audit Log — {{ workspace.name }} — IDA{% endblock %}
+{% block content %}
+
+<div class="page-shell max-w-none space-y-8">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="flex items-center gap-4 min-w-0">
+      <a href="{% url 'workspaces:detail' workspace.id %}" class="p-2 rounded-xl hover:bg-slate-100 transition-colors flex-shrink-0" title="Back">
+        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      </a>
+      <div class="min-w-0">
+        <h2 class="page-title truncate">Audit Log</h2>
+        <p class="page-subtitle truncate">{{ workspace.name }} — Role-based module access &amp; event history</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
+        {% if membership.role == 'owner' %}bg-amber-50 text-amber-700
+        {% elif membership.role == 'admin' %}bg-indigo-50 text-indigo-700
+        {% else %}bg-slate-100 text-slate-600{% endif %}">
+        {{ membership.get_role_display }}
+      </span>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+    <div class="premium-surface card-elevate section-card">
+      <div class="section-head">
+        <h2 class="section-title">Total Events</h2>
+        <p class="section-subtitle">All time</p>
+      </div>
+      <p class="text-3xl font-bold text-slate-900">{{ total_count }}</p>
+    </div>
+    {% with logs=page_obj.object_list %}
+    {% if logs.0.created_at %}
+    <div class="premium-surface card-elevate section-card">
+      <div class="section-head">
+        <h2 class="section-title">Latest Event</h2>
+        <p class="section-subtitle">Most recent</p>
+      </div>
+      <p class="text-xl font-bold text-slate-900">{{ logs.0.created_at|date:'M d, Y' }}</p>
+      <p class="text-xs text-slate-400 mt-1">{{ logs.0.created_at|date:'H:i:s' }}</p>
+    </div>
+    <div class="premium-surface card-elevate section-card">
+      <div class="section-head">
+        <h2 class="section-title">Earliest Event</h2>
+        <p class="section-subtitle">Oldest on record</p>
+      </div>
+      <p class="text-xl font-bold text-slate-900">{{ logs.last.created_at|date:'M d, Y' }}</p>
+      <p class="text-xs text-slate-400 mt-1">{{ logs.last.created_at|date:'H:i:s' }}</p>
+    </div>
+    {% endif %}
+    {% endwith %}
+    <div class="premium-surface card-elevate section-card">
+      <div class="section-head">
+        <h2 class="section-title">Showing</h2>
+        <p class="section-subtitle">Current page</p>
+      </div>
+      <p class="text-3xl font-bold text-slate-900">{{ page_obj.start_index }}–{{ page_obj.end_index }}</p>
+    </div>
+  </div>
+
+  <div class="premium-surface card-elevate section-card overflow-x-auto">
+    <div class="section-head">
+      <h2 class="section-title">Module Access by Role</h2>
+      <p class="section-subtitle">Permission levels per module — Owner always has full access</p>
+    </div>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-slate-200">
+          <th class="text-left py-3 px-4 font-bold text-slate-600 text-xs uppercase tracking-wider">Module</th>
+          {% for role in roles %}
+          <th class="text-center py-3 px-3 font-bold text-xs uppercase tracking-wider whitespace-nowrap
+            {% if role == 'owner' %}text-amber-700{% elif role == 'admin' %}text-indigo-700{% elif role == 'member' %}text-emerald-700{% endif %}">
+            {{ role_labels|dictget:role }}
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for icon, group in module_groups.items %}
+        {% with g_label=group.0 g_modules=group.1 %}
+        <tr class="bg-slate-50/80">
+          <td colspan="4" class="py-2 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {% if icon == 'pencil-alt' %}<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>{% endif %}
+              {% if icon == 'mail' %}<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>{% endif %}
+              {% if icon == 'cog' %}<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>{% endif %}
+              {% if icon == 'clipboard-list' %}<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>{% endif %}
+            </svg>
+            {{ g_label }}
+          </td>
+        </tr>
+        {% for module in g_modules %}
+        {% with mod_perms=roles_matrix|dictget:module %}
+        {% if mod_perms %}
+        <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+          <td class="py-2.5 px-4 font-semibold text-slate-800 whitespace-nowrap text-sm">{{ module_labels|dictget:module }}</td>
+          {% for role in roles %}
+          <td class="text-center py-2.5 px-2">
+            {% with role_mod_perms=mod_perms|dictget:role %}
+            {% if role == 'owner' %}
+            <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600">
+              <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              Full
+            </span>
+            {% elif role_mod_perms %}
+            <div class="flex items-center justify-center gap-0.5">
+              <span class="inline-flex items-center gap-0.5 p-1 {% if role_mod_perms.read %}text-primary{% else %}text-slate-300{% endif %}"><span class="text-[9px] font-bold">R</span></span>
+              <span class="inline-flex items-center gap-0.5 p-1 {% if role_mod_perms.create %}text-emerald-500{% else %}text-slate-300{% endif %}"><span class="text-[9px] font-bold">C</span></span>
+              <span class="inline-flex items-center gap-0.5 p-1 {% if role_mod_perms.edit %}text-indigo-500{% else %}text-slate-300{% endif %}"><span class="text-[9px] font-bold">U</span></span>
+              <span class="inline-flex items-center gap-0.5 p-1 {% if role_mod_perms.delete %}text-red-500{% else %}text-slate-300{% endif %}"><span class="text-[9px] font-bold">D</span></span>
+            </div>
+            {% else %}
+            <span class="text-slate-300">—</span>
+            {% endif %}
+            {% endwith %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endif %}
+        {% endwith %}
+        {% endfor %}
+        {% endwith %}
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="mt-6 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-500">
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded border border-primary bg-white"></span> R = Read</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded border border-emerald-300 bg-white"></span> C = Create</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded border border-indigo-300 bg-white"></span> U = Update (Edit)</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded border border-red-300 bg-white"></span> D = Delete</span>
+    </div>
+  </div>
+
+  <div class="premium-surface card-elevate section-card overflow-hidden">
+    <div class="section-head">
+      <h2 class="section-title">Event Log</h2>
+      <p class="section-subtitle">Chronological record of actions in this workspace</p>
+    </div>
+    {% with logs=page_obj.object_list %}
+    {% if logs %}
+    <div class="overflow-x-auto -mx-6">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-100 bg-slate-50/50">
+            <th class="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Timestamp</th>
+            <th class="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Action</th>
+            <th class="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">User</th>
+            <th class="text-right px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Details</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50">
+          {% for log in logs %}
+          <tr class="hover:bg-slate-50/50 transition-colors">
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="text-sm font-semibold text-slate-700">{{ log.created_at|date:'M d, Y' }}</span>
+              <span class="block text-xs text-slate-400">{{ log.created_at|date:'H:i:s' }}</span>
+            </td>
+            <td class="px-6 py-4">
+              <span class="text-sm font-semibold text-slate-900">{{ log.action }}</span>
+            </td>
+            <td class="px-6 py-4">
+              {% if log.user %}
+              <span class="inline-flex items-center gap-2">
+                <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                  {{ log.user.first_name|first|upper }}{{ log.user.last_name|first|upper }}
+                </span>
+                <span class="text-sm text-slate-600">{{ log.user.get_full_name|default:log.user.email }}</span>
+              </span>
+              {% else %}
+              <span class="text-sm text-slate-400">—</span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 text-right">
+              {% if log.details %}
+              <button onclick="toggleDetails(this)" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-50 text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">View</button>
+              {% else %}
+              <span class="text-xs text-slate-300">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% if log.details %}
+          <tr class="hidden detail-row">
+            <td colspan="4" class="px-6 py-4 bg-slate-50/50">
+              <pre class="text-xs text-slate-500 leading-relaxed overflow-x-auto max-h-48 overflow-y-auto">{{ log.details|pprint }}</pre>
+            </td>
+          </tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="flex items-center justify-between mt-6">
+      <span class="text-xs text-slate-400">{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ total_count }}</span>
+      <div class="flex items-center gap-1.5">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-xs font-semibold transition-colors">Prev</a>
+        {% endif %}
+        {% for page_num in page_obj.paginator.page_range %}
+          {% if page_num == page_obj.number %}
+          <span class="px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-bold">{{ page_num }}</span>
+          {% elif page_num >= page_obj.number|add:-2 and page_num <= page_obj.number|add:2 %}
+          <a href="?page={{ page_num }}" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-xs font-semibold transition-colors">{{ page_num }}</a>
+          {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-xs font-semibold transition-colors">Next</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="flex flex-col items-center gap-3 py-12">
+      <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
+        <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      </div>
+      <p class="text-sm text-slate-500">No audit events recorded yet.</p>
+    </div>
+    {% endif %}
+    {% endwith %}
+  </div>
+</div>
+
+<script>
+function toggleDetails(btn) {
+  var row = btn.closest('tr').nextElementSibling;
+  if (row && row.classList.contains('detail-row')) {
+    row.classList.toggle('hidden');
+    btn.textContent = row.classList.contains('hidden') ? 'View' : 'Hide';
+  }
+}
+</script>
+{% endblock %}

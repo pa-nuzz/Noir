@@ -1,0 +1,436 @@
+{% extends "base_dashboard.html" %}
+{% load static dashboard_tags %}
+
+{% block title %}Content Hub — IDA{% endblock %}
+
+{% block content %}
+<style>
+  .sch-tabs {
+    display: flex; align-items: center; gap: 0;
+    border-bottom: 1px solid #E2E8F0;
+    margin-top: 4px;
+  }
+  .sch-tab {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 20px; height: 44px;
+    font-size: 0.875rem; font-weight: 600;
+    color: #64748B; background: transparent;
+    border: none; border-bottom: 2px solid transparent;
+    cursor: pointer; transition: all 0.15s ease;
+    text-decoration: none; white-space: nowrap;
+  }
+  .sch-tab:hover { color: #0A2540; background: #F8FAFC; }
+  .sch-tab.active { color: #0A2540; border-bottom-color: #06B6D4; font-weight: 700; }
+  .sch-tab svg { width: 18px; height: 18px; }
+  .sch-tab-panel { display: none; }
+  .sch-tab-panel.active { display: block; }
+
+  /* Media Library */
+  .sch-media-sidebar { width: 200px; flex-shrink: 0; }
+  .sch-media-filter {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px; border-radius: 10px;
+    font-size: 0.8125rem; font-weight: 500; color: #64748B;
+    text-decoration: none; transition: all 0.12s;
+  }
+  .sch-media-filter:hover { background: #F1F5F9; color: #0A2540; }
+  .sch-media-filter.active { background: #ECFEFF; color: #06B6D4; font-weight: 600; }
+  .sch-media-filter svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .sch-media-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .sch-media-card {
+    position: relative; border-radius: 12px; overflow: hidden;
+    border: 1px solid #E2E8F0; background: #FFFFFF;
+    aspect-ratio: 1; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .sch-media-card:hover { border-color: #06B6D4; box-shadow: 0 4px 16px rgba(6,182,212,0.12); }
+  .sch-media-thumb { width: 100%; height: 100%; object-fit: cover; background: #F1F5F9; }
+  .sch-media-icon {
+    width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+    background: #F1F5F9; color: #CBD5E1;
+  }
+  .sch-media-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 40%, rgba(10,37,64,0.88) 100%);
+    opacity: 0; transition: opacity 0.2s;
+    display: flex; flex-direction: column; justify-content: flex-end; padding: 12px;
+  }
+  .sch-media-card:hover .sch-media-overlay { opacity: 1; }
+  .sch-media-name { font-size: 0.75rem; font-weight: 600; color: #FFFFFF; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sch-media-meta { font-size: 10px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+
+  /* Empty state */
+
+
+  /* Quick action cards */
+  .sch-action-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; border-radius: 12px;
+    border: 1px solid #E2E8F0; background: #FFFFFF;
+    text-decoration: none; transition: all 0.15s;
+  }
+  .sch-action-card:hover { border-color: #06B6D4; box-shadow: 0 4px 12px rgba(6,182,212,0.1); }
+  .sch-action-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    background: #F1F5F9; flex-shrink: 0; transition: background 0.15s;
+  }
+  .sch-action-card:hover .sch-action-icon { background: #ECFEFF; }
+  .sch-action-icon svg { width: 18px; height: 18px; color: #64748B; transition: color 0.15s; }
+  .sch-action-card:hover .sch-action-icon svg { color: #06B6D4; }
+
+  @media (max-width: 1200px) { .sch-media-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 1024px) { .sch-media-sidebar { display: none; } }
+  @media (max-width: 768px) { .sch-media-grid { grid-template-columns: repeat(2, 1fr); } }
+</style>
+
+<div class="page-shell max-w-none space-y-6">
+  <!-- Page Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Content Hub</h1>
+      <p class="text-sm text-slate-500 mt-1">Manage media assets and generate AI content</p>
+    </div>
+    <div class="flex gap-3">
+      {% url 'content_studio:content_hub' as content_studio_hub_url %}
+      {% include "components/button.html" with label="AI Content Studio" href=content_studio_hub_url variant="primary" icon="M13 10V3L4 14h7v7l9-11h-7z" %}
+      <a href="#" onclick="event.preventDefault();openUploadModal();" class="btn-action btn-action-secondary inline-flex whitespace-nowrap">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+        Upload Asset
+      </a>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+    <div class="premium-surface rounded-2xl p-5">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Media Assets</p>
+      <p class="text-2xl font-bold text-slate-900 mt-1">{{ media_assets|length }}</p>
+    </div>
+    <div class="premium-surface rounded-2xl p-5">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Folders</p>
+      <p class="text-2xl font-bold text-slate-900 mt-1">{{ media_folders|length }}</p>
+    </div>
+    <div class="premium-surface rounded-2xl p-5">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Content Items</p>
+      <p class="text-2xl font-bold text-slate-900 mt-1">{{ content_items|length }}</p>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <a href="{% url 'content_studio:content_hub' %}?tab=generate" class="sch-action-card">
+      <div class="sch-action-icon">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      </div>
+      <div>
+        <p class="text-sm font-semibold text-slate-700">Generate Content</p>
+        <p class="text-xs text-slate-400">AI-powered captions, hashtags, scripts</p>
+      </div>
+    </a>
+    <a href="#" onclick="event.preventDefault();openUploadModal();" class="sch-action-card">
+      <div class="sch-action-icon">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      </div>
+      <div>
+        <p class="text-sm font-semibold text-slate-700">Upload Media</p>
+        <p class="text-xs text-slate-400">Images, videos, documents</p>
+      </div>
+    </a>
+    <a href="{% url 'social_accounts:social_hub' %}" class="sch-action-card">
+      <div class="sch-action-icon">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+      </div>
+      <div>
+        <p class="text-sm font-semibold text-slate-700">Social Accounts</p>
+        <p class="text-xs text-slate-400">Connect and manage platforms</p>
+      </div>
+    </a>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div>
+    <div class="sch-tabs" role="tablist">
+      <button class="sch-tab active" role="tab" aria-selected="true" onclick="switchTab('media')" id="tab-media">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        Media Library
+      </button>
+      <button class="sch-tab" role="tab" aria-selected="false" onclick="switchTab('content')" id="tab-content">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Content Items
+      </button>
+      <button class="sch-tab" role="tab" aria-selected="false" onclick="switchTab('folders')" id="tab-folders">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+        Folders
+      </button>
+    </div>
+
+    <!-- Panel: Media Library -->
+    <div class="sch-tab-panel active" id="panel-media">
+      <div class="flex gap-6">
+        <!-- Sidebar Filters -->
+        <div class="sch-media-sidebar">
+          <div class="premium-surface rounded-2xl p-4 mb-4">
+            <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Filter by Type</h4>
+            <div class="space-y-1">
+              <a href="?tab=media" class="sch-media-filter {% if not media_current_type %}active{% endif %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+                All Types
+              </a>
+              <a href="?tab=media&media_type=image" class="sch-media-filter {% if media_current_type == 'image' %}active{% endif %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                Images
+              </a>
+              <a href="?tab=media&media_type=video" class="sch-media-filter {% if media_current_type == 'video' %}active{% endif %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Videos
+              </a>
+              <a href="?tab=media&media_type=audio" class="sch-media-filter {% if media_current_type == 'audio' %}active{% endif %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"/></svg>
+                Audio
+              </a>
+              <a href="?tab=media&media_type=document" class="sch-media-filter {% if media_current_type == 'document' %}active{% endif %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                Documents
+              </a>
+            </div>
+          </div>
+
+          {% if media_folders %}
+          <div class="premium-surface rounded-2xl p-4">
+            <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Folders</h4>
+            <div class="space-y-1">
+              <a href="?tab=media" class="sch-media-filter {% if not media_current_folder %}active{% endif %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                All Folders
+              </a>
+              {% for folder in media_folders %}
+              <a href="?tab=media&media_folder={{ folder.id }}" class="sch-media-filter {% if media_current_folder == folder.id|stringformat:'i' %}active{% endif %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                {{ folder.name }}
+              </a>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 min-w-0">
+          <div class="premium-surface rounded-2xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100">
+              <form method="get" class="flex gap-3">
+                <input type="hidden" name="tab" value="media">
+                {% if media_current_type %}<input type="hidden" name="media_type" value="{{ media_current_type }}">{% endif %}
+                {% if media_current_folder %}<input type="hidden" name="media_folder" value="{{ media_current_folder }}">{% endif %}
+                <div class="relative flex-1">
+                  <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                  <input type="text" name="media_q" value="{{ media_query }}" class="input-field w-full pl-10" placeholder="Search assets...">
+                </div>
+                {% include "components/button.html" with label="Search" type="submit" variant="primary" %}
+                {% if media_query or media_current_type or media_current_folder %}
+                {% include "components/button.html" with label="Clear" href="?tab=media" variant="secondary" %}
+                {% endif %}
+              </form>
+            </div>
+
+            {% if media_assets %}
+            <div class="sch-media-grid p-6">
+              {% for asset in media_assets %}
+              <a href="{% url 'media_assets:detail' asset.id %}" class="sch-media-card">
+                {% if asset.is_image and asset.display_thumbnail_url %}
+                <img src="{{ asset.display_thumbnail_url }}" alt="{{ asset.name }}" class="sch-media-thumb" loading="lazy" onerror="this.style.display='none';this.parentElement.querySelector('.sch-media-fallback').classList.remove('hidden')">
+                <div class="sch-media-fallback sch-media-icon hidden">
+                  <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </div>
+                {% elif asset.is_image and asset.display_url %}
+                <img src="{{ asset.display_url }}" alt="{{ asset.name }}" class="sch-media-thumb" loading="lazy" onerror="this.style.display='none';this.parentElement.querySelector('.sch-media-fallback').classList.remove('hidden')">
+                <div class="sch-media-fallback sch-media-icon hidden">
+                  <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </div>
+                {% elif asset.is_video %}
+                <div class="sch-media-icon">
+                  <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                {% elif asset.is_audio %}
+                <div class="sch-media-icon">
+                  <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"/></svg>
+                </div>
+                {% else %}
+                <div class="sch-media-icon">
+                  <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                </div>
+                {% endif %}
+                <div class="sch-media-overlay">
+                  <div class="sch-media-name">{{ asset.name }}</div>
+                  <div class="sch-media-meta">{{ asset.file_type_display }} &middot; {{ asset.file_size_display }}{% if asset.dimensions %} &middot; {{ asset.dimensions }}{% endif %}</div>
+                </div>
+              </a>
+              {% endfor %}
+            </div>
+            {% else %}
+            <div class="flex flex-col items-center justify-center px-5 py-12 text-center">
+              <div class="w-14 h-14 rounded-2xl bg-cyan-50 flex items-center justify-center mb-4">
+                <svg class="w-7 h-7 text-cyan-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              </div>
+              <h3 class="text-[15px] font-bold text-slate-900 mb-1">{% if media_query or media_current_type or media_current_folder %}No assets found{% else %}Your media library is empty{% endif %}</h3>
+              <p class="text-xs text-slate-400 max-w-[320px] mb-4">{% if media_query or media_current_type or media_current_folder %}Try adjusting your filters.{% else %}Upload images, videos, and design assets.{% endif %}</p>
+              <a href="#" onclick="event.preventDefault();openUploadModal();" class="btn-action btn-action-primary inline-flex">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+                Upload Asset
+              </a>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel: Content Items -->
+    <div class="sch-tab-panel" id="panel-content">
+      <div class="premium-surface rounded-2xl overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h2 class="text-sm font-bold text-slate-800">Generated Content</h2>
+          <a href="{% url 'content_studio:content_hub' %}" class="text-xs font-semibold text-indigo-600 hover:underline">Open AI Studio</a>
+        </div>
+        {% if content_items %}
+        <div class="divide-y divide-slate-50">
+          {% for item in content_items %}
+          <a href="{% url 'content_studio:detail' item.id %}" class="flex items-center gap-4 px-6 py-4 hover:bg-slate-50/70 transition-colors">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold
+              {% if item.content_type == 'caption' %}bg-blue-50 text-blue-600
+              {% elif item.content_type == 'hashtag_set' %}bg-indigo-50 text-indigo-600
+              {% elif item.content_type == 'script' %}bg-emerald-50 text-emerald-600
+              {% else %}bg-slate-100 text-slate-600{% endif %}">
+              {{ item.get_content_type_display|slice:':2'|upper }}
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-slate-900 truncate">{{ item.title|default:item.body|truncatechars:60 }}</p>
+              <p class="text-xs text-gray-500 mt-0.5">{{ item.get_content_type_display }} &middot; {{ item.created_at|date:'M d, Y' }}</p>
+            </div>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase
+              {% if item.status == 'published' %}bg-emerald-50 text-emerald-600
+              {% elif item.status == 'approved' %}bg-blue-50 text-blue-600
+              {% else %}bg-slate-100 text-slate-600{% endif %}">
+              {{ item.status }}
+            </span>
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        {% url 'content_studio:content_hub' as content_hub_url %}
+        {% include "components/empty_state.html" with title="No content yet" description="Generate captions, hashtags, and scripts with AI." cta_url=content_hub_url cta_label="Open AI Studio" icon="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" %}
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Panel: Folders -->
+    <div class="sch-tab-panel" id="panel-folders">
+      <div class="mt-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div>
+            <div class="premium-surface rounded-2xl p-6">
+              <h2 class="text-base font-bold text-slate-800 mb-4">New Folder</h2>
+              <form method="post" action="{% url 'media_assets:folders' %}" class="space-y-4">
+                {% csrf_token %}
+                <div>
+                  <label for="folder_name" class="block text-sm font-semibold text-slate-700 mb-1.5">Name</label>
+                  <input type="text" name="name" id="folder_name" class="auth-input w-full" placeholder="Folder name" required>
+                </div>
+                <button type="submit" class="btn-action btn-action-primary w-full">Create Folder</button>
+              </form>
+              <div class="mt-4 pt-4 border-t border-slate-100">
+                <a href="{% url 'media_assets:folders' %}" class="text-sm font-semibold text-indigo-600 hover:underline">Manage All Folders &rarr;</a>
+              </div>
+            </div>
+          </div>
+          <div class="lg:col-span-2">
+            <div class="premium-surface rounded-2xl overflow-hidden">
+              <div class="px-6 py-4 border-b border-slate-100">
+                <h2 class="text-base font-bold text-slate-800">Folder Structure</h2>
+              </div>
+              {% if media_folders %}
+              <div class="p-4">
+                <ul class="space-y-1">
+                  {% for folder in media_folders %}
+                  <li>
+                    <a href="{% url 'media_assets:folder_detail' folder.id %}" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 transition-colors group">
+                      <svg class="w-4 h-4 text-amber-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
+                      <span class="text-sm font-semibold text-slate-700 group-hover:text-primary transition-colors">{{ folder.name }}</span>
+                      <span class="text-xs text-gray-400 ml-auto">{{ folder.asset_count }}</span>
+                    </a>
+                    {% if folder.children %}
+                    <div class="ml-4 pl-4 border-l border-slate-100">
+                      <ul class="space-y-1">
+                        {% for child in folder.children %}
+                        <li>
+                          <a href="{% url 'media_assets:folder_detail' child.id %}" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 transition-colors group">
+                            <svg class="w-4 h-4 text-amber-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
+                            <span class="text-sm font-semibold text-slate-700 group-hover:text-primary transition-colors">{{ child.name }}</span>
+                            <span class="text-xs text-gray-400 ml-auto">{{ child.asset_count }}</span>
+                          </a>
+                          {% if child.children %}
+                          <div class="ml-4 pl-4 border-l border-slate-100">
+                            <ul class="space-y-1">
+                              {% for grandchild in child.children %}
+                              <li>
+                                <a href="{% url 'media_assets:folder_detail' grandchild.id %}" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 transition-colors group">
+                                  <svg class="w-4 h-4 text-amber-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
+                                  <span class="text-sm font-semibold text-slate-700 group-hover:text-primary transition-colors">{{ grandchild.name }}</span>
+                                  <span class="text-xs text-gray-400 ml-auto">{{ grandchild.asset_count }}</span>
+                                </a>
+                              </li>
+                              {% endfor %}
+                            </ul>
+                          </div>
+                          {% endif %}
+                        </li>
+                        {% endfor %}
+                      </ul>
+                    </div>
+                    {% endif %}
+                  </li>
+                  {% endfor %}
+                </ul>
+              </div>
+              {% else %}
+              <div class="px-6 py-12 text-center">
+                <div class="w-12 h-12 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+                  <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                </div>
+                <p class="text-sm text-slate-500">No folders yet. Create your first folder.</p>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function switchTab(tabId) {
+  document.querySelectorAll('.sch-tab').forEach(function(t) {
+    t.classList.remove('active');
+    t.setAttribute('aria-selected', 'false');
+  });
+  document.querySelectorAll('.sch-tab-panel').forEach(function(p) {
+    p.classList.remove('active');
+  });
+  document.getElementById('tab-' + tabId).classList.add('active');
+  document.getElementById('tab-' + tabId).setAttribute('aria-selected', 'true');
+  document.getElementById('panel-' + tabId).classList.add('active');
+  var url = new URL(window.location);
+  url.searchParams.set('tab', tabId);
+  history.replaceState(null, '', url);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var params = new URLSearchParams(window.location.search);
+  var tab = params.get('tab');
+  if (tab && document.getElementById('tab-' + tab)) switchTab(tab);
+});
+</script>
+{% endblock %}

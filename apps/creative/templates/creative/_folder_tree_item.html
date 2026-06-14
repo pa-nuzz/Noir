@@ -1,0 +1,39 @@
+{% load workspace_tags %}
+<div class="folder-tree-item">
+  <a href="{% url 'creative:media_library' %}?folder={{ folder.id }}"
+     class="flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors text-slate-600 hover:bg-slate-50 text-xs"
+     data-folder-id="{{ folder.id }}">
+    <!-- Ancestor vertical lines -->
+    {% for c in folder.connectors %}
+    {% if c %}
+    <span class="shrink-0 text-slate-300 font-mono">│</span>
+    {% else %}
+    <span class="shrink-0 text-slate-300 font-mono">&nbsp;</span>
+    {% endif %}
+    {% endfor %}
+    <!-- Branch connector -->
+    {% if folder.is_last %}
+    <span class="shrink-0 text-slate-300 font-mono">└──</span>
+    {% else %}
+    <span class="shrink-0 text-slate-300 font-mono">├──</span>
+    {% endif %}
+    <!-- Chevron or spacer -->
+    {% if folder.has_children %}
+    <span onclick="event.preventDefault();event.stopPropagation();toggleFolder({{ folder.id }})" class="shrink-0 cursor-pointer p-0.5 rounded hover:bg-slate-200 transition-transform" id="folder-chevron-{{ folder.id }}">
+      <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+    </span>
+    {% else %}
+    <span class="w-3 shrink-0"></span>
+    {% endif %}
+    <svg class="w-3.5 h-3.5 shrink-0 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
+    <span class="flex-1 truncate font-medium">{{ folder.name }}</span>
+    <span class="text-[10px] text-slate-400 font-semibold">{{ folder.asset_count }}</span>
+  </a>
+  {% if folder.children %}
+  <div id="folder-children-{{ folder.id }}" class="{% if depth > 0 %}hidden{% endif %}">
+    {% for child in folder.children %}
+    {% include "creative/_folder_tree_item.html" with folder=child depth=depth|add:1 %}
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>

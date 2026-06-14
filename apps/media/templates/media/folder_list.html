@@ -1,0 +1,48 @@
+{% extends 'base_dashboard.html' %}
+{% load workspace_tags %}
+{% block title %}Folders — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Media Folders{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none space-y-6">
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-slate-900">Folders</h1>
+{% can_create 'media' as can_create_media %}{% if can_create_media %}
+    {% url 'media:folder_create' as folder_create_url %}{% include "components/button.html" with label="New Folder" variant="primary" icon="M9 13h6m-3-3v6m-5 4h10a2 2 0 002-2V7a2 2 0 00-2-2H9l-3 3H5a2 2 0 00-2 2v8a2 2 0 002 2z" href=folder_create_url %}
+{% endif %}
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+    {% for folder in folders %}
+    <div class="premium-surface rounded-2xl p-5 flex items-center justify-between group">
+      <a href="{% url 'media:folder_detail' folder.pk %}" class="flex items-center gap-3 flex-1 min-w-0">
+        <svg class="w-8 h-8 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+        <div class="min-w-0">
+          <p class="text-sm font-semibold text-slate-900 truncate">{{ folder.name }}</p>
+          {% if folder.parent %}
+          <p class="text-[10px] text-gray-500">{{ folder.parent.name }} /</p>
+          {% endif %}
+        </div>
+      </a>
+{% can_delete 'media' as can_delete_media %}{% if can_delete_media %}
+      <form method="post" action="{% url 'media:folder_delete' folder.pk %}" onsubmit="return confirm('Delete folder {{ folder.name }} and all its assets?')">
+        {% csrf_token %}
+        <button type="submit" class="opacity-0 group-hover:opacity-100 p-1 text-red-400 hover:text-red-600 transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </button>
+      </form>
+{% endif %}
+    </div>
+    {% empty %}
+    <div class="col-span-full premium-surface rounded-2xl p-12 text-center">
+      <p class="text-sm text-gray-500">No folders yet.</p>
+      {% if can_create_media %}
+      <a href="{% url 'media:folder_create' %}" class="inline-flex mt-4 items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold">Create your first folder</a>
+      {% else %}
+      <p class="text-sm text-gray-400 mt-2">Contact an administrator to create folders.</p>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

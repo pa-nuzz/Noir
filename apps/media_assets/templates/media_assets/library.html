@@ -1,0 +1,116 @@
+{% extends 'base_dashboard.html' %}
+{% load workspace_tags %}
+{% block title %}Media Library — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Media Library{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none space-y-6">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Media Library</h1>
+      <p class="text-sm text-slate-500 mt-1">Upload, organize, and manage your media assets</p>
+    </div>
+    <div class="flex gap-3">
+{% can_create 'media' as can_create_media %}{% if can_create_media %}
+      {% include "components/button.html" with label="Upload" icon="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" variant="primary" href="#" onclick="event.preventDefault();openUploadModal();" class="inline-flex whitespace-nowrap" %}
+{% endif %}
+{% if can_create_media %}
+      {% url 'media_assets:folders' as folders_url %}
+      {% include "components/button.html" with label="Folders" icon="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" variant="secondary" href=folders_url class="inline-flex whitespace-nowrap" %}
+{% endif %}
+    </div>
+  </div>
+
+  <div class="flex flex-col lg:flex-row gap-6">
+    <div class="lg:w-56 shrink-0 space-y-4">
+      <div class="premium-surface rounded-2xl p-4">
+        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Filter by Type</h3>
+        <div class="space-y-1">
+          <a href="{% url 'media_assets:library' %}" class="block px-3 py-2 rounded-xl text-sm font-semibold transition-colors {% if not current_type %}bg-primary/10 text-primary{% else %}text-slate-600 hover:bg-slate-50{% endif %}">All Types</a>
+          <a href="{% url 'media_assets:library' %}?type=image" class="block px-3 py-2 rounded-xl text-sm font-semibold transition-colors {% if current_type == 'image' %}bg-primary/10 text-primary{% else %}text-slate-600 hover:bg-slate-50{% endif %}">Images</a>
+          <a href="{% url 'media_assets:library' %}?type=video" class="block px-3 py-2 rounded-xl text-sm font-semibold transition-colors {% if current_type == 'video' %}bg-primary/10 text-primary{% else %}text-slate-600 hover:bg-slate-50{% endif %}">Videos</a>
+          <a href="{% url 'media_assets:library' %}?type=audio" class="block px-3 py-2 rounded-xl text-sm font-semibold transition-colors {% if current_type == 'audio' %}bg-primary/10 text-primary{% else %}text-slate-600 hover:bg-slate-50{% endif %}">Audio</a>
+          <a href="{% url 'media_assets:library' %}?type=document" class="block px-3 py-2 rounded-xl text-sm font-semibold transition-colors {% if current_type == 'document' %}bg-primary/10 text-primary{% else %}text-slate-600 hover:bg-slate-50{% endif %}">Documents</a>
+        </div>
+      </div>
+
+      <div class="premium-surface rounded-2xl p-4">
+        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Folders</h3>
+        <div class="space-y-1">
+          <a href="{% url 'media_assets:library' %}" class="block px-3 py-2 rounded-xl text-sm font-semibold transition-colors {% if not current_folder %}bg-primary/10 text-primary{% else %}text-slate-600 hover:bg-slate-50{% endif %}">All</a>
+          {% for folder in folders %}
+          <a href="{% url 'media_assets:library' %}?folder={{ folder.id }}" class="block px-3 py-2 rounded-xl text-sm font-semibold transition-colors truncate {% if current_folder == folder.id|stringformat:'i' %}bg-primary/10 text-primary{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
+            <svg class="w-3.5 h-3.5 inline mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+            {{ folder.name }}
+          </a>
+          {% empty %}
+          <p class="text-xs text-gray-400 px-3">No folders yet</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="flex-1 min-w-0">
+      <div class="premium-surface rounded-2xl overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100">
+          <form method="get" class="flex gap-3">
+            <div class="relative flex-1">
+              <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              <input type="text" name="q" value="{{ query }}" class="auth-input w-full pl-10" placeholder="Search assets...">
+            </div>
+            <button type="submit" class="btn-action btn-action-primary">Search</button>
+            {% if query or current_type or current_folder %}
+            {% url 'media_assets:library' as clear_url %}
+            {% include "components/button.html" with label="Clear" variant="secondary" href=clear_url %}
+            {% endif %}
+          </form>
+        </div>
+
+        {% if assets %}
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 p-6">
+          {% for asset in assets %}
+          <a href="{% url 'media_assets:detail' asset.id %}" class="group premium-surface rounded-xl overflow-hidden hover:shadow-md transition-shadow">
+            <div class="aspect-square bg-slate-100 relative overflow-hidden flex items-center justify-center">
+              {% if asset.file_type == 'image' and asset.display_thumbnail_url %}
+              <img src="{{ asset.display_thumbnail_url }}" alt="{{ asset.title|default:asset.original_filename }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform">
+              {% elif asset.file_type == 'image' and asset.display_url %}
+              <img src="{{ asset.display_url }}" alt="{{ asset.title|default:asset.original_filename }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform">
+              {% elif asset.file_type == 'video' %}
+              <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span class="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">{{ asset.duration|floatformat:0 }}s</span>
+              {% elif asset.file_type == 'audio' %}
+              <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+              {% else %}
+              <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+              {% endif %}
+            </div>
+            <div class="p-3">
+              <p class="text-xs font-semibold text-slate-800 truncate">{{ asset.title|default:asset.original_filename }}</p>
+              <p class="text-[11px] text-gray-400 mt-0.5">
+                {{ asset.get_file_type_display }} · {{ asset.file_size|filesizeformat }}
+              </p>
+            </div>
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="px-6 py-16 text-center">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+            <svg class="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-slate-700 mb-2">No assets found</h3>
+          <p class="text-sm text-gray-400 mb-6">
+            {% if query or current_type or current_folder %}Try adjusting your filters.{% else %}Upload your first media asset.{% endif %}
+          </p>
+          {% if can_create_media %}
+          {% include "components/button.html" with label="Upload" variant="primary" href="#" onclick="event.preventDefault();openUploadModal();" class="inline-flex" %}
+          {% else %}
+          <p class="text-sm text-gray-400">Contact an administrator to upload assets.</p>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

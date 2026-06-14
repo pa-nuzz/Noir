@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% load static widget_tweaks %}
+{% block title %}Create Account — Intelligent Digital Automation (IDA){% endblock %}
+{% block extra_head %}
+<style>
+  @keyframes logoPop {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div class="min-h-[80vh] flex items-center justify-center px-4 py-12">
+  <div class="auth-card !max-w-[480px]">
+    <div class="text-center mb-10">
+      <div class="flex justify-center mb-8" style="animation: logoPop .5s ease-out both;">
+        <img src="{% static 'images/logo-mark.svg' %}?v={{ STATIC_VERSION }}" alt="Intelligent Digital Automation (IDA) Logo" class="w-12 h-12" />
+      </div>
+      <div class="flex justify-center">
+        <p class="eyebrow">Get started</p>
+      </div>
+      <h1 class="page-title mt-2">Create your account</h1>
+      <p class="page-lead text-center">Build campaigns, manage senders, and launch with fewer deliverability surprises.</p>
+    </div>
+
+    {% if form.non_field_errors %}
+      <div class="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl text-red-700 text-sm font-medium flex items-center gap-3">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        {{ form.non_field_errors.0 }}
+      </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'accounts:register' %}" class="space-y-6">
+      {% csrf_token %}
+      
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-2">First Name</label>
+          {{ form.first_name|add_class:"auth-input"|attr:"placeholder:John"|attr:"autofocus:autofocus" }}
+          {% if form.first_name.errors %}<p class="mt-2 text-sm text-red-600 font-medium">{{ form.first_name.errors.0 }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-2">Last Name</label>
+          {{ form.last_name|add_class:"auth-input"|attr:"placeholder:Doe" }}
+          {% if form.last_name.errors %}<p class="mt-2 text-sm text-red-600 font-medium">{{ form.last_name.errors.0 }}</p>{% endif %}
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
+        {{ form.email|add_class:"auth-input"|attr:"placeholder:john@company.com" }}
+        {% if form.email.errors %}<p class="mt-2 text-sm text-red-600 font-medium">{{ form.email.errors.0 }}</p>{% endif %}
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">Password</label>
+        <div class="relative">
+          {{ form.password1|add_class:"auth-input pr-12"|attr:"id:reg_password"|attr:"placeholder:••••••••" }}
+          <button type="button" onclick="togglePassword('reg_password', 'p-eye-1')" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+            <svg id="p-eye-1" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+          </button>
+        </div>
+        <!-- Strength Meter -->
+        <div class="mt-3">
+          <div class="flex gap-1">
+            <div id="strength-seg-1" class="h-1.5 flex-1 rounded-full bg-gray-200 transition-colors duration-300"></div>
+            <div id="strength-seg-2" class="h-1.5 flex-1 rounded-full bg-gray-200 transition-colors duration-300"></div>
+            <div id="strength-seg-3" class="h-1.5 flex-1 rounded-full bg-gray-200 transition-colors duration-300"></div>
+            <div id="strength-seg-4" class="h-1.5 flex-1 rounded-full bg-gray-200 transition-colors duration-300"></div>
+          </div>
+          <p id="strength-text" class="text-[11px] font-bold uppercase tracking-wider text-gray-400 mt-2">Enter a password</p>
+        </div>
+        {% if form.password1.errors %}<p class="mt-2 text-sm text-red-600 font-medium">{{ form.password1.errors.0 }}</p>{% endif %}
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">Confirm Password</label>
+        <div class="relative">
+          {{ form.password2|add_class:"auth-input pr-12"|attr:"id:reg_confirm"|attr:"placeholder:••••••••" }}
+          <button type="button" onclick="togglePassword('reg_confirm', 'p-eye-2')" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+            <svg id="p-eye-2" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+          </button>
+        </div>
+        <p id="password-match-indicator" class="mt-2 text-xs font-medium hidden"></p>
+        {% if form.password2.errors %}<p class="mt-2 text-sm text-red-600 font-medium">{{ form.password2.errors.0 }}</p>{% endif %}
+      </div>
+
+      <button type="submit" class="btn-primary w-full justify-center py-3.5 text-lg shadow-lg shadow-indigo-500/25">
+        Create Account
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9l3 3m0 0l-3 3m3-3H8m-4 -2a2 2 0 0 0 -2 2v1a2 2 0 0 0 2 2"/></svg>
+      </button>
+    </form>
+
+    <div class="mt-10 pt-8 border-t border-gray-100 text-center">
+      <p class="text-gray-600 font-medium">Already have an account? <a href="{% url 'accounts:login' %}" class="text-primary font-bold hover:underline">Sign In</a></p>
+    </div>
+  </div>
+</div>
+
+<script>
+  function togglePassword(id, iconId) {
+    const input = document.getElementById(id);
+    const icon = document.getElementById(iconId);
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/>';
+    } else {
+      input.type = 'password';
+      icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>';
+    }
+  }
+
+  const passInput = document.getElementById('reg_password');
+  const segments = [
+    document.getElementById('strength-seg-1'),
+    document.getElementById('strength-seg-2'),
+    document.getElementById('strength-seg-3'),
+    document.getElementById('strength-seg-4'),
+  ];
+  const text = document.getElementById('strength-text');
+  const confirmInput = document.getElementById('reg_confirm');
+  const matchIndicator = document.getElementById('password-match-indicator');
+
+  function paintSegments(count, colorClass) {
+    segments.forEach((seg, index) => {
+      seg.className = 'h-1.5 flex-1 rounded-full transition-colors duration-300 ' + (index < count ? colorClass : 'bg-gray-200');
+    });
+  }
+
+  passInput.addEventListener('input', () => {
+    const val = passInput.value;
+    let strength = 0;
+    if (val.length > 5) strength += 25;
+    if (val.length > 8) strength += 25;
+    if (/[A-Z]/.test(val)) strength += 25;
+    if (/[0-9]/.test(val) || /[^A-Za-z0-9]/.test(val)) strength += 25;
+
+    if (strength === 0) {
+      paintSegments(0, 'bg-gray-200');
+      text.innerText = 'Enter a password';
+      text.className = 'text-[11px] font-bold uppercase tracking-wider text-gray-400 mt-2';
+    } else if (strength <= 24) {
+      paintSegments(1, 'bg-red-400');
+      text.innerText = 'Weak';
+      text.className = 'text-[11px] font-bold uppercase tracking-wider text-red-500 mt-2';
+    } else if (strength <= 49) {
+      paintSegments(2, 'bg-amber-400');
+      text.innerText = 'Good';
+      text.className = 'text-[11px] font-bold uppercase tracking-wider text-yellow-600 mt-2';
+    } else if (strength <= 74) {
+      paintSegments(3, 'bg-emerald-400');
+      text.innerText = 'Strong';
+      text.className = 'text-[11px] font-bold uppercase tracking-wider text-emerald-600 mt-2';
+    } else {
+      paintSegments(4, 'bg-emerald-400');
+      text.innerText = 'Very Strong';
+      text.className = 'text-[11px] font-bold uppercase tracking-wider text-emerald-600 mt-2';
+    }
+
+    updatePasswordMatch();
+  });
+
+  function updatePasswordMatch() {
+    const passVal = passInput.value;
+    const confirmVal = confirmInput.value;
+
+    if (!confirmVal) {
+      matchIndicator.classList.add('hidden');
+      matchIndicator.textContent = '';
+      return;
+    }
+
+    matchIndicator.classList.remove('hidden');
+
+    if (passVal === confirmVal) {
+      matchIndicator.className = 'mt-2 text-xs font-medium text-emerald-600';
+      matchIndicator.textContent = '✓ Passwords match';
+    } else {
+      matchIndicator.className = 'mt-2 text-xs font-medium text-red-600';
+      matchIndicator.textContent = '✕ Passwords don\'t match';
+    }
+  }
+
+  confirmInput.addEventListener('input', updatePasswordMatch);
+  passInput.addEventListener('input', updatePasswordMatch);
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const firstNameInput = document.getElementById('id_first_name');
+    if (firstNameInput) {
+      firstNameInput.focus();
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>400 - Bad Request</title>
+  <style>
+    :root { --bg: #f8fafc; --card: #ffffff; --text: #0f172a; --muted: #64748b; --primary: #2563eb; --border: #e2e8f0; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #020617; --card: #0f172a; --text: #f8fafc; --muted: #94a3b8; --primary: #60a5fa; --border: #1e293b; } }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; display: grid; place-items: center; min-height: 100vh; line-height: 1.5; }
+    .card { max-width: 420px; width: 90%; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 40px; text-align: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); transition: transform 0.2s; }
+    .icon { width: 64px; height: 64px; background: #fee2e2; color: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; }
+    h1 { margin: 0 0 12px; font-size: 1.875rem; font-weight: 800; }
+    p { margin: 0 0 32px; color: var(--muted); font-size: 1.1rem; }
+    .btn { display: inline-block; background: var(--primary); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: opacity 0.2s; }
+    .btn:hover { opacity: 0.9; }
+    .code { font-family: monospace; font-size: 0.8rem; color: var(--muted); margin-top: 24px; opacity: 0.6; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="icon">
+      <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+    </div>
+    <h1>Invalid Request</h1>
+    <p>The request could not be understood by the server. Please verify the URL or data provided.</p>
+    <a href="/" class="btn">Back to Home</a>
+    <div class="code">Error Code: 400</div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{% load widget_tweaks %}
+<div class="form-group {{ class }}">
+  {% if label %}
+    <label for="{{ id }}" class="form-label">{{ label }}{% if required %}<span class="text-red-500 ml-1">*</span>{% endif %}</label>
+  {% endif %}
+  {% if field %}
+    {% if field|field_type == "textarea" %}
+      {{ field|add_class:"input-field"|attr:"id:"|add:id }}
+    {% elif field|field_type == "select" %}
+      {{ field|add_class:"input-field"|attr:"id:"|add:id }}
+    {% elif field|field_type == "checkboxinput" %}
+      <label class="flex items-center gap-2">
+        {{ field|add_class:"rounded border-gray-300 text-brand focus:ring-cyan" }}
+        <span class="text-sm text-gray-600">{{ field.label }}</span>
+      </label>
+    {% else %}
+      {{ field|add_class:"input-field"|attr:"id:"|add:id }}
+    {% endif %}
+    {% if field.help_text %}<p class="help">{{ field.help_text }}</p>{% endif %}
+    {% if field.errors %}<p class="err">{{ field.errors.0 }}</p>{% endif %}
+  {% else %}
+    <input type="{{ type|default:'text' }}" id="{{ id }}" name="{{ name }}" value="{{ value|default:'' }}"
+           placeholder="{{ placeholder|default:'' }}" {% if required %}required{% endif %}
+           class="input-field" {% if disabled %}disabled{% endif %}>
+  {% endif %}
+</div>

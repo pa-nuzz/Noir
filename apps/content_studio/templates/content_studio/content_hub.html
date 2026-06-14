@@ -1,0 +1,585 @@
+{% extends 'base_dashboard.html' %}
+{% load dashboard_tags %}
+
+{% block title %}Content Hub — IDA{% endblock %}
+
+{% block content %}
+<style>
+  .sch-tabs {
+    display: flex; align-items: center; gap: 0;
+    border-bottom: 1px solid #E2E8F0; margin-top: 4px;
+  }
+  .sch-tab {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 20px; height: 44px;
+    font-size: 0.875rem; font-weight: 600;
+    color: #64748B; background: transparent;
+    border: none; border-bottom: 2px solid transparent;
+    cursor: pointer; transition: all 0.15s ease;
+    text-decoration: none; white-space: nowrap;
+  }
+  .sch-tab:hover { color: #0A2540; background: #F8FAFC; }
+  .sch-tab.active { color: #0A2540; border-bottom-color: #06B6D4; font-weight: 700; }
+  .sch-tab svg { width: 18px; height: 18px; }
+  .sch-tab-panel { display: none; }
+  .sch-tab-panel.active { display: block; }
+
+  /* Content list items */
+  .cs-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 20px; transition: background-color 0.15s;
+  }
+  .cs-item:hover { background-color: #F8FAFC; }
+  .cs-type-badge {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.6875rem; font-weight: 700; flex-shrink: 0;
+  }
+  .cs-status {
+    display: inline-block; padding: 2px 8px; border-radius: 9999px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+  }
+  .cs-status-draft { background: #F1F5F9; color: #64748B; }
+  .cs-status-pending_review { background: #FEF3C7; color: #D97706; }
+  .cs-status-approved { background: #D1FAE5; color: #059669; }
+  .cs-status-published { background: #DBEAFE; color: #1D4ED8; }
+  .cs-status-archived { background: #F3F4F6; color: #9CA3AF; }
+
+  /* Generator cards */
+  .cs-gen-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; border-radius: 12px;
+    border: 1px solid #E2E8F0; background: #FFFFFF;
+    text-decoration: none; transition: all 0.15s;
+  }
+  .cs-gen-card:hover { border-color: #06B6D4; box-shadow: 0 4px 12px rgba(6,182,212,0.1); }
+  .cs-gen-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    background: #F1F5F9; flex-shrink: 0; transition: background 0.15s;
+  }
+  .cs-gen-card:hover .cs-gen-icon { background: #ECFEFF; }
+  .cs-gen-icon svg { width: 18px; height: 18px; color: #64748B; transition: color 0.15s; }
+  .cs-gen-card:hover .cs-gen-icon svg { color: #06B6D4; }
+
+</style>
+
+<div class="page-shell max-w-none space-y-6">
+  <!-- Page Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">AI Content Studio</h1>
+      <p class="text-sm text-slate-500 mt-1">Generate, refine, and manage AI-powered content</p>
+    </div>
+    <div class="flex gap-3">
+      {% url 'content_studio:generate' as content_studio_generate_url %}
+      {% include "components/button.html" with label="Generate Content" variant="primary" href=content_studio_generate_url icon="M13 10V3L4 14h7v7l9-11h-7z" %}
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+    <div class="premium-surface rounded-2xl p-5">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Total Items</p>
+      <p class="text-2xl font-bold text-slate-900 mt-1">{{ stats.total }}</p>
+    </div>
+    <div class="premium-surface rounded-2xl p-5">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Drafts</p>
+      <p class="text-2xl font-bold text-slate-900 mt-1">{{ stats.drafts }}</p>
+    </div>
+    <div class="premium-surface rounded-2xl p-5">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Approved</p>
+      <p class="text-2xl font-bold text-slate-900 mt-1">{{ stats.approved }}</p>
+    </div>
+    <div class="premium-surface rounded-2xl p-5">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Published</p>
+      <p class="text-2xl font-bold text-slate-900 mt-1">{{ stats.published }}</p>
+    </div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div>
+    <div class="sch-tabs" role="tablist">
+      <button class="sch-tab active" role="tab" aria-selected="true" onclick="switchTab('overview')" id="tab-overview">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Overview
+      </button>
+      <button class="sch-tab" role="tab" aria-selected="false" onclick="switchTab('generate')" id="tab-generate">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        Generate
+      </button>
+      <button class="sch-tab" role="tab" aria-selected="false" onclick="switchTab('history')" id="tab-history">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        History
+      </button>
+    </div>
+
+    <!-- Panel: Overview -->
+    <div class="sch-tab-panel active" id="panel-overview">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        <!-- Recent Content -->
+        <div class="lg:col-span-2 premium-surface rounded-2xl overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h2 class="text-sm font-bold text-slate-800">Recent Content</h2>
+          </div>
+          {% if items %}
+          <div class="divide-y divide-slate-50">
+            {% for item in items %}
+            <a href="{% url 'content_studio:detail' item.id %}" class="cs-item">
+              <div class="cs-type-badge
+                {% if item.content_type == 'caption' %}bg-blue-50 text-blue-600
+                {% elif item.content_type == 'hashtag_set' %}bg-indigo-50 text-indigo-600
+                {% elif item.content_type == 'carousel' %}bg-amber-50 text-amber-600
+                {% elif item.content_type == 'script' %}bg-emerald-50 text-emerald-600
+                {% elif item.content_type == 'image_prompt' %}bg-violet-50 text-violet-600
+                {% elif item.content_type == 'cta' %}bg-rose-50 text-rose-600
+                {% else %}bg-slate-100 text-slate-600{% endif %}">
+                {{ item.get_content_type_display|slice:':2'|upper }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-slate-900 truncate">{{ item.title|default:item.body|truncatechars:60 }}</p>
+                <p class="text-xs text-gray-400 mt-0.5">
+                  {{ item.get_content_type_display }} &middot; {{ item.created_at|date:'M d, Y' }}
+                  {% if item.platform %} &middot; {{ item.platform|title }}{% endif %}
+                </p>
+              </div>
+              <span class="cs-status cs-status-{{ item.status }}">{{ item.get_status_display }}</span>
+            </a>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="px-6 py-12 text-center">
+            <div class="w-12 h-12 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+              <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            </div>
+            <p class="text-sm text-slate-500">No content yet. Generate your first piece.</p>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Generators -->
+        <div class="premium-surface rounded-2xl p-5">
+          <h2 class="text-sm font-bold text-slate-800 mb-4">Content Generators</h2>
+          <div class="space-y-2">
+            {% for gen in generators %}
+            <a href="{% url 'content_studio:generate' %}?type={{ gen.key }}" class="cs-gen-card">
+              <div class="cs-gen-icon">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              </div>
+              <span class="text-sm font-semibold text-slate-700">{{ gen.name }}</span>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel: Generate -->
+    <div class="sch-tab-panel" id="panel-generate">
+      <div class="mt-6">
+        <form method="post" action="{% url 'content_studio:generate' %}" class="space-y-6">
+          {% csrf_token %}
+
+          <div class="premium-surface rounded-2xl p-6 space-y-5">
+            <h2 class="text-base font-bold text-slate-800">1. Choose Type</h2>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label for="content_type" class="block text-sm font-semibold text-slate-700 mb-1.5">Content Type *</label>
+                <select name="content_type" id="content_type" class="input-field w-full" onchange="toggleFields()">
+                  {% for gen in generators %}
+                  <option value="{{ gen.key }}" {% if request.GET.type == gen.key %}selected{% endif %}>{{ gen.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div>
+                <label for="platform" class="block text-sm font-semibold text-slate-700 mb-1.5">Target Platform</label>
+                <select name="platform" id="platform" class="input-field w-full">
+                  <option value="all">All Platforms</option>
+                  <option value="facebook">Facebook</option>
+                  <option value="instagram">Instagram</option>
+                  <option value="twitter">X (Twitter)</option>
+                  <option value="linkedin">LinkedIn</option>
+                  <option value="tiktok">TikTok</option>
+                  <option value="youtube">YouTube</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label for="tone" class="block text-sm font-semibold text-slate-700 mb-1.5">Tone</label>
+                  <select name="tone" id="tone" class="input-field w-full">
+                    <option value="professional">Professional</option>
+                    <option value="casual">Casual</option>
+                    <option value="humorous">Humorous</option>
+                    <option value="inspirational">Inspirational</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label for="prompt" class="block text-sm font-semibold text-slate-700 mb-1.5">Prompt / Topic *</label>
+              <textarea name="prompt" id="prompt" rows="4" class="input-field w-full resize-y" placeholder="Describe what you want to create..." required></textarea>
+            </div>
+
+            <div id="extraFields" class="space-y-4 border-t border-slate-100 pt-4">
+              <p class="text-sm font-semibold text-slate-700">Extra Options</p>
+
+              <div id="extra-hashtag_set" class="extra-group hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700 mb-1.5">Number of Hashtags</label>
+                  <input type="number" name="hashtag_count" class="input-field w-full" value="10" min="1" max="50">
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700 mb-1.5">Category</label>
+                  <select name="category" class="input-field w-full">
+                    <option value="general">General</option>
+                    <option value="technology">Technology</option>
+                    <option value="business">Business</option>
+                    <option value="health">Health</option>
+                    <option value="fashion">Fashion</option>
+                    <option value="travel">Travel</option>
+                    <option value="food">Food</option>
+                    <option value="fitness">Fitness</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="extra-carousel" class="extra-group hidden">
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Number of Slides</label>
+                <input type="number" name="slides" class="input-field w-full sm:w-32" value="5" min="2" max="20">
+              </div>
+
+              <div id="extra-script" class="extra-group hidden">
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Format</label>
+                <select name="format" class="input-field w-full sm:w-60">
+                  <option value="short">Short (15-30s)</option>
+                  <option value="long">Long (1-3 min)</option>
+                  <option value="reel">Reel / Shorts</option>
+                </select>
+              </div>
+
+              <div id="extra-image_prompt" class="extra-group hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700 mb-1.5">Art Style</label>
+                  <input type="text" name="style" class="input-field w-full" placeholder="e.g. minimalist, realistic">
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700 mb-1.5">Mood</label>
+                  <input type="text" name="mood" class="input-field w-full" placeholder="e.g. serene, dramatic">
+                </div>
+              </div>
+
+              <div id="extra-cta" class="extra-group hidden">
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Goal</label>
+                <select name="goal" class="input-field w-full sm:w-60">
+                  <option value="engagement">Engagement</option>
+                  <option value="conversion">Conversion / Sales</option>
+                  <option value="awareness">Brand Awareness</option>
+                  <option value="signup">Signups</option>
+                  <option value="traffic">Website Traffic</option>
+                </select>
+              </div>
+
+              <div id="extra-caption" class="extra-group hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700 mb-1.5">Hashtag Count</label>
+                  <input type="number" name="caption_hashtag_count" class="input-field w-full" value="3" min="0" max="30">
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700 mb-1.5">Target Audience</label>
+                  <input type="text" name="target_audience" class="input-field w-full" placeholder="e.g. tech professionals, parents">
+                </div>
+              </div>
+
+              <div id="extra-full_post" class="extra-group hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700 mb-1.5">Target Audience</label>
+                  <input type="text" name="target_audience" class="input-field w-full" placeholder="e.g. small business owners">
+                </div>
+                <div class="sm:col-span-2">
+                  <label class="block text-sm font-semibold text-slate-700 mb-1.5">Key Points</label>
+                  <textarea name="key_points" rows="3" class="input-field w-full resize-y" placeholder="Bullet points or key topics to cover..."></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="premium-surface rounded-2xl p-6 space-y-4">
+            <h2 class="text-base font-bold text-slate-800">2. Attach Media Assets</h2>
+            <p class="text-sm text-slate-500">Optionally attach images, videos, or documents from your media library</p>
+            <input type="hidden" name="asset_ids" id="asset_ids" value="">
+            {% include "components/button.html" with label="Browse Media" variant="secondary" onclick="openMediaPicker()" icon="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" %}
+            <div id="selected-media-preview" class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 hidden"></div>
+          </div>
+
+          <div class="flex items-center justify-end gap-3">
+            <button type="submit" class="btn-action btn-action-primary">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              Generate
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Panel: History -->
+    <div class="sch-tab-panel" id="panel-history">
+      <div class="mt-6">
+        <div class="premium-surface rounded-2xl overflow-hidden">
+          {% if all_items %}
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-slate-100 bg-slate-50/50">
+                  <th class="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Title</th>
+                  <th class="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Type</th>
+                  <th class="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Platform</th>
+                  <th class="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                  <th class="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Created</th>
+                  <th class="text-right px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-50">
+                {% for item in all_items %}
+                <tr class="hover:bg-slate-50/50 transition-colors">
+                  <td class="px-6 py-4">
+                    <a href="{% url 'content_studio:detail' item.id %}" class="font-semibold text-slate-900 hover:text-primary transition-colors truncate block max-w-[240px]">{{ item.title|default:'Untitled' }}</a>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="px-2.5 py-1 rounded-lg text-xs font-semibold
+                      {% if item.content_type == 'caption' %}bg-blue-50 text-blue-600
+                      {% elif item.content_type == 'hashtag_set' %}bg-indigo-50 text-indigo-600
+                      {% elif item.content_type == 'carousel' %}bg-amber-50 text-amber-600
+                      {% elif item.content_type == 'script' %}bg-emerald-50 text-emerald-600
+                      {% elif item.content_type == 'image_prompt' %}bg-violet-50 text-violet-600
+                      {% elif item.content_type == 'cta' %}bg-rose-50 text-rose-600
+                      {% else %}bg-slate-100 text-slate-600{% endif %}">
+                      {{ item.get_content_type_display }}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-slate-600">{{ item.platform|title|default:'—' }}</td>
+                  <td class="px-6 py-4">
+                    <span class="cs-status cs-status-{{ item.status }}">{{ item.get_status_display }}</span>
+                  </td>
+                  <td class="px-6 py-4 text-slate-600">{{ item.created_at|date:'M d, Y' }}</td>
+                  <td class="px-6 py-4 text-right">
+                    <a href="{% url 'content_studio:detail' item.id %}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors">View</a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          {% include "components/empty_state.html" with title="No content history" description="Generated content will appear here." %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="mediaPickerModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+  <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" onclick="closeModal('mediaPickerModal')"></div>
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col">
+      <div class="flex items-center justify-between p-5 border-b border-slate-200">
+        <h3 class="text-lg font-bold text-slate-800">Select Media Assets</h3>
+        <button type="button" onclick="closeModal('mediaPickerModal')" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
+          <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="mediaGrid" class="flex-1 overflow-y-auto p-5 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        <div class="col-span-full text-center py-12 text-slate-400">
+          <svg class="w-8 h-8 mx-auto mb-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+          <p>Loading assets...</p>
+        </div>
+      </div>
+      <div class="flex items-center justify-between p-5 border-t border-slate-200">
+        <p id="selectionCount" class="text-sm text-slate-500">0 selected</p>
+        <div class="flex gap-3">
+          {% include "components/button.html" with label="Cancel" variant="secondary" onclick="closeModal('mediaPickerModal')" %}
+          {% include "components/button.html" with label="Attach Selected" variant="primary" onclick="confirmMediaSelection()" %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+</script>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function switchTab(tabId) {
+  document.querySelectorAll('.sch-tab').forEach(function(t) {
+    t.classList.remove('active');
+    t.setAttribute('aria-selected', 'false');
+  });
+  document.querySelectorAll('.sch-tab-panel').forEach(function(p) {
+    p.classList.remove('active');
+  });
+  document.getElementById('tab-' + tabId).classList.add('active');
+  document.getElementById('tab-' + tabId).setAttribute('aria-selected', 'true');
+  document.getElementById('panel-' + tabId).classList.add('active');
+}
+
+function toggleFields() {
+  var type = document.getElementById('content_type').value;
+  document.querySelectorAll('.extra-group').forEach(function(g) { g.classList.add('hidden'); });
+  var target = document.getElementById('extra-' + type);
+  if (target) target.classList.remove('hidden');
+}
+document.addEventListener('DOMContentLoaded', toggleFields);
+
+// Media picker
+let selectedAssetIds = new Set();
+
+function updateSelectionUI() {
+  document.querySelectorAll('.media-item').forEach(el => {
+    const id = parseInt(el.dataset.id);
+    el.classList.toggle('ring-2', selectedAssetIds.has(id));
+    el.classList.toggle('ring-indigo-500', selectedAssetIds.has(id));
+    const check = el.querySelector('.media-check');
+    if (check) check.classList.toggle('hidden', !selectedAssetIds.has(id));
+  });
+  document.getElementById('selectionCount').textContent = selectedAssetIds.size + ' selected';
+}
+
+function toggleAsset(id) {
+  if (selectedAssetIds.has(id)) selectedAssetIds.delete(id);
+  else selectedAssetIds.add(id);
+  updateSelectionUI();
+}
+
+function closeMediaPicker() {
+  document.getElementById('mediaPickerModal').classList.add('hidden');
+}
+
+function confirmMediaSelection() {
+  const ids = Array.from(selectedAssetIds).join(',');
+  document.getElementById('asset_ids').value = ids;
+  renderSelectedPreview();
+  closeMediaPicker();
+}
+
+function renderSelectedPreview() {
+  const container = document.getElementById('selected-media-preview');
+  const ids = document.getElementById('asset_ids').value;
+  if (!ids) {
+    container.classList.add('hidden');
+    container.innerHTML = '';
+    return;
+  }
+  const idList = ids.split(',').map(Number);
+  container.classList.remove('hidden');
+  container.innerHTML = '';
+  document.querySelectorAll('.media-item').forEach(el => {
+    const id = parseInt(el.dataset.id);
+    if (idList.includes(id)) {
+      const thumb = el.querySelector('img');
+      const title = el.dataset.title || 'Asset';
+      const div = document.createElement('div');
+      div.className = 'relative group aspect-square rounded-lg overflow-hidden bg-slate-100';
+      if (thumb) {
+        const img = document.createElement('img');
+        img.src = thumb.src;
+        img.alt = title;
+        img.className = 'w-full h-full object-cover';
+        div.appendChild(img);
+      } else {
+        div.innerHTML = '<div class="flex items-center justify-center h-full text-slate-400 text-xs">No preview</div>';
+      }
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'absolute top-1 right-1 p-1 bg-white/80 rounded-full hover:bg-red-100 transition-colors opacity-0 group-hover:opacity-100';
+      remove.innerHTML = '<svg class="w-3 h-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>';
+      remove.onclick = function(e) {
+        e.stopPropagation();
+        selectedAssetIds.delete(id);
+        updateSelectionUI();
+        confirmMediaSelection();
+      };
+      div.appendChild(remove);
+      container.appendChild(div);
+    }
+  });
+}
+
+function openMediaPicker() {
+  document.getElementById('mediaPickerModal').classList.remove('hidden');
+  updateSelectionUI();
+  if (document.querySelectorAll('.media-item').length === 0) fetchAssets();
+}
+
+function fetchAssets() {
+  const grid = document.getElementById('mediaGrid');
+  grid.innerHTML = '<div class="col-span-full text-center py-12 text-slate-400"><svg class="w-8 h-8 mx-auto mb-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg><p>Loading assets...</p></div>';
+
+  fetch('/media-assets/api/assets/')
+    .then(r => r.json())
+    .then(data => {
+      if (!data.assets || data.assets.length === 0) {
+        grid.innerHTML = '<div class="col-span-full text-center py-12 text-slate-400"><p>No media assets found. <a href="/media-assets/upload/" class="text-indigo-600 hover:underline">Upload one first</a>.</p></div>';
+        return;
+      }
+      grid.innerHTML = '';
+      const existing = document.getElementById('asset_ids').value;
+      if (existing) {
+        existing.split(',').map(Number).forEach(id => selectedAssetIds.add(id));
+      }
+      data.assets.forEach(a => {
+        const div = document.createElement('div');
+        div.className = 'media-item relative aspect-square rounded-lg overflow-hidden bg-slate-100 cursor-pointer hover:ring-2 hover:ring-indigo-300 transition-all';
+        div.dataset.id = a.id;
+        div.dataset.title = a.title;
+        div.onclick = () => toggleAsset(a.id);
+        const check = document.createElement('div');
+        check.className = 'media-check absolute top-2 left-2 w-5 h-5 bg-indigo-600 rounded-full flex items-center justify-center hidden';
+        check.innerHTML = '<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>';
+        div.appendChild(check);
+        if (a.thumbnail_url) {
+          const img = document.createElement('img');
+          img.src = a.thumbnail_url;
+          img.alt = a.title;
+          img.className = 'w-full h-full object-cover';
+          div.appendChild(img);
+        } else {
+          const icon = document.createElement('div');
+          icon.className = 'flex items-center justify-center h-full text-slate-400';
+          icon.innerHTML = '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>';
+          div.appendChild(icon);
+        }
+        const label = document.createElement('div');
+        label.className = 'absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-2 pt-4';
+        const labelText = document.createElement('p');
+        labelText.className = 'text-xs text-white truncate';
+        labelText.textContent = a.title;
+        label.appendChild(labelText);
+        div.appendChild(label);
+        if (selectedAssetIds.has(a.id)) {
+          div.classList.add('ring-2', 'ring-indigo-500');
+          check.classList.remove('hidden');
+        }
+        grid.appendChild(div);
+      });
+      updateSelectionUI();
+    })
+    .catch(() => {
+      grid.innerHTML = '<div class="col-span-full text-center py-12 text-slate-400"><p>Failed to load assets. Try again later.</p></div>';
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('openMediaPicker').addEventListener('click', openMediaPicker);
+});
+</script>
+{% endblock %}

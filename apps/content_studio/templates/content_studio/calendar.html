@@ -1,0 +1,96 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Content Calendar — Content Studio{% endblock %}
+{% block page_title %}Content Calendar{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center gap-3">
+      <a href="{% url 'content_studio:calendar' %}?year={{ prev_year }}&month={{ prev_month }}" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
+        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      </a>
+      <h2 class="text-xl font-bold text-slate-900">{{ month_name }} {{ year }}</h2>
+      <a href="{% url 'content_studio:calendar' %}?year={{ next_year }}&month={{ next_month }}" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
+        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+    {% url 'content_studio:calendar' as content_studio_calendar_url %}
+    {% include "components/button.html" with label="Today" variant="secondary" size="sm" href=content_studio_calendar_url %}
+  </div>
+
+  <div class="premium-surface rounded-2xl overflow-hidden">
+    <div class="grid grid-cols-7 border-b border-slate-200">
+      <div class="px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Mon</div>
+      <div class="px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Tue</div>
+      <div class="px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Wed</div>
+      <div class="px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Thu</div>
+      <div class="px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Fri</div>
+      <div class="px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Sat</div>
+      <div class="px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Sun</div>
+    </div>
+    {% for week in cal_rows %}
+    <div class="grid grid-cols-7 border-b border-slate-100 last:border-b-0">
+      {% for cell in week %}
+        {% if cell %}
+        <div class="min-h-[100px] p-2 border-r border-slate-100 last:border-r-0 {% if cell.is_today %}bg-indigo-50/50{% elif cell.is_past %}bg-slate-50/30{% endif %}">
+          <div class="text-sm font-semibold mb-1 {% if cell.is_today %}text-indigo-600{% else %}text-slate-700{% endif %}">
+            {{ cell.day }}
+          </div>
+          <div class="space-y-1">
+            {% for item in cell.items|slice:":3" %}
+            <a href="{% url 'content_studio:detail' item.id %}"
+               class="block px-2 py-1 rounded-lg text-[11px] font-semibold leading-tight truncate hover:brightness-90 transition-all
+                      {% if item.content_type == 'caption' %}bg-blue-50 text-blue-700
+                      {% elif item.content_type == 'hashtag_set' %}bg-emerald-50 text-emerald-700
+                      {% elif item.content_type == 'carousel' %}bg-purple-50 text-purple-700
+                      {% elif item.content_type == 'script' %}bg-amber-50 text-amber-700
+                      {% elif item.content_type == 'image_prompt' %}bg-rose-50 text-rose-700
+                      {% elif item.content_type == 'cta' %}bg-cyan-50 text-cyan-700
+                      {% elif item.content_type == 'full_post' %}bg-indigo-50 text-indigo-700
+                      {% endif %}">
+              {{ item.title|truncatechars:20 }}
+            </a>
+            {% endfor %}
+            {% if cell.items|length > 3 %}
+            <p class="text-[10px] text-slate-400 pl-2">+{{ cell.items|length|add:"-3" }} more</p>
+            {% endif %}
+          </div>
+        </div>
+        {% else %}
+        <div class="min-h-[100px] bg-slate-50/20 border-r border-slate-100 last:border-r-0"></div>
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% empty %}
+    <div class="p-12 text-center text-slate-400">
+      <p>No items scheduled this month.</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if unscheduled %}
+  <div class="premium-surface rounded-2xl p-5 mt-6">
+    <h3 class="text-sm font-bold text-slate-800 mb-3">Unscheduled Content</h3>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {% for item in unscheduled %}
+      <a href="{% url 'content_studio:detail' item.id %}" class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
+        <div class="w-2 h-2 rounded-full
+          {% if item.content_type == 'caption' %}bg-blue-500
+          {% elif item.content_type == 'hashtag_set' %}bg-emerald-500
+          {% elif item.content_type == 'carousel' %}bg-purple-500
+          {% elif item.content_type == 'script' %}bg-amber-500
+          {% elif item.content_type == 'image_prompt' %}bg-rose-500
+          {% elif item.content_type == 'cta' %}bg-cyan-500
+          {% elif item.content_type == 'full_post' %}bg-indigo-500
+          {% endif %}"></div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-slate-800 truncate">{{ item.title }}</p>
+          <p class="text-xs text-slate-400">{{ item.get_content_type_display }} · {{ item.created_at|date:"M d" }}</p>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

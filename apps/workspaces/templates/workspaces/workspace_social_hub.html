@@ -1,0 +1,115 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Social Hub — {{ workspace.name }}{% endblock %}
+{% block content %}
+
+<div class="page-shell max-w-none space-y-6">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="flex items-center gap-4 min-w-0">
+      <a href="{% url 'workspaces:overview' workspace.id %}" class="p-2 rounded-xl hover:bg-slate-100 transition-colors flex-shrink-0" title="Back to overview">
+        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      </a>
+      <div class="min-w-0">
+        <h2 class="page-title truncate">Social Hub</h2>
+        <p class="page-subtitle truncate">{{ workspace.name }}</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 flex-shrink-0">
+      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
+        {% if membership.role == 'owner' %}bg-amber-50 text-amber-700
+        {% elif membership.role == 'admin' %}bg-indigo-50 text-indigo-700
+        {% elif membership.role == 'member' %}bg-emerald-50 text-emerald-700
+        {% else %}bg-slate-100 text-slate-600{% endif %}">
+        {{ membership.get_role_display }}
+      </span>
+      {% if membership.role == 'owner' or membership.role == 'admin' %}
+      <a href="{% url 'social_accounts:social_hub' %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Connect Account
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if messages %}
+  <div class="space-y-2">
+    {% for message in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm font-semibold
+      {% if message.tags == 'success' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+      {% elif message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200
+      {% else %}bg-indigo-50 text-indigo-700 border border-indigo-200{% endif %}">
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="premium-surface card-elevate section-card">
+    <div class="section-head">
+      <h2 class="section-title">Shared Accounts</h2>
+      <p class="section-subtitle">Social platforms connected to this workspace</p>
+    </div>
+    {% if shared_accounts %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      {% for sa in shared_accounts %}
+      <div class="rounded-xl border border-slate-100 bg-white p-4 hover:border-slate-200 transition-colors">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center font-bold flex-shrink-0">
+            {{ sa.account.get_platform_display|first|upper }}
+          </div>
+          <div class="min-w-0">
+            <p class="text-sm font-bold text-slate-800 truncate">{{ sa.account.account_name }}</p>
+            <p class="text-xs text-slate-500">{{ sa.account.get_platform_display }}</p>
+          </div>
+        </div>
+        <div class="mt-3 flex items-center justify-between">
+          <span class="text-[10px] text-slate-400">Added by {{ sa.added_by.get_full_name|default:sa.added_by.email }}</span>
+          {% include "components/badge.html" with label="Active" variant="green" %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    {% include "components/empty_state.html" with title="No shared accounts" description="Ask an owner or admin to connect social platforms." %}
+    {% endif %}
+  </div>
+
+  <div class="premium-surface card-elevate section-card">
+    <div class="section-head">
+      <h2 class="section-title">Posts</h2>
+      <p class="section-subtitle">Social posts created in this workspace</p>
+    </div>
+    {% if posts %}
+    <div class="divide-y divide-slate-100 -mx-6">
+      {% for post in posts %}
+      <div class="px-6 py-4 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center flex-shrink-0 font-bold text-xs">
+            {{ post.platform|first|upper }}
+          </div>
+          <div class="min-w-0">
+            <p class="text-sm font-semibold text-slate-800 truncate">{{ post.content|default:'(no content)'|truncatechars:80 }}</p>
+            <p class="text-xs text-slate-500 mt-0.5">{{ post.created_at|date:'M d, Y · H:i' }} · by {{ post.user.get_full_name|default:post.user.email }}</p>
+          </div>
+        </div>
+        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex-shrink-0
+          {% if post.status == 'published' %}bg-emerald-50 text-emerald-700
+          {% elif post.status == 'scheduled' %}bg-indigo-50 text-indigo-700
+          {% elif post.status == 'draft' %}bg-slate-100 text-slate-600
+          {% elif post.status == 'failed' %}bg-red-50 text-red-600
+          {% else %}bg-amber-50 text-amber-700{% endif %}">
+          {{ post.get_status_display }}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    {% url 'social_accounts:post_create' as social_post_create_url %}
+    {% if membership.role != 'viewer' %}
+    {% include "components/empty_state.html" with title="No posts yet in this workspace." cta_url=social_post_create_url cta_label="Create your first post" %}
+    {% else %}
+    {% include "components/empty_state.html" with title="No posts yet in this workspace." %}
+    {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

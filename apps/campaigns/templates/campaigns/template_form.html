@@ -1,0 +1,371 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}{% if template %}Edit{% else %}New{% endif %} Template - Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}{% if template %}Edit Template{% else %}New Template{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none mx-auto space-y-6">
+<div class="flex items-center gap-4">
+    <a href="{% url 'campaigns:template_list' %}" class="w-10 h-10 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:text-slate-700 hover:border-slate-300 transition-all">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    </a>
+    <div>
+        <h1 class="text-2xl font-bold text-slate-900">{% if template %}Edit Template{% else %}New Template{% endif %}</h1>
+        <p class="text-sm text-slate-500">{% if template %}Update your reusable email template{% else %}Create a reusable email template{% endif %}</p>
+    </div>
+    <div class="ml-auto flex gap-2">
+  <button type="button" onclick="openPreview(event)" data-preview-btn="" class="btn-action btn-action-secondary">Preview</button>
+    </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" id="templateForm">
+    {% csrf_token %}
+    <div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
+        <div class="xl:col-span-3">
+            <div class="glass-card card-elevate overflow-hidden">
+                <div class="p-6 sm:p-8 space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">
+                            Template Name <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" name="name" required
+                        value="{{ template.name|default:'' }}"
+                        class="auth-input py-3 text-base w-full"
+                        placeholder="e.g., Welcome Email, Monthly Newsletter..."
+                        autofocus />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Email Subject</label>
+                        <input type="text" name="subject"
+                        value="{{ template.subject|default:'' }}"
+                        class="auth-input py-3 w-full"
+
+              placeholder="Email subject line..."
+              id="template-subject-input" />
+            <p id="template-subject-counter" class="mt-1 text-xs text-slate-400">0/60 characters</p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">Email Body (HTML)</label>
+            <textarea name="body_html" rows="20"
+              class="auth-input p-4 w-full font-mono text-sm resize-y"
+              placeholder="<p>Hello {{ first_name }},</p>
+
+<p>Welcome to our newsletter!</p>
+
+<p>Best regards,<br>Team</p>">{{ template.body_html|default:'' }}</textarea>
+            <p class="mt-2 text-xs text-slate-400 flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              Use variables like <code class="bg-slate-100 px-1 py-0.5 rounded text-slate-600">{ { first_name }}</code>, <code class="bg-slate-100 px-1 py-0.5 rounded text-slate-600">{ { email }}</code> — they will be replaced when sending
+            </p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">Plain Text Version <span class="text-slate-400 font-normal">(optional)</span></label>
+            <textarea name="body_text" rows="10"
+              class="auth-input p-4 w-full font-mono text-sm resize-y"
+              placeholder="Plain text version for email clients that don't support HTML..."
+              id="template-body-text-input">{{ template.body_text|default:'' }}</textarea>
+            <p id="template-body-text-counter" class="mt-1 text-xs text-slate-400">0 words · 0 chars</p>
+          </div>
+        </div>
+      </div>
+      <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-100">
+        <a href="{% url 'campaigns:template_list' %}"
+          class="px-6 py-3 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-semibold transition-colors text-center flex-1">
+          Cancel
+        </a>
+  {% include 'campaigns/_button.html' with type='primary' text=template|yesno:'Save Changes,Create Template' button_type='submit' %}
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN (2/5 width) - Header, Footer, Images, Save -->
+    <div class="xl:col-span-2 space-y-5">
+      <div class="glass-card p-6">
+        <h2 class="text-base font-bold text-slate-800 mb-4">Header &amp; Footer</h2>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Header Logo / Image</label>
+            <input type="file" name="header_logo" accept="image/*" class="auth-input w-full text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20">
+            {% if template and template.header_logo %}
+            <div class="mt-2 flex items-center gap-2">
+              <img src="{{ template.header_logo.url }}" alt="" class="h-8 rounded border border-slate-200">
+              <span class="text-xs text-gray-400">Current</span>
+            </div>
+            {% endif %}
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Header Text</label>
+            <input type="text" name="header_text" value="{{ template.header_text|default:'' }}" class="auth-input w-full" placeholder="e.g. Monthly Newsletter - May 2026">
+          </div>
+          <hr class="border-slate-100">
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Footer Logo / Image</label>
+            <input type="file" name="footer_logo" accept="image/*" class="auth-input w-full text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20">
+            {% if template and template.footer_logo %}
+            <div class="mt-2 flex items-center gap-2">
+              <img src="{{ template.footer_logo.url }}" alt="" class="h-6 rounded border border-slate-200">
+              <span class="text-xs text-gray-400">Current</span>
+            </div>
+            {% endif %}
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Footer Text</label>
+            <textarea name="footer_text" rows="3" class="auth-input w-full resize-none text-sm" placeholder="Company address, unsubscribe link, etc.">{{ template.footer_text|default:'' }}</textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Signature & Embedded Images -->
+      <div class="glass-card p-6">
+        <h2 class="text-base font-bold text-slate-800 mb-1">Signature &amp; Embedded Images</h2>
+        <p class="text-xs text-slate-500 mb-4">Upload images referenced via <code class="bg-slate-100 px-1 rounded text-slate-600">cid:</code> in your HTML (profile pic, logo, icons, etc.)</p>
+
+        <div class="space-y-4" id="embedded-images-list">
+          {% if template %}
+            {% for img in template.images.all %}
+            <div class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50/50">
+              {% if img.image %}
+              <img src="{{ img.image.url }}" alt="{{ img.cid_name }}" class="w-10 h-10 rounded-lg object-cover border border-slate-200 flex-shrink-0">
+              {% else %}
+              <div class="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center text-slate-400 flex-shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              </div>
+              {% endif %}
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-semibold text-slate-700 truncate">{{ img.cid_name }}</p>
+                <p class="text-[10px] text-slate-400 truncate">{{ img.label }}</p>
+              </div>
+              <label class="text-[10px] text-primary font-semibold cursor-pointer hover:underline">
+                Replace
+                <input type="file" name="image_{{ img.cid_name }}" accept="image/*" class="hidden" onchange="if(this.files[0]){var img=this.closest('.flex').querySelector('img');if(img)img.src=URL.createObjectURL(this.files[0]);}">
+              </label>
+            </div>
+            {% endfor %}
+          {% endif %}
+        </div>
+
+        <div class="mt-3">
+          <button type="button" onclick="addImageRow()" class="text-xs font-semibold text-primary hover:text-primary/80 flex items-center gap-1">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Add image
+          </button>
+        </div>
+
+        <div id="new-image-rows" class="mt-3 space-y-3"></div>
+
+        <template id="image-row-template">
+          <div class="image-row p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex-1 space-y-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 mb-1">CID Name</label>
+                  <input type="text" class="auth-input w-full text-sm cid-name" placeholder="profile.jpg, logo.png, linkedin.jpg, ...">
+                  <p class="mt-1 text-[10px] text-slate-400">Use in HTML as <code class="bg-slate-100 px-1 rounded">cid:name</code></p>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 mb-1">Image File</label>
+                  <input type="file" accept="image/*" class="auth-input w-full text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary cid-image">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 mb-1">Label <span class="text-slate-400 font-normal">(optional)</span></label>
+                  <input type="text" class="auth-input w-full text-sm cid-label" placeholder="Profile Picture">
+                </div>
+              </div>
+              <button type="button" onclick="this.closest('.image-row').remove()" class="p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-red-500 flex-shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
+        </template>
+
+        <p class="mt-3 text-[10px] text-slate-400 flex items-start gap-1">
+          <svg class="w-3 h-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Reference images in your HTML with <code class="bg-slate-100 px-1 rounded text-indigo-600">&lt;img src="cid:filename.jpg"&gt;</code> — they will be embedded automatically when sending.
+        </p>
+      </div>
+
+      
+       
+</div>
+</div>
+</form>
+
+<div id="previewOverlay" class="hidden fixed inset-0 z-[100] bg-black/20 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closePreview()">
+  <div id="previewPanel" class="bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden w-full max-w-3xl max-h-[85vh] flex flex-col">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 shrink-0">
+      <span class="text-sm font-semibold text-slate-800">Live Preview</span>
+      <div class="flex items-center gap-1.5">
+        <button type="button" onclick="previewInNewWindow()" class="text-xs font-medium text-slate-400 hover:text-slate-600 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors">Open in Tab</button>
+        <button type="button" onclick="closePreview()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="p-4 bg-slate-50 flex-1 overflow-auto">
+      <iframe id="previewFrame" class="border-0 rounded-lg bg-white" style="max-width:600px;width:100%;display:block;margin:0 auto" srcdoc="<html><body style='font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:40px;text-align:center;color:#999'><p>Fill in the template and click Preview</p></body></html>"></iframe>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+{% include 'campaigns/_preview_helpers.html' %}
+<script>
+var headerLogoUrl = '{% if template.header_logo %}{{ template.header_logo.url|escapejs }}{% endif %}';
+var footerLogoUrl = '{% if template.footer_logo %}{{ template.footer_logo.url|escapejs }}{% endif %}';
+
+var cidImageUrls = {};
+{% if template %}
+  {% for img in template.images.all %}
+    {% if img.image %}
+      cidImageUrls['{{ img.cid_name|escapejs }}'] = '{{ img.image.url|escapejs }}';
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+var _cidRowIdx = 0;
+
+function addImageRow() {
+  var template = document.getElementById('image-row-template');
+  var clone = template.content.cloneNode(true);
+  var row = clone.querySelector('.image-row');
+  var idx = _cidRowIdx++;
+  row.querySelector('.cid-name').name = 'cid_name_' + idx;
+  row.querySelector('.cid-image').name = 'cid_image_' + idx;
+  row.querySelector('.cid-label').name = 'cid_label_' + idx;
+  document.getElementById('new-image-rows').appendChild(row);
+}
+
+// ── Live counters ─────────────────────────────────────────────
+(function () {
+  var subjectInput = document.getElementById('template-subject-input');
+  var subjectCounter = document.getElementById('template-subject-counter');
+  if (subjectInput && subjectCounter) {
+    function updateSubjectCount() {
+      var count = (subjectInput.value || '').length;
+      subjectCounter.textContent = count + '/60 characters';
+      subjectCounter.className = 'mt-1 text-xs ' + (count > 60 ? 'text-amber-500 font-semibold' : 'text-slate-400');
+    }
+    subjectInput.addEventListener('input', updateSubjectCount);
+    updateSubjectCount();
+  }
+
+  var bodyTextInput = document.getElementById('template-body-text-input');
+  var bodyTextCounter = document.getElementById('template-body-text-counter');
+  if (bodyTextInput && bodyTextCounter) {
+    function updateBodyTextCount() {
+      var text = bodyTextInput.value || '';
+      var words = text.trim() ? text.trim().split(/\s+/).length : 0;
+      bodyTextCounter.textContent = words + ' words · ' + text.length + ' chars';
+    }
+    bodyTextInput.addEventListener('input', updateBodyTextCount);
+    updateBodyTextCount();
+  }
+})();
+
+// ── Preview HTML Builder ──────────────────────────────────────
+function buildPreviewHtml() {
+  var bodyHtml = document.querySelector('[name="body_html"]')?.value || '';
+  var headerText = document.querySelector('[name="header_text"]')?.value || '';
+  var footerText = document.querySelector('[name="footer_text"]')?.value || '';
+
+  var subject = document.querySelector('[name="subject"]')?.value || 'Your Email';
+  var body = previewReplacePlaceholders(bodyHtml, { subject: subject });
+
+  var placeholder = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+  body = body.replace(/cid:([^"'\s>]+)/g, function(match, cidName) {
+    return cidImageUrls[cidName] || placeholder;
+  });
+
+  body = previewFixImages(body);
+
+  var headerRows = '';
+  if (headerLogoUrl || headerText) {
+    headerRows = '<tr><td style="text-align:center;padding:24px 30px 20px;border-bottom:1px solid #e2e8f0">';
+    if (headerLogoUrl) {
+      headerRows += '<img src="' + headerLogoUrl + '" alt="" style="display:block;outline:none;border:0;max-height:60px;margin:0 auto 8px" />';
+    }
+    if (headerText) {
+      var escH = headerText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      headerRows += '<p style="font-family:' + PREVIEW_FONT + ';font-size:13px;color:#6b7280;margin:4px 0 0;line-height:1.4">' + escH + '</p>';
+    }
+    headerRows += '</td></tr>';
+  }
+
+  var footerRows = '';
+  if (footerLogoUrl || footerText) {
+    footerRows = '<tr><td style="text-align:center;padding:20px 30px;border-top:1px solid #e2e8f0;font-size:12px;color:#9ca3af;font-family:' + PREVIEW_FONT + '">';
+    if (footerLogoUrl) {
+      footerRows += '<img src="' + footerLogoUrl + '" alt="" style="display:block;outline:none;border:0;max-height:40px;margin:0 auto 8px" />';
+    }
+    if (footerText) {
+      var escF = footerText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      footerRows += '<p style="margin:4px 0;line-height:1.5">' + escF + '</p>';
+    }
+    footerRows += '</td></tr>';
+  }
+
+  var bodyStyle = 'padding:20px 24px;font-size:15px;line-height:1.6;color:#1e293b;font-family:' + PREVIEW_FONT;
+  return previewEmailShell({
+    title: 'Template Preview',
+    headerRows: headerRows ? '<tr><td style="padding:0">' + headerRows + '</td></tr>' : '',
+    bodyRows: '<tr><td style="' + bodyStyle + '">' + body + '</td></tr>',
+    footerRows: footerRows ? '<tr><td style="padding:0">' + footerRows + '</td></tr>' : '',
+  });
+}
+
+// ── Centered Modal Preview ────────────────────────────────────
+function openPreview(event) {
+  var overlay = document.getElementById('previewOverlay');
+  var iframe = document.getElementById('previewFrame');
+  iframe.style.width = '100%'; iframe.style.maxWidth = '600px';
+  iframe.style.height = '';
+  iframe.srcdoc = buildPreviewHtml();
+  iframe.onload = function () {
+    try {
+      var doc = iframe.contentWindow.document;
+      iframe.style.height = Math.min(doc.documentElement.scrollHeight, 600) + 'px';
+    } catch (e) {}
+    iframe.onload = null;
+  };
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePreview() {
+  document.getElementById('previewOverlay').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closePreview();
+});
+
+function previewInNewWindow() {
+  var html = buildPreviewHtml();
+  var w = window.open();
+  if (w) {
+    w.document.write(html);
+    w.document.close();
+  }
+}
+
+// Form loading state
+(function() {
+  var form = document.getElementById('templateForm');
+  if (!form) return;
+
+  form.addEventListener('submit', function(e) {
+    var submitButtons = form.querySelectorAll('button[type="submit"]');
+    submitButtons.forEach(function(btn) {
+      btn.disabled = true;
+      btn.dataset.originalHtml = btn.innerHTML;
+      btn.innerHTML = '<svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Saving...';
+    });
+  });
+})();
+</script>
+{% endblock %}

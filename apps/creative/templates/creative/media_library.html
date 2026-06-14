@@ -1,0 +1,358 @@
+{% extends 'base_dashboard.html' %}
+{% load workspace_tags %}
+{% block title %}Media Library — Creative Suite{% endblock %}
+{% block page_title %}Media Library{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none space-y-5">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Media Library</h1>
+      <p class="text-sm text-slate-500 mt-1">Browse folders, upload assets, and schedule content for social platforms</p>
+    </div>
+    <div class="flex gap-3">
+      {% include "components/button.html" with label="New Folder" onclick="openCreateFolderModal()" icon="M9 13h6m-3-3v6m-5 4h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" class="!bg-slate-100 !text-slate-700 hover:!bg-slate-200 !bg-none" %}
+      {% include "components/button.html" with label="Upload" onclick="openUploadModal()" icon="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" %}
+    </div>
+  </div>
+
+  <div class="flex flex-col lg:flex-row gap-5" style="height: calc(100vh - 14rem); min-height: 520px;">
+    <!-- Left: Folder Tree Explorer -->
+    <div class="lg:w-64 shrink-0 flex flex-col premium-surface rounded-2xl overflow-hidden">
+      <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Folders</h3>
+        <button onclick="openCreateFolderModal()" class="text-primary hover:text-primary-dark p-1 rounded-lg hover:bg-primary-light transition-colors" title="New Folder">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        </button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-2 text-sm" id="folder-tree-container">
+        <!-- Root folder link -->
+        <a href="{% url 'creative:media_library' %}"
+           class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors {% if not current_folder %}bg-primary-light text-primary font-semibold{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+          <span class="flex-1 truncate">All Assets</span>
+          <span class="text-xs text-slate-400">{{ assets|length }}</span>
+        </a>
+
+        {% for folder in folder_tree %}
+        {% include "creative/_folder_tree_item.html" with folder=folder depth=0 %}
+        {% empty %}
+        <div class="px-3 py-6 text-center">
+          <p class="text-xs text-slate-400">No folders yet</p>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Folder actions -->
+      <div class="px-3 py-2 border-t border-slate-100 flex gap-1">
+        {% include "components/button.html" with label="Create" onclick="openCreateFolderModal()" icon="M12 4v16m8-8H4" class="!bg-transparent !text-slate-500 hover:!text-slate-700 !shadow-none !bg-none !rounded-lg !text-xs !py-2 !px-2 flex-1" %}
+      </div>
+    </div>
+
+    <!-- Center: Asset Grid -->
+    <div class="flex-1 flex flex-col premium-surface rounded-2xl overflow-hidden min-w-0">
+      <!-- Toolbar -->
+      <div class="px-5 py-3 border-b border-slate-100 flex flex-wrap gap-3 items-center">
+        <form method="get" class="flex gap-2 flex-1 min-w-0">
+          <div class="relative flex-1 min-w-0">
+            <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input type="text" name="q" value="{{ query }}" class="input-field w-full pl-10" placeholder="Search assets...">
+          </div>
+          {% include "components/button.html" with label="Search" type="submit" class="!text-sm" %}
+          {% if query or current_type or current_folder %}
+          {% include "components/button.html" with label="Clear" href="/creative/media/" class="!bg-slate-100 !text-slate-700 hover:!bg-slate-200 !bg-none !text-sm" %}
+          {% endif %}
+        </form>
+      </div>
+
+      <!-- Type filters -->
+      <div class="px-5 py-2 border-b border-slate-50 flex items-center gap-2 text-xs overflow-x-auto">
+        <a href="{% if current_folder %}?folder={{ current_folder }}{% else %}{% url 'creative:media_library' %}{% endif %}" class="px-3 py-1.5 rounded-lg font-semibold whitespace-nowrap transition-colors {% if not current_type %}bg-primary/10 text-primary{% else %}text-slate-500 hover:bg-slate-100{% endif %}">All</a>
+        <a href="{% if current_folder %}?folder={{ current_folder }}&type=image{% else %}?type=image{% endif %}" class="px-3 py-1.5 rounded-lg font-semibold whitespace-nowrap transition-colors {% if current_type == 'image' %}bg-primary/10 text-primary{% else %}text-slate-500 hover:bg-slate-100{% endif %}">Images</a>
+        <a href="{% if current_folder %}?folder={{ current_folder }}&type=video{% else %}?type=video{% endif %}" class="px-3 py-1.5 rounded-lg font-semibold whitespace-nowrap transition-colors {% if current_type == 'video' %}bg-primary/10 text-primary{% else %}text-slate-500 hover:bg-slate-100{% endif %}">Videos</a>
+        <a href="{% if current_folder %}?folder={{ current_folder }}&type=document{% else %}?type=document{% endif %}" class="px-3 py-1.5 rounded-lg font-semibold whitespace-nowrap transition-colors {% if current_type == 'document' %}bg-primary/10 text-primary{% else %}text-slate-500 hover:bg-slate-100{% endif %}">Documents</a>
+        <span class="text-slate-300 mx-1">|</span>
+        <span class="text-slate-400 font-medium">{{ assets|length }} asset{{ assets|pluralize }}</span>
+      </div>
+
+      <!-- Grid -->
+      <div class="flex-1 overflow-y-auto p-4" id="asset-grid-container">
+        {% if assets %}
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3" id="asset-grid">
+          {% for asset in assets %}
+          <div class="group premium-surface rounded-xl overflow-hidden hover:shadow-md transition-all relative
+            {% if selected_asset and selected_asset.id == asset.id %}ring-2 ring-primary ring-offset-2{% endif %}"
+            data-asset-id="{{ asset.id }}">
+            <a href="{% url 'creative:media_library' %}?selected={{ asset.id }}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_folder %}&folder={{ current_folder }}{% endif %}{% if query %}&q={{ query }}{% endif %}"
+               class="block aspect-square bg-slate-100 relative overflow-hidden">
+              {% if asset.file_type == 'image' and asset.display_thumbnail_url %}
+              <img src="{{ asset.display_thumbnail_url }}" alt="{{ asset.title|default:asset.original_filename }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy">
+              {% elif asset.file_type == 'image' and asset.display_url %}
+              <img src="{{ asset.display_url }}" alt="{{ asset.title|default:asset.original_filename }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy">
+              {% elif asset.file_type == 'video' %}
+              <div class="flex items-center justify-center h-full">
+                <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0114 0z"/></svg>
+              </div>
+              {% else %}
+              <div class="flex items-center justify-center h-full">
+                <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+              </div>
+              {% endif %}
+            </a>
+            <div class="p-2.5">
+              <p class="text-xs font-semibold text-slate-800 truncate">{{ asset.title|default:asset.original_filename }}</p>
+              <p class="text-[11px] text-gray-400 mt-0.5">{{ asset.get_file_type_display }} · {{ asset.file_size|filesizeformat }}</p>
+            </div>
+            <!-- Quick actions overlay -->
+            <div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onclick="event.preventDefault();scheduleAsset({{ asset.id }}, '{{ asset.title|default:asset.original_filename|escapejs }}')" class="p-1.5 bg-white/90 rounded-lg hover:bg-white shadow-sm text-slate-600 hover:text-primary transition-all" title="Schedule">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              </button>
+              <button onclick="event.preventDefault();deleteAsset({{ asset.id }})" class="p-1.5 bg-white/90 rounded-lg hover:bg-white shadow-sm text-slate-600 hover:text-red-600 transition-all" title="Delete">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="flex flex-col items-center justify-center h-full text-center py-12">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+            <svg class="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          </div>
+          <p class="text-sm font-semibold text-slate-600 mb-1">No assets in this view</p>
+          <p class="text-xs text-slate-400 mb-4">Upload media or adjust your folder/filter selections</p>
+          {% include "components/button.html" with label="Upload Media" onclick="openUploadModal()" icon="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" class="!text-sm" %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Right: Preview & Schedule Pane -->
+    <div class="lg:w-80 xl:w-96 shrink-0 flex flex-col premium-surface rounded-2xl overflow-hidden">
+      {% if selected_asset %}
+      <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+        <h3 class="text-sm font-bold text-slate-800 truncate flex-1">{{ selected_asset.title|default:selected_asset.original_filename }}</h3>
+        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ml-2
+          {% if selected_asset.file_type == 'image' %}bg-blue-50 text-blue-600
+          {% elif selected_asset.file_type == 'video' %}bg-purple-50 text-purple-600
+          {% elif selected_asset.file_type == 'document' %}bg-emerald-50 text-emerald-600
+          {% else %}bg-slate-100 text-slate-600{% endif %}">
+          {{ selected_asset.get_file_type_display }}
+        </span>
+      </div>
+
+      <div class="flex-1 overflow-y-auto">
+        <!-- Preview -->
+        <div class="bg-slate-50/50 flex items-center justify-center min-h-[180px] border-b border-slate-100 p-3">
+          {% if selected_asset.file_type == 'image' and selected_asset.display_url %}
+          <img src="{{ selected_asset.display_url }}" alt="{{ selected_asset.title|default:selected_asset.original_filename }}" class="max-h-52 max-w-full rounded-xl object-contain shadow-sm">
+          {% elif selected_asset.file_type == 'document' %}
+          <div class="text-center py-6">
+            <svg class="w-12 h-12 mx-auto text-emerald-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+            <p class="text-sm font-semibold text-slate-600">{{ selected_asset.original_filename }}</p>
+          </div>
+          {% else %}
+          <div class="text-center py-6">
+            <svg class="w-12 h-12 mx-auto text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+            <p class="text-sm font-semibold text-slate-600">{{ selected_asset.original_filename }}</p>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Schedule Form -->
+        <form method="post" class="p-4 space-y-3 border-b border-slate-100">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="schedule_asset">
+          <input type="hidden" name="asset_id" value="{{ selected_asset.id }}">
+          <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Schedule for Publishing</h4>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Platform</label>
+            <select name="platform" class="input-field w-full text-sm">
+              <option value="">Select platform...</option>
+              <option value="facebook">Facebook</option>
+              <option value="instagram">Instagram</option>
+              <option value="linkedin">LinkedIn</option>
+              <option value="twitter">X (Twitter)</option>
+              <option value="tiktok">TikTok</option>
+              <option value="youtube">YouTube</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Schedule Date</label>
+            <input type="datetime-local" name="scheduled_at" class="input-field w-full text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Link to Strategy</label>
+            <select name="strategy_id" class="input-field w-full text-sm">
+              <option value="">No strategy</option>
+              {% for s in strategies %}
+              <option value="{{ s.id }}">{{ s.title|truncatechars:40 }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% include "components/button.html" with label="Schedule" type="submit" icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" class="w-full !text-sm" %}
+        </form>
+
+        <!-- Context Notes -->
+        <form method="post" class="p-4 space-y-3">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="save_context_notes">
+          <input type="hidden" name="asset_id" value="{{ selected_asset.id }}">
+          <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Context Notes</h4>
+          <textarea name="context_notes" rows="3" class="input-field w-full text-sm" placeholder="Describe how this asset fits into your campaign...">{{ selected_asset.description }}</textarea>
+          {% include "components/button.html" with label="Save Notes" type="submit" icon="M5 13l4 4L19 7" class="w-full !text-sm" %}
+        </form>
+
+        <!-- Metadata -->
+        <div class="p-4 grid grid-cols-2 gap-2 text-xs border-t border-slate-100">
+          <div class="bg-slate-50 rounded-lg p-2.5">
+            <p class="text-slate-400 font-medium">Size</p>
+            <p class="font-semibold text-slate-700 mt-0.5">{{ selected_asset.file_size|filesizeformat }}</p>
+          </div>
+          {% if selected_asset.width %}
+          <div class="bg-slate-50 rounded-lg p-2.5">
+            <p class="text-slate-400 font-medium">Dimensions</p>
+            <p class="font-semibold text-slate-700 mt-0.5">{{ selected_asset.width }}x{{ selected_asset.height }}</p>
+          </div>
+          {% endif %}
+          {% if selected_asset.folder %}
+          <div class="bg-slate-50 rounded-lg p-2.5">
+            <p class="text-slate-400 font-medium">Folder</p>
+            <p class="font-semibold text-slate-700 mt-0.5">{{ selected_asset.folder.name }}</p>
+          </div>
+          {% endif %}
+          <div class="bg-slate-50 rounded-lg p-2.5">
+            <p class="text-slate-400 font-medium">Created</p>
+            <p class="font-semibold text-slate-700 mt-0.5">{{ selected_asset.created_at|date:'M d, Y' }}</p>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="p-4 border-t border-slate-100 flex gap-2">
+          <form method="post" class="flex-1">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_asset">
+            <input type="hidden" name="asset_id" value="{{ selected_asset.id }}">
+            {% include "components/button.html" with label="Delete" type="submit" onclick="return confirm('Delete this asset?')" icon="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" primary_start="#DC2626" primary_end="#EF4444" class="!text-xs" %}
+          </form>
+        </div>
+      </div>
+      {% else %}
+      {% include "components/empty_state.html" with title="Select an Asset" description="Click any asset from the center grid to preview, add context, or schedule it." class="border-0 h-full justify-center" %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Create Folder Modal -->
+<div id="createFolderModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/40 backdrop-blur-sm">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between p-5 border-b border-slate-200">
+      <h3 class="text-lg font-bold text-slate-800">Create New Folder</h3>
+      <button onclick="closeFolderModal()" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
+        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form method="post" class="p-5 space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create_folder">
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Folder Name</label>
+        <input type="text" name="name" class="input-field w-full" placeholder="e.g., Q4 Campaign Assets" required>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Parent Folder</label>
+        <select name="parent_id" class="input-field w-full">
+          <option value="">Root (no parent)</option>
+          {% for f in folders %}
+          <option value="{{ f.id }}">{{ f.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        {% include "components/button.html" with label="Cancel" onclick="closeFolderModal()" class="!bg-slate-100 !text-slate-700 hover:!bg-slate-200 !bg-none" %}
+        {% include "components/button.html" with label="Create Folder" type="submit" %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Schedule Asset Modal -->
+<div id="scheduleModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/40 backdrop-blur-sm">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between p-5 border-b border-slate-200">
+      <h3 class="text-lg font-bold text-slate-800">Schedule Asset</h3>
+      <button onclick="closeScheduleModal()" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
+        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form method="post" class="p-5 space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="schedule_asset">
+      <input type="hidden" name="asset_id" id="sched-asset-id" value="">
+      <p class="text-sm text-slate-600" id="sched-asset-name"></p>
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Platform</label>
+        <select name="platform" class="input-field w-full" required>
+          <option value="">Select platform...</option>
+          <option value="facebook">Facebook</option>
+          <option value="instagram">Instagram</option>
+          <option value="linkedin">LinkedIn</option>
+          <option value="twitter">X (Twitter)</option>
+          <option value="tiktok">TikTok</option>
+          <option value="youtube">YouTube</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Schedule Date &amp; Time</label>
+        <input type="datetime-local" name="scheduled_at" class="input-field w-full" required>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Link to Strategy</label>
+        <select name="strategy_id" class="input-field w-full">
+          <option value="">No strategy</option>
+          {% for s in strategies %}
+          <option value="{{ s.id }}">{{ s.title|truncatechars:50 }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        {% include "components/button.html" with label="Cancel" onclick="closeScheduleModal()" class="!bg-slate-100 !text-slate-700 hover:!bg-slate-200 !bg-none" %}
+        {% include "components/button.html" with label="Schedule" type="submit" icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+{% include "components/modal.html" with id="deleteModal" title="Delete Asset?" content='<div class="text-center"><div class="w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center"><svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg></div><p class="text-sm text-slate-500 mb-6">This action cannot be undone. The file will be permanently removed.</p><input type="hidden" name="action" value="delete_asset"><input type="hidden" name="asset_id" id="delete-asset-id" value=""><div class="flex gap-3 justify-center"><button type="button" onclick="closeModal("deleteModal")" class="!bg-slate-100 !text-slate-700 hover:!bg-slate-200 !bg-none btn-action btn-action-secondary" style="background:none!important;color:#475569!important">Cancel</button><button type="submit" style="background:linear-gradient(135deg,#DC2626,#EF4444)" class="btn-action">Delete</button></div></div>' form_action="." %}
+
+<script>
+function openCreateFolderModal() { openFolderModal(); }
+function closeFolderModal() { closeModal('createFolderModal'); }
+
+function scheduleAsset(id, name) {
+  document.getElementById('sched-asset-id').value = id;
+  document.getElementById('sched-asset-name').textContent = 'Scheduling: ' + name;
+  openModal('scheduleModal');
+}
+function closeScheduleModal() { closeModal('scheduleModal'); }
+
+function openCreateFolderModal() { openModal('createFolderModal'); }
+
+function deleteAsset(id) {
+  document.getElementById('delete-asset-id').value = id;
+  openModal('deleteModal');
+}
+
+function toggleFolder(id) {
+  var el = document.getElementById('folder-children-' + id);
+  var chevron = document.getElementById('folder-chevron-' + id);
+  if (el) {
+    el.classList.toggle('hidden');
+    if (chevron) chevron.classList.toggle('rotate-90');
+  }
+}
+</script>
+{% endblock %}

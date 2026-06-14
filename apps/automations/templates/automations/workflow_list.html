@@ -1,0 +1,86 @@
+{% extends 'base_dashboard.html' %}
+{% load workspace_tags %}
+{% block title %}Automations — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Automations{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none space-y-6">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <p class="eyebrow">Workflows</p>
+      <h1 class="page-title mt-2">Automations</h1>
+      <p class="page-lead">Build triggered email sequences for your contacts</p>
+    </div>
+    {% can_create 'workflows' as can_create_workflows %}
+    {% if can_create_workflows %}
+    {% url 'automations:workflow_create' as workflow_create_url %}
+    {% include "components/button.html" with label="New Automation" variant="primary" href=workflow_create_url icon="M12 4v16m8-8H4" %}
+    {% endif %}
+  </div>
+
+  <div class="premium-surface card-elevate rounded-2xl overflow-hidden">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-slate-100">
+          <th class="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
+          <th class="text-left px-4 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+          <th class="text-left px-4 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Enrolled</th>
+          <th class="text-left px-4 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Created</th>
+          <th class="text-right px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for wf in workflows %}
+        <tr class="hover:bg-slate-50/50 transition-colors">
+          <td class="px-6 py-4 font-semibold text-slate-900">{{ wf.name }}</td>
+          <td class="px-4 py-4">
+            {% if wf.is_active %}
+              {% include "components/badge.html" with label="Active" variant="green" dot=True %}
+            {% else %}
+              {% include "components/badge.html" with label="Paused" variant="gray" dot=True %}
+            {% endif %}
+          </td>
+          <td class="px-4 py-4 text-slate-500">{{ wf.enrollment_count }}</td>
+          <td class="px-4 py-4 text-slate-500">{{ wf.created_at|date:'M j, Y' }}</td>
+          <td class="px-6 py-4">
+            <div class="flex items-center justify-end gap-1.5">
+              {% url 'automations:workflow_edit' wf.id as workflow_edit_url %}
+              {% url 'automations:workflow_analytics' wf.id as workflow_analytics_url %}
+              {% include "components/button.html" with label="Edit" variant="secondary" size="sm" href=workflow_edit_url %}
+              {% include "components/button.html" with label="Analytics" variant="secondary" size="sm" href=workflow_analytics_url %}
+              {% can_edit 'workflows' as can_edit_workflows %}
+              {% if can_edit_workflows %}
+              <form method="post" action="{% url 'automations:workflow_toggle' wf.id %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="btn-action btn-action-secondary btn-sm">
+                  {% if wf.is_active %}Pause{% else %}Activate{% endif %}
+                </button>
+              </form>
+              {% endif %}
+              {% can_delete 'workflows' as can_delete_workflows %}
+              {% if can_delete_workflows %}
+              <form method="post" action="{% url 'automations:workflow_delete' wf.id %}" onsubmit="return confirm('Delete this automation? This action cannot be undone.')" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="btn-action btn-action-danger btn-sm">Delete</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="px-6 py-12 text-center">
+            {% if can_create_workflows %}
+            {% url 'automations:workflow_create' as workflow_create_url %}
+            {% include "components/empty_state.html" with title="No automations yet" description="Create your first automation to get started." cta_url=workflow_create_url cta_label="Create Automation" %}
+            {% else %}
+            {% include "components/empty_state.html" with title="No automations yet" description="Create your first automation to get started." %}
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,906 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}New Post — Social Media{% endblock %}
+{% block page_title %}New Post{% endblock %}
+
+{% block content %}
+<style>
+  .copilot-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 400px;
+    height: 100vh;
+    background-color: #ffffff;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+    z-index: 11000; /* Higher than the overlay (10990) */
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease-in-out;
+  }
+  .copilot-drawer.hidden {
+    display: none !important;
+  }
+  .copilot-header {
+    padding: 1.25rem;
+    border-b: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .copilot-body {
+    padding: 1.25rem;
+    flex: 1;
+    overflow-y: auto;
+  }
+  .copilot-footer {
+    padding: 1.25rem;
+    border-t: 1px solid #f1f5f9;
+    background-color: #f8fafc;
+  }
+</style>
+
+<div class="page-shell max-w-none mx-auto">
+  <div class="flex items-center gap-3 mb-8">
+    <a href="{% url 'social_accounts:social_hub' %}?tab=posts" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
+      <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    </a>
+    <div>
+      <div class="flex items-center gap-3">
+        <h1 class="text-2xl font-bold text-slate-900">Create Post</h1>
+        {% include "components/badge.html" with label="Multi-Platform" variant="blue" %}
+      </div>
+      <p class="text-sm text-slate-500 mt-0.5">Write once, publish to multiple platforms at once</p>
+    </div>
+    <div id="autosaveIndicator" class="hidden ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+      All changes saved
+    </div>
+  </div>
+
+  <form method="post" id="postForm" class="space-y-6" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <div class="flex items-center gap-2 mb-6">
+      <div class="flex items-center gap-3 px-4 py-2 rounded-xl bg-slate-50 border border-slate-200">
+        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Mode</span>
+        <div class="flex rounded-lg overflow-hidden border border-slate-200 bg-white" role="radiogroup">
+          <label class="relative px-4 py-1.5 text-sm font-semibold cursor-pointer has-[:checked]:bg-primary has-[:checked]:text-white has-[:checked]:shadow-sm text-slate-600 transition-all">
+            <input type="radio" name="save_mode" value="draft" class="absolute opacity-0" checked onchange="toggleSaveMode('draft')">
+            Draft
+          </label>
+          <label class="relative px-4 py-1.5 text-sm font-semibold cursor-pointer has-[:checked]:bg-primary has-[:checked]:text-white has-[:checked]:shadow-sm text-slate-600 transition-all border-x border-slate-200">
+            <input type="radio" name="save_mode" value="schedule" class="absolute opacity-0" onchange="toggleSaveMode('schedule')">
+            Schedule
+          </label>
+          <label class="relative px-4 py-1.5 text-sm font-semibold cursor-pointer has-[:checked]:bg-primary has-[:checked]:text-white has-[:checked]:shadow-sm text-slate-600 transition-all">
+            <input type="radio" name="save_mode" value="publish" class="absolute opacity-0" onchange="toggleSaveMode('publish')">
+            Publish Now
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      <div class="lg:col-span-3 space-y-6">
+        <div class="premium-surface rounded-2xl overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-transparent to-slate-50/50">
+            <div class="flex items-center gap-2.5">
+              <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-indigo-500 flex items-center justify-center">
+                <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+              </div>
+              <h2 class="text-sm font-bold text-slate-800">Compose</h2>
+            </div>
+            <span id="charDisplay" class="text-xs font-mono font-semibold tabular-nums px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500">0</span>
+          </div>
+
+          <div class="p-6 space-y-5">
+            <div>
+              <label for="content" class="block text-sm font-semibold text-slate-700 mb-2">Post Text</label>
+              <textarea name="content" id="content" rows="6" class="input-field w-full resize-y text-base leading-relaxed" placeholder="What's on your mind?" aria-describedby="content-hint">{{ form_data.content|default:'' }}</textarea>
+              <span id="content-hint" class="sr-only">Enter your post text. Character limits vary by platform. Use bold and italic shortcuts.</span>
+              <div class="mt-2 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <p class="text-xs text-gray-400">Tip: <kbd id="shortcutMod" class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 text-[10px] font-mono font-semibold">⌘</kbd><kbd class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 text-[10px] font-mono font-semibold">B</kbd> for <strong>bold</strong>, <kbd id="shortcutMod2" class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 text-[10px] font-mono font-semibold">⌘</kbd><kbd class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 text-[10px] font-mono font-semibold">I</kbd> for <em>italic</em></p>
+                  <span class="w-px h-4 bg-slate-200"></span>
+                  <button type="button" id="boldBtn" class="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors" title="Bold (⌘B)">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 4h8a4 4 0 014 4 4 4 0 01-4 4H6z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 12h9a4 4 0 014 4 4 4 0 01-4 4H6z"/></svg>
+                  </button>
+                  <button type="button" id="italicBtn" class="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors" title="Italic (⌘I)">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 4h8M14 4l-4 16M6 20h8"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label for="hashtags" class="block text-sm font-semibold text-slate-700 mb-2">
+                  <span class="flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/></svg>
+                    Hashtags
+                  </span>
+                </label>
+                <div class="relative">
+                  <input type="text" name="hashtags" id="hashtags" class="input-field w-full pl-9 pr-3 py-2.5" placeholder="ai, marketing, social" value="{{ form_data.hashtags|default:'' }}">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-sm font-semibold">#</span>
+                </div>
+                <p class="text-xs text-gray-400 mt-1.5">Comma-separated keywords</p>
+              </div>
+              <div>
+                <label for="link_url" class="block text-sm font-semibold text-slate-700 mb-2">
+                  <span class="flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                    Link URL
+                  </span>
+                </label>
+                <div class="relative">
+                  <input type="url" name="link_url" id="link_url" class="input-field w-full pl-9 pr-3 py-2.5" placeholder="https://example.com" value="{{ form_data.link_url|default:'' }}">
+                  <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2">
+                <span class="flex items-center gap-1.5">
+                  <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                  Media
+                  <span id="contentTypeBadge" class="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase hidden"></span>
+                </span>
+              </label>
+              <div id="dropZone" class="relative border-2 border-dashed border-slate-300 rounded-xl p-8 text-center transition-all cursor-pointer hover:border-primary/40 hover:bg-primary-light/20">
+                <input type="file" id="fileInput" name="media_files" multiple accept="image/*,video/*" class="absolute inset-0 opacity-0 cursor-pointer">
+                <svg class="w-8 h-8 mx-auto text-slate-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                <p class="text-sm font-semibold text-slate-600 drop-text">Drop images or videos here</p>
+                <p class="text-xs text-slate-400 mt-1">or click to browse</p>
+                <div id="filePreview" class="flex flex-wrap gap-2 mt-3 justify-center"></div>
+              </div>
+              <div id="mediaFileList" class="space-y-1.5 mt-3"></div>
+              <div id="mediaUrls" class="space-y-2 mt-3">
+                <div class="flex items-center gap-2 media-row">
+                  <div class="flex-1 relative">
+                    <input type="url" name="media_urls" class="input-field w-full pl-9 pr-3 py-2.5 media-input" placeholder="Or paste a media URL...">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                  </div>
+                  <button type="button" class="remove-url w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all flex-shrink-0" style="visibility:hidden">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                  </button>
+                </div>
+              </div>
+              <button type="button" id="addMediaUrl" class="mt-2 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-dashed border-slate-300 text-xs font-semibold text-slate-500 hover:border-primary/40 hover:text-primary hover:bg-primary-light/30 transition-all">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Add Media URL
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-2 space-y-6">
+        <div class="premium-surface rounded-2xl overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-transparent to-slate-50/50">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-500 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <h2 class="text-sm font-bold text-slate-800">Platforms</h2>
+              </div>
+              <span id="selectedCount" class="text-xs font-semibold text-slate-400">0 selected</span>
+            </div>
+          </div>
+          <div class="p-4 space-y-3 max-h-[360px] overflow-y-auto" id="platformCheckboxList">
+            {% for platform, accts in grouped_accounts.items %}
+            <div class="platform-group rounded-xl border border-slate-200 overflow-hidden transition-all duration-200" data-platform="{{ platform }}">
+              <label class="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-slate-50 transition-colors platform-header">
+                <input type="checkbox" class="platform-toggle w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/30 cursor-pointer" data-platform="{{ platform }}">
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                  <span class="platform-indicator w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold uppercase
+                    {% if platform == 'facebook' %}bg-blue-100 text-blue-600
+                    {% elif platform == 'instagram' %}bg-pink-100 text-pink-600
+                    {% elif platform == 'twitter' %}bg-sky-100 text-sky-600
+                    {% elif platform == 'linkedin' %}bg-blue-100 text-blue-700
+                    {% elif platform == 'tiktok' %}bg-gray-100 text-gray-800
+                    {% elif platform == 'youtube' %}bg-red-100 text-red-600
+                    {% else %}bg-slate-100 text-slate-600{% endif %}">
+                    {{ platform|slice:':2' }}
+                  </span>
+                  <span class="text-sm font-semibold text-slate-800">{{ platform|title }}</span>
+                </div>
+                <span class="platform-compat text-[10px] font-semibold text-slate-400"></span>
+              </label>
+              <div class="px-4 pb-2 space-y-1">
+                {% for acct in accts %}
+                <label class="flex items-center gap-3 pl-11 py-1.5 rounded-lg cursor-pointer hover:bg-slate-50/50 transition-colors account-check-label">
+                  <input type="checkbox" name="account_ids" value="{{ acct.id }}" class="account-check w-3.5 h-3.5 rounded border-slate-300 text-primary focus:ring-primary/30 cursor-pointer" data-platform="{{ platform }}">
+                  <span class="text-sm text-slate-700 truncate">{{ acct.account_name }}</span>
+                </label>
+                {% endfor %}
+              </div>
+            </div>
+            {% empty %}
+            <div class="p-6 text-center">
+              <div class="w-12 h-12 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+                <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+              </div>
+              <p class="text-sm font-semibold text-slate-600">No accounts connected</p>
+              <p class="text-xs text-slate-400 mt-1"><a href="{% url 'social_accounts:social_hub' %}" class="underline font-semibold">Connect an account</a> first.</p>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="premium-surface rounded-2xl overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-transparent to-slate-50/50">
+            <div class="flex items-center gap-2.5">
+              <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-indigo-500 flex items-center justify-center">
+                <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+              </div>
+              <h2 class="text-sm font-bold text-slate-800">Publishing</h2>
+            </div>
+          </div>
+          <div class="p-6 space-y-5">
+            <div id="scheduleGroup" class="space-y-4">
+              <div>
+                <label for="scheduled_at" class="block text-sm font-semibold text-slate-700 mb-2">
+                  <span class="flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    Schedule for
+                  </span>
+                </label>
+                <input type="datetime-local" name="scheduled_at" id="scheduled_at" class="input-field w-full py-2.5" value="{{ form_data.scheduled_at|default:'' }}">
+                <p class="text-xs text-gray-400 mt-1.5">Your timezone: <span class="font-semibold text-slate-600" id="timezoneDisplay"></span></p>
+              </div>
+            </div>
+
+            <div id="publishGroup" class="p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200">
+              <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19V5m0 0l-7 7m7-7l7 7"/></svg>
+                </div>
+                <div>
+                  <p class="text-sm font-bold text-emerald-800">Publish Immediately</p>
+                  <p class="text-xs text-emerald-700 mt-0.5">Post to all selected platforms at once.</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer ml-auto flex-shrink-0">
+                  <input type="checkbox" name="publish_now" id="publish_now" value="1" class="sr-only peer">
+                  <div class="w-9 h-5 bg-slate-300 rounded-full peer peer-checked:bg-emerald-500 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="premium-surface rounded-2xl overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-transparent to-slate-50/50">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                </div>
+                <h2 class="text-sm font-bold text-slate-800">Preview</h2>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="flex rounded-lg overflow-hidden border border-slate-200 bg-slate-50 text-xs font-semibold" id="deviceToggle">
+                  <button type="button" class="px-3 py-1.5 bg-white text-slate-800 shadow-sm" data-device="desktop" onclick="setPreviewDevice('desktop')">
+                    <svg class="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                  </button>
+                  <button type="button" class="px-3 py-1.5 text-slate-500 hover:bg-white hover:text-slate-800 transition-all" data-device="mobile" onclick="setPreviewDevice('mobile')">
+                    <svg class="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="border-t border-slate-100 pt-3 px-6">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="aiIncludeVisual" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Include Visual Design Specs</span>
+              </label>
+            </div>
+          </div>
+          <div class="p-6">
+            <div class="flex gap-1 mb-4 overflow-x-auto" id="previewTabs">
+              <button type="button" class="preview-tab active px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-primary text-white" data-platform="generic" onclick="switchPreview('generic')">
+                <span class="flex items-center gap-1.5">Generic</span>
+              </button>
+              <button type="button" class="preview-tab px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:bg-slate-100" data-platform="linkedin" onclick="switchPreview('linkedin')">
+                <span class="flex items-center gap-1.5"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="#0A66C2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg> LinkedIn</span>
+              </button>
+              <button type="button" class="preview-tab px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:bg-slate-100" data-platform="twitter" onclick="switchPreview('twitter')">
+                <span class="flex items-center gap-1.5"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="#1DA1F2"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> X</span>
+              </button>
+              <button type="button" class="preview-tab px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:bg-slate-100" data-platform="instagram" onclick="switchPreview('instagram')">
+                <span class="flex items-center gap-1.5"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="#E4405F"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg> Instagram</span>
+              </button>
+              <button type="button" class="preview-tab px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:bg-slate-100" data-platform="facebook" onclick="switchPreview('facebook')">
+                <span class="flex items-center gap-1.5"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> Facebook</span>
+              </button>
+            </div>
+            <div id="previewPane" class="rounded-xl border border-slate-200 bg-white overflow-hidden transition-all">
+              <div class="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-indigo-500 flex items-center justify-center text-white text-xs font-bold">M</div>
+                <div class="flex-1">
+                  <p class="text-sm font-bold text-slate-800" id="previewAccount">Your Account</p>
+                  <p class="text-xs text-slate-400" id="previewPlatform">Select platforms below</p>
+                </div>
+                <span id="previewCharLimit" class="text-xs font-semibold text-slate-400 px-2 py-0.5 rounded-full bg-slate-100"></span>
+              </div>
+              <div class="p-4" id="previewBody">
+                <p class="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed" id="previewContent">Your post content will appear here...</p>
+                <div id="previewHashtags" class="flex flex-wrap gap-1.5 mt-3"></div>
+                <div id="previewLink" class="mt-3 hidden">
+                  <div class="rounded-lg border border-slate-200 p-3 bg-slate-50">
+                    <p class="text-xs text-slate-400 truncate" id="previewLinkUrl">https://...</p>
+                  </div>
+                </div>
+                <div id="previewMedia" class="mt-3 grid grid-cols-2 gap-2 hidden"></div>
+              </div>
+              <div class="px-4 py-2.5 border-t border-slate-100 bg-slate-50 flex items-center gap-2 flex-wrap" id="previewPlatformBadges">
+                <span class="text-[10px] text-slate-400 font-semibold">Posting to:</span>
+                <span class="text-[10px] text-slate-400 italic">none selected</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-end gap-3 pt-2 pb-8">
+      <a href="{% url 'social_accounts:social_hub' %}?tab=posts" class="px-5 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all">Cancel</a>
+      <button type="submit" id="submitBtn" class="btn-action btn-action-primary inline-flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" id="submitIcon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        <span id="submitLabel">Save as Draft</span>
+      </button>
+    </div>
+  </form>
+
+
+</div>
+
+<script>
+  const PLATFORM_LABELS = { linkedin: 'LinkedIn', twitter: 'X (Twitter)', facebook: 'Facebook', instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube' };
+  const PLATFORM_COLORS = { linkedin: 'text-blue-700', twitter: 'text-sky-600', facebook: 'text-blue-600', instagram: 'text-pink-600', tiktok: 'text-gray-800', youtube: 'text-red-600' };
+  const PLATFORM_BG = { linkedin: 'bg-blue-100', twitter: 'bg-sky-100', facebook: 'bg-blue-100', instagram: 'bg-pink-100', tiktok: 'bg-gray-100', youtube: 'bg-red-100' };
+  const PLATFORM_CHAR_LIMITS = { linkedin: 3000, twitter: 280, facebook: 63206, instagram: 2200, tiktok: 2200, youtube: 5000, generic: 5000 };
+
+  const CANVAS_SPECS = {
+    linkedin: { width: 1200, height: 628, ratio: '1.91:1', types: ['JPG','PNG','GIF'], maxSize: '5MB', safeArea: { top: 50, right: 50, bottom: 50, left: 50 } },
+    instagram: { width: 1080, height: 1080, ratio: '1:1', types: ['JPG','PNG'], maxSize: '8MB', safeArea: { top: 80, right: 50, bottom: 120, left: 50 } },
+    twitter: { width: 1200, height: 600, ratio: '2:1', types: ['JPG','PNG','GIF'], maxSize: '5MB', safeArea: { top: 40, right: 40, bottom: 40, left: 40 } },
+    facebook: { width: 1200, height: 630, ratio: '1.91:1', types: ['JPG','PNG'], maxSize: '8MB', safeArea: { top: 50, right: 50, bottom: 50, left: 50 } },
+    tiktok: { width: 1080, height: 1920, ratio: '9:16', types: ['MP4','MOV'], maxSize: '287.6MB', safeArea: { top: 250, right: 100, bottom: 250, left: 100 } },
+    youtube: { width: 1280, height: 720, ratio: '16:9', types: ['JPG','PNG','GIF'], maxSize: '2MB', safeArea: { top: 120, right: 100, bottom: 100, left: 100 } }
+  };
+  const BRAND_COLORS = { navy: '#0A2540', cyan: '#06B6D4', gray: '#64748B', success: '#10B981', warning: '#F59E0B', error: '#EF4444', excitement: '#EC4899', curiosity: '#8B5CF6' };
+  const FONT_STACK = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+
+  var currentPreviewPlatform = 'generic';
+  var previewDevice = 'desktop';
+
+  const CHAR_LIMITS = { linkedin: 3000, twitter: 280, facebook: 63206, instagram: 2200, tiktok: 2200, youtube: 5000 };
+
+  const VIDEO_EXTS = ['mp4', 'mov', 'avi', 'mkv', 'webm', 'm4v', '3gp', 'mpeg', 'mpg', 'wmv', 'flv'];
+  const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'tiff', 'tif'];
+
+  const PLATFORM_COMPAT = {
+    text: ['facebook', 'instagram', 'twitter', 'linkedin', 'tiktok', 'youtube'],
+    image: ['facebook', 'instagram', 'twitter', 'linkedin', 'tiktok'],
+    video: ['facebook', 'instagram', 'linkedin', 'youtube', 'tiktok'],
+  };
+
+  const contentEl = document.getElementById('content');
+  const charDisplay = document.getElementById('charDisplay');
+  const charProgress = document.getElementById('charProgress');
+  const charWarning = document.getElementById('charWarning');
+  const previewContent = document.getElementById('previewContent');
+  const previewAccount = document.getElementById('previewAccount');
+  const previewPlatform = document.getElementById('previewPlatform');
+  const previewHashtags = document.getElementById('previewHashtags');
+  const previewLink = document.getElementById('previewLink');
+  const previewLinkUrl = document.getElementById('previewLinkUrl');
+  const previewMedia = document.getElementById('previewMedia');
+  const submitLabel = document.getElementById('submitLabel');
+  const submitIcon = document.getElementById('submitIcon');
+  const scheduleInput = document.getElementById('scheduled_at');
+  const publishCheckbox = document.getElementById('publish_now');
+  const scheduleGroup = document.getElementById('scheduleGroup');
+  const publishGroup = document.getElementById('publishGroup');
+  const contentTypeBadge = document.getElementById('contentTypeBadge');
+  const selectedCount = document.getElementById('selectedCount');
+  const previewPlatformBadges = document.getElementById('previewPlatformBadges');
+
+  document.getElementById('timezoneDisplay').textContent = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  function detectContentType() {
+    const inputs = document.querySelectorAll('.media-input');
+    const urls = Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
+    if (!urls.length) return 'text';
+
+    let hasVideo = false, hasImage = false;
+    for (const url of urls) {
+      const ext = url.split('?').split('.').pop()?.toLowerCase() || '';
+      if (VIDEO_EXTS.includes(ext)) { hasVideo = true; break; }
+      if (IMAGE_EXTS.includes(ext)) { hasImage = true; }
+      if (url.includes('youtube.com') || url.includes('youtu.be') || url.includes('vimeo.com') || url.includes('tiktok.com')) {
+        hasVideo = true; break;
+      }
+    }
+    if (hasVideo) return 'video';
+    if (hasImage) return 'image';
+    return 'text';
+  }
+
+  function getWorstCharLimit() {
+    let min = Infinity;
+    document.querySelectorAll('.account-check:checked').forEach(cb => {
+      const p = cb.dataset.platform;
+      const limit = CHAR_LIMITS[p];
+      if (limit && limit < min) min = limit;
+    });
+    return min === Infinity ? null : min;
+  }
+
+  function updateCharCount() {
+    const len = contentEl.value.length;
+    const limit = getWorstCharLimit();
+    charDisplay.textContent = limit ? `${len} / ${limit}` : String(len);
+    const pct = limit ? Math.min((len / limit) * 100, 100) : 0;
+    charProgress.style.width = pct + '%';
+    if (limit && len > limit * 0.9) {
+      charWarning.textContent = `${limit - len} characters remaining`;
+      charWarning.classList.remove('hidden');
+      charWarning.className = 'text-xs font-semibold ' + (len > limit ? 'text-red-500' : 'text-amber-500');
+      charProgress.className = 'h-full rounded-full ' + (len > limit ? 'bg-red-500' : 'bg-amber-500') + ' transition-all duration-300';
+    } else {
+      charWarning.classList.add('hidden');
+      charProgress.className = 'h-full rounded-full bg-primary transition-all duration-300';
+    }
+    updateStrength();
+  }
+
+  function updateStrength() {
+    const text = contentEl.value;
+    const hashtags = document.getElementById('hashtags')?.value || '';
+    const linkUrl = document.getElementById('link_url')?.value || '';
+    const mediaRows = document.querySelectorAll('.media-row').length;
+    const checked = document.querySelectorAll('.account-check:checked').length;
+
+
+  function updatePlatformCompatibility() {
+    const type = detectContentType();
+    const compat = PLATFORM_COMPAT[type] || PLATFORM_COMPAT.text;
+
+    contentTypeBadge.className = 'ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase';
+    if (type === 'video') {
+      contentTypeBadge.textContent = 'Video detected';
+      contentTypeBadge.classList.add('bg-purple-100', 'text-purple-700');
+      contentTypeBadge.classList.remove('hidden');
+    } else if (type === 'image') {
+      contentTypeBadge.textContent = 'Image detected';
+      contentTypeBadge.classList.add('bg-amber-100', 'text-amber-700');
+      contentTypeBadge.classList.remove('hidden');
+    } else {
+      contentTypeBadge.textContent = '';
+      contentTypeBadge.classList.add('hidden');
+    }
+
+    document.querySelectorAll('.platform-group').forEach(group => {
+      const platform = group.dataset.platform;
+      const checks = group.querySelectorAll('.account-check');
+      const toggle = group.querySelector('.platform-toggle');
+      const compatBadge = group.querySelector('.platform-compat');
+
+      const isCompat = compat.includes(platform);
+      group.classList.toggle('opacity-40', !isCompat);
+      group.classList.toggle('pointer-events-none', !isCompat);
+
+      if (!isCompat) {
+        checks.forEach(cb => { cb.checked = false; cb.disabled = true; });
+        toggle.checked = false;
+        toggle.disabled = true;
+        compatBadge.textContent = type === 'video' ? 'no video support' : type === 'image' ? 'no image support' : '';
+      } else {
+        checks.forEach(cb => { cb.disabled = false; });
+        toggle.disabled = false;
+        compatBadge.textContent = '';
+      }
+    });
+    updateCounts();
+    updatePreview();
+  }
+
+  function updateCounts() {
+    const checked = document.querySelectorAll('.account-check:checked').length;
+    selectedCount.textContent = checked + ' selected';
+
+    document.querySelectorAll('.platform-group').forEach(group => {
+      const checks = group.querySelectorAll('.account-check:checked');
+      const toggle = group.querySelector('.platform-toggle');
+      const all = group.querySelectorAll('.account-check:not(:disabled)');
+      if (checks.length === all.length && all.length > 0) {
+        toggle.checked = true;
+        toggle.indeterminate = false;
+      } else if (checks.length > 0) {
+        toggle.checked = false;
+        toggle.indeterminate = true;
+      } else {
+        toggle.checked = false;
+        toggle.indeterminate = false;
+      }
+    });
+
+    updateCharCount();
+    updatePreview();
+  }
+
+  document.querySelectorAll('.platform-toggle').forEach(toggle => {
+    toggle.addEventListener('change', function() {
+      const group = this.closest('.platform-group');
+      const checks = group.querySelectorAll('.account-check:not(:disabled)');
+      checks.forEach(cb => { cb.checked = this.checked; });
+      updateCounts();
+    });
+  });
+
+  document.querySelectorAll('.account-check').forEach(cb => {
+    cb.addEventListener('change', updateCounts);
+  });
+
+  function escapeHtml(text) {
+    const d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+  }
+
+  function renderMarkdown(text) {
+    return escapeHtml(text)
+      .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>')
+      .replace(/\n/g, '<br>');
+  }
+
+  function updatePreview() {
+    previewContent.innerHTML = contentEl.value ? renderMarkdown(contentEl.value) : 'Your post content will appear here...';
+
+    const checked = document.querySelectorAll('.account-check:checked');
+    if (checked.length) {
+      const names = Array.from(checked).map(cb => {
+        const label = cb.closest('.account-check-label');
+        return label ? label.querySelector('span')?.textContent?.trim() : '';
+      }).filter(Boolean);
+      previewAccount.textContent = names.length > 1 ? names + ' +' + (names.length - 1) + ' more' : names || 'Selected accounts';
+      previewPlatform.textContent = names.length + ' account(s) selected';
+
+      const platforms = new Set();
+      checked.forEach(cb => platforms.add(cb.dataset.platform));
+      const badgesHtml = Array.from(platforms).map(p => {
+        const color = PLATFORM_COLORS[p] || 'text-slate-500';
+        const bg = PLATFORM_BG[p] || 'bg-slate-100';
+        return `<span class="${bg} ${color} px-2 py-0.5 rounded text-[10px] font-semibold">${PLATFORM_LABELS[p] || p}</span>`;
+      }).join(' ');
+      previewPlatformBadges.innerHTML = '<span class="text-[10px] text-slate-400 font-semibold">Posting to:</span> ' + (badgesHtml || '<span class="text-[10px] text-slate-400 italic">none selected</span>');
+    } else {
+      previewAccount.textContent = 'Your Account';
+      previewPlatform.textContent = 'Select platforms below';
+      previewPlatformBadges.innerHTML = '<span class="text-[10px] text-slate-400 font-semibold">Posting to:</span> <span class="text-[10px] text-slate-400 italic">none selected</span>';
+    }
+
+    const hashtags = document.getElementById('hashtags').value.split(',').map(t => t.trim()).filter(Boolean);
+    previewHashtags.innerHTML = hashtags.map(t => `<span class="px-2 py-0.5 rounded-full bg-primary-light text-primary text-[10px] font-semibold">#${t}</span>`).join('');
+
+    const link = document.getElementById('link_url').value.trim();
+    if (link) {
+      previewLink.classList.remove('hidden');
+      previewLinkUrl.textContent = link;
+    } else {
+      previewLink.classList.add('hidden');
+    }
+
+    const mediaInputs = document.querySelectorAll('.media-input');
+    const urls = Array.from(mediaInputs).map(i => i.value.trim()).filter(Boolean);
+    if (urls.length) {
+      previewMedia.classList.remove('hidden');
+      previewMedia.innerHTML = urls.map(u => {
+        const isVid = VIDEO_EXTS.includes(u.split('?').split('.').pop()?.toLowerCase() || '');
+        if (isVid) {
+          return `<div class="aspect-video rounded-lg bg-slate-100 overflow-hidden border border-slate-200 flex items-center justify-center text-slate-400"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>`;
+        }
+        return `<div class="aspect-video rounded-lg bg-slate-100 overflow-hidden border border-slate-200"><img src="${u}" alt="" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\\'flex items-center justify-center h-full text-slate-400\\'><svg class=\\'w-5 h-5\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'2\\' d=\\'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z\\'/></svg></div>'"></div>`;
+      }).join('');
+    } else {
+      previewMedia.classList.add('hidden');
+    }
+    updatePlatformCharLimit();
+  }
+
+  function updatePlatformCharLimit() {
+    var el = document.getElementById('previewCharLimit');
+    if (!el) return;
+    var limit = PLATFORM_CHAR_LIMITS[currentPreviewPlatform] || 5000;
+    var len = contentEl.value.length;
+    var remaining = limit - len;
+    el.textContent = len + ' / ' + limit;
+    el.className = 'text-xs font-semibold px-2 py-0.5 rounded-full ' + (remaining < 0 ? 'bg-red-100 text-red-600' : remaining < 50 ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-400');
+  }
+
+  function switchPreview(platform) {
+    currentPreviewPlatform = platform;
+    document.querySelectorAll('.preview-tab').forEach(function(t) {
+      t.classList.remove('active', 'bg-primary', 'text-white');
+      t.classList.add('text-slate-500', 'hover:bg-slate-100');
+    });
+    var tab = document.querySelector('.preview-tab[data-platform="' + platform + '"]');
+    if (tab) {
+      tab.classList.add('active', 'bg-primary', 'text-white');
+      tab.classList.remove('text-slate-500', 'hover:bg-slate-100');
+    }
+    updatePreview();
+  }
+
+  function setPreviewDevice(device) {
+    previewDevice = device;
+    var pane = document.getElementById('previewPane');
+    document.querySelectorAll('#deviceToggle button').forEach(function(b) {
+      b.classList.remove('bg-white', 'text-slate-800', 'shadow-sm');
+      b.classList.add('text-slate-500');
+    });
+    var btn = document.querySelector('#deviceToggle button[data-device="' + device + '"]');
+    if (btn) {
+      btn.classList.add('bg-white', 'text-slate-800', 'shadow-sm');
+      btn.classList.remove('text-slate-500');
+    }
+    if (device === 'mobile') {
+      pane.style.maxWidth = '375px';
+      pane.style.marginLeft = 'auto';
+      pane.style.marginRight = 'auto';
+    } else {
+      pane.style.maxWidth = '';
+      pane.style.marginLeft = '';
+      pane.style.marginRight = '';
+    }
+  }
+
+  function toggleSaveMode(mode) {
+    if (mode === 'draft') {
+      scheduleGroup.style.opacity = '0.3';
+      scheduleGroup.querySelectorAll('input, button').forEach(el => el.disabled = true);
+      publishGroup.style.opacity = '0.3';
+      publishCheckbox.disabled = true;
+      scheduleInput.disabled = true;
+      scheduleInput.value = '';
+      publishCheckbox.checked = false;
+      submitLabel.textContent = 'Save as Draft';
+    } else if (mode === 'schedule') {
+      scheduleGroup.style.opacity = '1';
+      scheduleGroup.querySelectorAll('input, button').forEach(el => el.disabled = false);
+      scheduleInput.disabled = false;
+      publishGroup.style.opacity = '0.3';
+      publishCheckbox.disabled = true;
+      publishCheckbox.checked = false;
+      submitLabel.textContent = 'Schedule Post';
+    } else {
+      scheduleGroup.style.opacity = '0.3';
+      scheduleGroup.querySelectorAll('input, button').forEach(el => el.disabled = true);
+      scheduleInput.disabled = true;
+      scheduleInput.value = '';
+      publishGroup.style.opacity = '1';
+      publishCheckbox.disabled = false;
+      publishCheckbox.checked = true;
+      submitLabel.textContent = 'Publish Now';
+    }
+  }
+
+  const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+  const mod = isMac ? '⌘' : 'Ctrl';
+  document.getElementById('shortcutMod').textContent = mod;
+  document.getElementById('shortcutMod2').textContent = mod;
+
+  function wrapSelection(prefix, suffix) {
+    const start = contentEl.selectionStart;
+    const end = contentEl.selectionEnd;
+    const text = contentEl.value;
+    const selected = text.substring(start, end);
+    const wrapped = prefix + selected + suffix;
+    contentEl.setRangeText(wrapped, start, end, 'end');
+    contentEl.focus();
+    updateCharCount();
+    updatePreview();
+  }
+
+  contentEl.addEventListener('keydown', function(e) {
+    const modKey = isMac ? e.metaKey : e.ctrlKey;
+    if (!modKey) return;
+    if (e.key === 'b' || e.key === 'B') { e.preventDefault(); wrapSelection('**', '**'); }
+    else if (e.key === 'i' || e.key === 'I') { e.preventDefault(); wrapSelection('*', '*'); }
+  });
+
+  document.getElementById('boldBtn')?.addEventListener('click', () => wrapSelection('**', '**'));
+  document.getElementById('italicBtn')?.addEventListener('click', () => wrapSelection('*', '*'));
+
+  document.getElementById('addMediaUrl')?.addEventListener('click', function() {
+    const container = document.getElementById('mediaUrls');
+    const first = container.querySelector('.media-row');
+    const newRow = first.cloneNode(true);
+    newRow.querySelector('input').value = '';
+    newRow.querySelector('input').classList.add('media-input');
+    const btn = newRow.querySelector('.remove-url');
+    btn.style.visibility = 'visible';
+    btn.addEventListener('click', () => { newRow.remove(); updatePlatformCompatibility(); updatePreview(); });
+    newRow.querySelector('input').addEventListener('input', function() { updatePlatformCompatibility(); updatePreview(); });
+    container.appendChild(newRow);
+  });
+
+  contentEl?.addEventListener('input', () => { updateCharCount(); updatePreview(); });
+  document.getElementById('hashtags')?.addEventListener('input', updatePreview);
+  document.getElementById('link_url')?.addEventListener('input', updatePreview);
+
+  document.querySelectorAll('.media-input').forEach(el => {
+    el.addEventListener('input', function() { updatePlatformCompatibility(); updatePreview(); });
+  });
+
+  const firstRow = document.querySelector('.media-row');
+  if (firstRow) {
+    firstRow.querySelector('.remove-url').addEventListener('click', function() {
+      if (document.querySelectorAll('.media-row').length > 1) {
+        firstRow.remove();
+        updatePlatformCompatibility();
+        updatePreview();
+      }
+    });
+  }
+
+  toggleSaveMode('draft');
+  updatePlatformCompatibility();
+  updateCounts();
+  updatePreview();
+
+  // Fake fallback for startAutosave if dashboard script isn't handling it yet
+  if (typeof startAutosave !== 'function') {
+    function startAutosave(formId, draftId, timer) { console.log("Autosave activated for " + formId); }
+  }
+  startAutosave('postForm', 'ida_post_draft', 30000);
+
+  // Drag & Drop + File upload via AJAX
+  (function() {
+    var zone = document.getElementById('dropZone');
+    var input = document.getElementById('fileInput');
+    var preview = document.getElementById('filePreview');
+    var fileList = document.getElementById('mediaFileList');
+    var container = document.getElementById('mediaUrls');
+    var csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    if (!zone || !input) return;
+
+    function showFileNames(files) {
+      fileList.innerHTML = '';
+      Array.from(files).forEach(function(file) {
+        var row = document.createElement('div');
+        row.className = 'flex items-center gap-2 py-1.5 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm';
+        var icon = file.type.match('video') ? '🎬' : '🖼️';
+        row.innerHTML = '<span>' + icon + '</span><span class="flex-1 truncate font-medium text-slate-700">' + file.name + '</span><span class="text-xs text-slate-400">' + (file.size / 1024).toFixed(0) + ' KB</span><span class="text-xs font-semibold text-amber-600">uploading...</span>';
+        fileList.appendChild(row);
+      });
+    }
+
+    function markUploaded(fileName, url) {
+      var rows = fileList.querySelectorAll('.flex');
+      for (var i = 0; i < rows.length; i++) {
+        if (rows[i].textContent.indexOf(fileName) !== -1) {
+          var status = rows[i].querySelector('span:last-child');
+          if (status) {
+            status.className = 'text-xs font-semibold text-emerald-600';
+            status.textContent = 'uploaded';
+          }
+          break;
+        }
+      }
+    }
+
+    function markFailed(fileName) {
+      var rows = fileList.querySelectorAll('.flex');
+      for (var i = 0; i < rows.length; i++) {
+        if (rows[i].textContent.indexOf(fileName) !== -1) {
+          var status = rows[i].querySelector('span:last-child');
+          if (status) {
+            status.className = 'text-xs font-semibold text-red-600';
+            status.textContent = 'failed';
+          }
+          break;
+        }
+      }
+    }
+
+    zone.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      zone.classList.add('border-primary', 'bg-primary-light/30');
+    });
+    zone.addEventListener('dragleave', function() {
+      zone.classList.remove('border-primary', 'bg-primary-light/30');
+    });
+    zone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      zone.classList.remove('border-primary', 'bg-primary-light/30');
+      var files = e.dataTransfer.files;
+      showFileNames(files);
+      uploadFiles(files);
+    });
+    input.addEventListener('change', function() {
+      if (input.files.length) {
+        showFileNames(input.files);
+        uploadFiles(input.files);
+      }
+    });
+
+    function uploadFiles(files) {
+      var pending = Array.from(files).filter(function(f) {
+        return f.type.match('image.*') || f.type.match('video.*');
+      });
+      if (!pending.length) return;
+      zone.querySelector('.drop-text').innerHTML = 'Uploading ' + pending.length + ' file(s)...';
+
+      pending.forEach(function(file) {
+        var fd = new FormData();
+        fd.append('file', file);
+        fd.append('csrfmiddlewaretoken', csrf);
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/media-assets/upload/');
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+        xhr.onload = function() {
+          if (xhr.status === 200) {
+            var data = JSON.parse(xhr.responseText);
+            if (data.url) {
+              addMediaUrl(data.url, file.name);
+              markUploaded(file.name, data.url);
+            }
+          } else {
+            markFailed(file.name);
+          }
+          var anyPending = fileList.querySelector('span:last-child');
+          if (!anyPending || anyPending.textContent !== 'uploading...') {
+            zone.querySelector('.drop-text').innerHTML = 'Drop images or videos here';
+          }
+        };
+        xhr.onerror = function() {
+          markFailed(file.name);
+          zone.querySelector('.drop-text').innerHTML = 'Upload failed - try again';
+        };
+        xhr.send(fd);
+      });
+    }
+
+    function addMediaUrl(url, fileName) {
+      // Show thumbnail preview
+      var wrapper = document.createElement('div');
+      wrapper.className = 'relative group';
+      var isVid = url.match(/\.(mp4|mov|avi|mkv|webm)(\?|$)/i);
+      if (isVid) {
+        wrapper.innerHTML = '<div class="w-14 h-14 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>';
+      } else {
+        wrapper.innerHTML = '<img src="' + url + '" class="w-14 h-14 object-cover rounded-lg border border-slate-200" onerror="this.outerHTML=\'<div class=\\\'w-14 h-14 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 text-[10px]\\\'>ERR</div>\'">';
+      }
+      wrapper.style.cssText = 'display:inline-flex';
+      preview.appendChild(wrapper);
+
+      // Add URL input to list with filename shown
+      var row = document.createElement('div');
+      row.className = 'flex items-center gap-2 media-row';
+      row.innerHTML = '<div class="flex-1 relative"><input type="url" name="media_urls" value="' + url + '" class="input-field w-full pl-3 pr-3 py-2 text-xs media-input" readonly><span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">' + (fileName || 'media') + '</span></div><button type="button" class="remove-url w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all flex-shrink-0" style="visibility:visible"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>';
+      row.querySelector('.media-input').style.paddingLeft = (fileName ? fileName.length * 0.6 + 20 : 70) + 'px';
+      container.appendChild(row);
+      row.querySelector('.remove-url').addEventListener('click', function() {
+        row.remove();
+        wrapper.remove();
+        updatePlatformCompatibility();
+        updatePreview();
+      });
+      updatePlatformCompatibility();
+      updatePreview();
+    }
+  })();
+
+
+</script>
+{% endblock %}
