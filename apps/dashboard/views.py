@@ -1424,6 +1424,18 @@ def social_content_hub(request):
                 'is_audio': a.file_type == 'audio',
             })
 
+    # ─── Trending Topics data ─────────────────────────────────────────
+    trending_topics = []
+    subscribed_topic_ids = []
+    try:
+        from apps.trending.models import Topic, UserTopicPreference
+        trending_topics = _safe_list(Topic.objects.filter(is_active=True).order_by('-subscriber_count'))
+        subscribed_topic_ids = list(
+            UserTopicPreference.objects.filter(user=user).values_list('topic_id', flat=True)
+        )
+    except Exception:
+        pass
+
     context = {
         'posts': posts,
         'calendar_month_label': calendar_month_label,
@@ -1434,6 +1446,8 @@ def social_content_hub(request):
         'media_current_type': media_current_type,
         'media_current_folder': media_current_folder,
         'media_query': media_query,
+        'trending_topics': trending_topics,
+        'subscribed_topic_ids': subscribed_topic_ids,
     }
     return render(request, 'dashboard/social_content_hub.html', context)
 
