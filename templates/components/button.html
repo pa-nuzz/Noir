@@ -2,7 +2,7 @@
 <{% if href %}a href="{{ href }}"{% else %}button{% endif %}
   type="{% if type %}{{ type }}{% else %}button{% endif %}"
   class="btn-action btn-{{ size|default:'md' }} {{ class }}"
-  style="background: linear-gradient(135deg, {{ primary_start|default:'#6D28D9' }}, {{ primary_end|default:'#06B6D4' }}); border: none; color: white; {% if disabled %}opacity: 0.6; pointer-events: none;{% endif %}"
+  style="background: linear-gradient(135deg, {{ primary_start|default:'#6D28D9' }}, {{ primary_end|default:'#06B6D4' }}); border: none; color: white; box-shadow: 0 4px 12px var(--primary-glow); {% if disabled %}opacity: 0.6; pointer-events: none;{% endif %}"
   {% if disabled %}disabled{% endif %}
   {% if onclick %}onclick="{{ onclick }}"{% endif %}>
   {% if icon %}

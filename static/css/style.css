@@ -607,6 +607,11 @@ tbody tr {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.btn-action:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 .btn-action-primary {
   background: var(--primary);
   color: #fff;
@@ -655,6 +660,7 @@ tbody tr {
   background: #fff;
   color: #1f2937;
   border: 1px solid #cbd5e1;
+  box-shadow: 0 4px 12px var(--primary-glow);
 }
 
 .btn-action-secondary:hover {
