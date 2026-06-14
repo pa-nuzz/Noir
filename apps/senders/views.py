@@ -22,6 +22,7 @@ def verify_sender(request):
         from_email = str(data.get('from_email', '')).strip()
         password = ''.join(str(data.get('password', '')).split())
         use_tls = bool(data.get('use_tls', True))
+        sender_id = data.get('sender_id')
 
         if not host or not password or not port:
             return JsonResponse({'success': False, 'error': 'Missing host, port, username, or password.'})
@@ -64,6 +65,18 @@ def verify_sender(request):
                     server.starttls(context=context)
                     server.ehlo()
                 authenticated_as = try_login(server)
+
+        from django.utils import timezone
+        if sender_id:
+            from apps.senders.models import Sender
+            try:
+                sender = Sender.objects.get(id=sender_id, user=request.user)
+                sender.is_active = True
+                sender.is_verified = True
+                sender.last_verified_at = timezone.now()
+                sender.save(update_fields=['is_active', 'is_verified', 'last_verified_at'])
+            except Sender.DoesNotExist:
+                pass
 
         return JsonResponse({'success': True, 'message': f'Connection verified as {authenticated_as}!'})
     except smtplib.SMTPAuthenticationError:
