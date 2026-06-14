@@ -39,6 +39,8 @@ from apps.contacts.models import ContactList, Contact, ContactTag
 
 logger = logging.getLogger(__name__)
 
+wizard_steps = ["Contacts", "Identity", "Message", "Delivery", "Review"]
+
 
 def _campaign_form_view(request, campaign=None, read_only=False):
     """Shared form view for creating/editing campaigns."""
