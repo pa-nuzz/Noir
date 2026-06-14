@@ -7,42 +7,30 @@
     0% { transform: scale(0.8); opacity: 0; }
     100% { transform: scale(1); opacity: 1; }
   }
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(16px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .animate-slide-up { animation: slideUp 0.5s ease-out forwards; }
-  .delay-1 { animation-delay: 0.05s; }
-  .delay-2 { animation-delay: 0.1s; }
-  .delay-3 { animation-delay: 0.15s; }
-  .delay-4 { animation-delay: 0.2s; }
-  .delay-5 { animation-delay: 0.25s; }
-  .delay-6 { animation-delay: 0.3s; }
 </style>
 {% endblock %}
 {% block content %}
-<div class="min-h-screen flex items-center justify-center px-4 py-16 bg-gradient-to-br from-slate-50 via-white to-slate-50">
-  <div class="relative z-10 w-full max-w-[440px]">
-    <div class="bg-white border border-slate-100 shadow-sm shadow-slate-200/50 rounded-2xl p-8 sm:p-10">
-    <div class="text-center mb-10 animate-slide-up">
-      <div class="flex justify-center mb-8" style="animation: logoPop .5s ease-out both;">
-        <img src="{% static 'images/logo-mark.svg' %}?v={{ STATIC_VERSION }}" alt="Intelligent Digital Automation (IDA) Logo" class="w-12 h-12" />
+<div class="min-h-screen flex items-center justify-center px-4 py-8">
+  <div class="auth-card">
+    <div class="text-center mb-6">
+      <div class="flex justify-center mb-5" style="animation: logoPop .5s ease-out both;">
+        <img src="{% static 'images/logo-mark.svg' %}?v={{ STATIC_VERSION }}" alt="Intelligent Digital Automation (IDA) Logo" class="w-10 h-10" />
       </div>
-      <h1 class="text-3xl font-extrabold text-[#0F1117] tracking-tight animate-slide-up delay-1">Welcome back</h1>
-      <p class="text-gray-500 mt-2 animate-slide-up delay-2">Sign in to Intelligent Digital Automation (IDA) to manage campaigns</p>
+      <h1 class="text-2xl font-extrabold text-[#0F1117]">Welcome back</h1>
+      <p class="text-gray-500 text-sm mt-1">Sign in to your account</p>
     </div>
 
     {% if form.non_field_errors %}
-      <div class="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl text-red-700 text-sm font-medium flex items-center gap-3">
+      <div class="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-red-700 text-sm font-medium flex items-center gap-3">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         {{ form.non_field_errors.0 }}
       </div>
     {% endif %}
 
-    <form method="POST" class="space-y-6" id="loginForm">
+    <form method="POST" class="space-y-4" id="loginForm">
       {% csrf_token %}
       
-      <div class="animate-slide-up delay-3">
+      <div>
         <label class="block text-sm font-semibold text-slate-700 mb-2">Email or Username</label>
         <div class="relative">
           {{ form.username|add_class:"auth-input"|attr:"placeholder:Email or Username"|attr:"id:id_username" }}
@@ -55,7 +43,7 @@
         <p id="login-availability-hint" class="mt-1 text-xs text-slate-400 hidden"></p>
       </div>
 
-      <div class="animate-slide-up delay-4">
+      <div>
         <div class="mb-2">
           <label class="block text-sm font-semibold text-slate-700">Password</label>
         </div>
@@ -71,7 +59,7 @@
         {% if form.password.errors %}<p class="mt-2 text-sm text-red-600 font-medium">{{ form.password.errors.0 }}</p>{% endif %}
       </div>
 
-      <button type="submit" id="loginSubmitBtn" class="btn-primary w-full justify-center py-3.5 text-lg shadow-lg shadow-indigo-500/25 animate-slide-up delay-5">
+      <button type="submit" id="loginSubmitBtn" class="btn-primary w-full justify-center py-3">
         <span id="loginSubmitText" class="inline-flex items-center gap-2">
           Sign In
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
@@ -79,8 +67,8 @@
       </button>
     </form>
 
-    <div class="mt-10 pt-8 border-t border-gray-100 text-center">
-      <p class="text-gray-600 font-medium">New around here? <a href="{% url 'accounts:register' %}" class="text-primary font-bold hover:underline">Create Account</a></p>
+    <div class="mt-6 pt-5 border-t border-gray-100 text-center">
+      <p class="text-gray-600 text-sm">New around here? <a href="{% url 'accounts:register' %}" class="text-primary font-bold hover:underline">Create Account</a></p>
     </div>
   </div>
 </div>
@@ -115,14 +103,13 @@
 
     form.addEventListener('submit', function () {
       btn.disabled = true;
-      btnText.innerHTML = '<svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9" stroke-opacity="0.25"></circle><path d="M21 12a9 9 a9 9 0 00-9-9"/></svg>Signing in...';
+      btnText.innerHTML = '<svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9" stroke-opacity="0.25"></circle><path d="M21 12a9 9 0 00-9-9"/></svg>Signing in...';
       setTimeout(function () {
         btn.disabled = false;
         btnText.innerHTML = 'Sign In <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>';
       }, 4000);
     });
 
-    // Email/Username availability check for login
     const input = document.getElementById('id_username');
     const availabilityIndicator = document.getElementById('login-availability-indicator');
     const availabilityIcon = document.getElementById('login-availability-icon');
@@ -130,7 +117,7 @@
     const availabilityHint = document.getElementById('login-availability-hint');
     let checkTimeout = null;
 
-    function checkAvailability(value) {
+    function checkLoginAvailability(value) {
       if (!value || value.length < 2) {
         availabilityIndicator.classList.add('hidden');
         availabilityHint.classList.add('hidden');
@@ -150,27 +137,21 @@
             availabilityHint.classList.remove('hidden');
             
             if (data.available) {
-              availabilityIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>';
-              availabilityIcon.className = 'w-5 h-5 text-emerald-500';
-              availabilityText.textContent = 'Available';
-              availabilityText.className = 'text-xs font-medium text-emerald-600';
-              if (data.field === 'email') {
-                availabilityHint.textContent = 'No account with this email - please register';
-              } else {
-                availabilityHint.textContent = 'Username available';
-              }
-              availabilityHint.className = 'mt-1 text-xs text-emerald-500';
-            } else {
+              // Account does NOT exist → can't login → show red
               availabilityIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>';
-              availabilityIcon.className = 'w-5 h-5 text-red-500';
-              availabilityText.textContent = 'Taken';
+              availabilityIcon.className = 'w-5 h-5 text-red-400';
+              availabilityText.textContent = 'Not found';
               availabilityText.className = 'text-xs font-medium text-red-600';
-              if (data.field === 'email') {
-                availabilityHint.textContent = 'Account exists - you can sign in';
-              } else {
-                availabilityHint.textContent = 'This username is already taken';
-              }
+              availabilityHint.textContent = 'No account found — please register instead';
               availabilityHint.className = 'mt-1 text-xs text-red-500';
+            } else {
+              // Account EXISTS → can login → show green
+              availabilityIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>';
+              availabilityIcon.className = 'w-5 h-5 text-emerald-500';
+              availabilityText.textContent = 'Account found';
+              availabilityText.className = 'text-xs font-medium text-emerald-600';
+              availabilityHint.textContent = 'You can sign in';
+              availabilityHint.className = 'mt-1 text-xs text-emerald-500';
             }
           })
           .catch(() => {
@@ -182,12 +163,10 @@
 
     if (input) {
       input.addEventListener('input', (e) => {
-        checkAvailability(e.target.value.trim());
+        checkLoginAvailability(e.target.value.trim());
       });
     }
   });
 </script>
 {% endblock %}
-    </div>
-  </div>
 </div>

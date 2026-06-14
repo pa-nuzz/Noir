@@ -429,7 +429,7 @@ def _get_empty_email_html():
 @login_required
 @require_workspace_permission('inbox', 'read')
 def message_detail(request, message_id):
-    msg = get_object_or_404(EmailMessage, id=message_id, thread__inbox__user=request.user)
+    msg = get_object_or_404(EmailMessage.objects.select_related('thread__inbox'), id=message_id, thread__inbox__user=request.user)
     
     # Build inline CIDs dict from message or thread
     inline_cids = {}

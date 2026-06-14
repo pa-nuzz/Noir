@@ -34,7 +34,6 @@ class RegisterForm(UserCreationForm):
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        # username is now provided by user, not auto-set to email
         if commit:
             user.save()
             if hasattr(self, 'save_m2m'):
@@ -50,41 +49,22 @@ class LoginForm(AuthenticationForm):
     password = forms.CharField(widget=forms.PasswordInput(attrs={'placeholder': 'Password', 'autocomplete': 'current-password'}))
 
     def clean(self):
-        username = self.cleaned_data.get('username')
+        raw_username = self.cleaned_data.get('username')
         password = self.cleaned_data.get('password')
-        
-        if username and password:
-            # Try to find user by email first, then by username
-            from django.contrib.auth import get_user_model
-            UserModel = get_user_model()
-            
-            # Try to find user by email first
-            user = None
-            if '@' in username:
+
+        if raw_username and password:
+            from django.contrib.auth import authenticate
+            self.user_cache = authenticate(self.request, username=raw_username, password=password)
+            if self.user_cache is None:
                 try:
-                    user = UserModel.objects.get(email__iexact=username)
-                except UserModel.DoesNotExist:
+                    user_obj = User.objects.get(username__iexact=raw_username)
+                    self.user_cache = authenticate(self.request, username=user_obj.email, password=password)
+                except User.DoesNotExist:
                     pass
-            
-            # If not found by email, try username
-            if not user:
-                try:
-                    user = UserModel.objects.get(username__iexact=username)
-                except UserModel.DoesNotExist:
-                    pass
-            
-            if user:
-                # Check password
-                if user.check_password(password):
-                    self.user_cache = user
-                else:
-                    raise forms.ValidationError(
-                        "Invalid password. Please try again.",
-                        code='invalid_login',
-                    )
-            else:
+            if self.user_cache is None:
                 raise forms.ValidationError(
-                    "No account found with this email or username.",
+                    "Invalid email/username or password.",
                     code='invalid_login',
                 )
+            self.confirm_login_allowed(self.user_cache)
         return self.cleaned_data

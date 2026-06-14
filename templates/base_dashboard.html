@@ -12,7 +12,11 @@
     <link rel="stylesheet" href="{% static 'css/style.css' %}?v={{ STATIC_VERSION }}" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tiptap/core@2.11.5/dist/tiptap.min.css" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tiptap/placeholder@2.11.5/dist/index.min.css" media="print" onload="this.media='all'" />
+    <style>.ws-switcher{display:none}@media(min-width:768px){.ws-switcher{display:flex}}</style>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
+    <script src="{% static 'js/email-module.js' %}?v={{ STATIC_VERSION }}" defer></script>
     <script>
       tailwind.config = {
         theme: {
@@ -119,7 +123,6 @@
       .sb-footer { margin-top: auto; padding: 10px 12px; border-top: 0.5px solid var(--border-faint); }
       .sb-signout { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 7px; border-radius: 8px; border: 0.5px solid #FEE2E2; background: transparent; color: #DC2626; font-size: 12px; font-weight: 500; cursor: pointer; width: 100%; transition: all .15s; }
       .sb-signout:hover { background: #FEF2F2; }
-
       .ida-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
       .ida-content { flex: 1; overflow-y: auto; padding: 16px; }
       .ida-footer { height: 38px; background: #fff; border-top: 0.5px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-size: 11px; color: var(--text-tertiary); flex-shrink: 0; }
@@ -138,7 +141,7 @@
     <aside class="sidebar w-64 bg-white border-r border-slate-200 hidden lg:flex flex-col fixed h-full z-30 shadow-[10px_0_24px_rgba(15,23,42,0.08)]">
       <div class="px-6 py-5 border-b border-white/10">
         <a href="{% url 'dashboard:dashboard' %}" class="inline-flex items-center">
-          <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="Intelligence Digital Automation (IDA) Logo" class="h-[39px] w-auto" />
+          <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="Intelligent Digital Automation (IDA) Logo" class="h-[39px] w-auto" />
         </a>
       </div>
 
@@ -158,6 +161,22 @@
         .sidebar-nav .sidebar-link.sub-link { padding-left: 2.75rem; font-size: 0.8125rem; margin: 1px 0; border-left: 3px solid transparent; }
         .sidebar-nav .sidebar-link.sub-link.active { background: #ECFEFF; color: #06B6D4; font-weight: 600; border-left-color: #06B6D4; }
         .sidebar-nav .sidebar-link.sub-link.active .opacity-40 { opacity: 1 !important; }
+
+        .onboarding-card {
+          background: linear-gradient(135deg, #EEF2FF 0%, #FFFFFF 50%, #ECFDF5 100%);
+          border: 1px solid #E0E7FF;
+          border-radius: 1rem;
+          padding: 1.25rem 1.5rem;
+          position: relative;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .onboarding-steps { display: flex; gap: 6px; margin: 12px 0; }
+        .onboarding-step {
+          flex: 1; height: 4px; border-radius: 2px;
+          background: #E2E8F0; transition: background 0.3s;
+        }
+        .onboarding-step.done { background: #10B981; }
+        .onboarding-step.active { background: #818CF8; }
       </style>
 
       <nav class="flex-grow px-4 overflow-y-auto sidebar-nav">
@@ -208,11 +227,11 @@
               <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
               Content Hub
             </a>
-            <a href="{% url 'social_accounts:social_hub' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'social_accounts' and request.resolver_match.url_name in 'social_hub,connect_platform,oauth_callback,disconnect_account' %}active{% endif %}">
+            <a href="{% url 'social_accounts:social_hub' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'social_accounts' and request.resolver_match.url_name != 'analytics_overview' and request.resolver_match.url_name != 'analytics_detail' %}active{% endif %}">
               <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
               Connected Accounts
             </a>
-            <a href="{% url 'content_studio:content_hub' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'content_studio' and request.resolver_match.url_name == 'content_hub' %}active{% endif %}">
+            <a href="{% url 'content_studio:content_hub' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'content_studio' and request.resolver_match.url_name != 'excel_sheets' and request.resolver_match.url_name != 'excel_sheets_add' and request.resolver_match.url_name != 'excel_sheets_sync' and request.resolver_match.url_name != 'sheets_auth_start' and request.resolver_match.url_name != 'sheets_auth_callback' and request.resolver_match.url_name != 'sheets_auth_disconnect' and request.resolver_match.url_name != 'sheets_list' and request.resolver_match.url_name != 'sheets_create' and request.resolver_match.url_name != 'sheets_select' %}active{% endif %}">
               <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
               AI Content Studio
             </a>
@@ -221,9 +240,37 @@
               Google Sheets
             </a>
             
+            <a href="{% url 'media_assets:library' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'media_assets' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              Media Library
+            </a>
             <a href="{% url 'social_accounts:analytics_overview' %}" class="sidebar-link sub-link {% if request.resolver_match.url_name == 'analytics_overview' or request.resolver_match.url_name == 'analytics_detail' %}active{% endif %}">
               <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
               Analytics
+            </a>
+          </div>
+        </div>
+
+        <div class="px-4 mt-6 mb-3 text-[11px] font-bold text-gray-400 uppercase tracking-[0.1em]">Creative</div>
+
+        <div class="sidebar-group">
+          <button type="button" class="sidebar-group-btn" onclick="toggleSidebarGroup(this)">
+            <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 3.34a13.78 13.78 0 00-8.66 2.95 1 1 0 00-.35.9 13.78 13.78 0 002.6 8.42 13.73 13.73 0 007.18 4.3 1 1 0 00.67 0 13.73 13.73 0 007.17-4.3 13.78 13.78 0 002.6-8.42 1 1 0 00-.35-.9A13.78 13.78 0 0014 3.34a1 1 0 00-1 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 11a5 5 0 01-10 0"/></svg>
+            <span class="flex-1 text-left text-sm font-medium">Creative Suite</span>
+            <svg class="w-4 h-4 sidebar-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div class="sidebar-group-content">
+            <a href="{% url 'creative:media_library' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'creative' and request.resolver_match.url_name == 'media_library' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              Media Library
+            </a>
+            <a href="{% url 'creative:strategy_studio' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'creative' and request.resolver_match.url_name == 'strategy_studio' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              Strategy Studio
+            </a>
+            <a href="{% url 'creative:company_context' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'creative' and request.resolver_match.url_name == 'company_context' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              Company Context
             </a>
           </div>
         </div>
@@ -330,7 +377,7 @@
           <div class="flex h-full items-center justify-between gap-4">
 
             <!-- Smart Breadcrumbs -->
-            <nav class="hidden md:flex items-center gap-2 text-sm text-slate-500" aria-label="Breadcrumb">
+            <nav class="flex items-center gap-2 text-sm text-slate-500 min-w-0" aria-label="Breadcrumb">
               <a href="{% url 'dashboard:dashboard' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
                 <span class="font-medium">Home</span>
@@ -444,7 +491,7 @@
                 {% if view_name == 'social_hub' or view_name == 'connect_platform' or view_name == 'oauth_callback' or view_name == 'disconnect_account' or view_name == 'select_page' %}
                   <a href="{% url 'social_accounts:social_hub' %}" class="{% if view_name == 'social_hub' %}text-slate-900 font-semibold{% else %}hover:text-primary{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'social_hub' %}hover:bg-slate-100{% endif %}">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-                    Social Hub
+                    Connected Accounts
                   </a>
                   {% if view_name == 'select_page' %}
                     <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
@@ -453,7 +500,7 @@
                 {% elif view_name == 'post_list' or view_name == 'post_create' or view_name == 'post_detail' or view_name == 'post_delete' or view_name == 'publish_post' %}
                   <a href="{% url 'social_accounts:post_list' %}" class="{% if view_name == 'post_list' %}text-slate-900 font-semibold{% else %}hover:text-primary{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'post_list' %}hover:bg-slate-100{% endif %}">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-                    Posts &amp; Publishing
+                    Connected Accounts
                   </a>
                   {% if view_name == 'post_create' %}
                     <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
@@ -470,7 +517,7 @@
                 {% elif view_name == 'calendar' or view_name == 'calendar_month' %}
                   <a href="{% url 'social_accounts:social_hub' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-                    Social Hub
+                    Connected Accounts
                   </a>
                   <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                   <span class="text-slate-900 font-semibold p-2">Calendar</span>
@@ -492,24 +539,30 @@
                 {% elif view_name == 'generate' %}
                   <a href="{% url 'content_studio:content_hub' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                    Content Studio
+                    AI Content Studio
                   </a>
                   <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                  <span class="text-slate-900 font-semibold p-2">Generate</span>
+                  <span class="text-slate-900 font-semibold p-2">Generate Content</span>
                 {% elif view_name == 'history' %}
                   <a href="{% url 'content_studio:content_hub' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                    Content Studio
+                    AI Content Studio
                   </a>
                   <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                   <span class="text-slate-900 font-semibold p-2">History</span>
                 {% elif view_name == 'detail' or view_name == 'edit' or view_name == 'refine' or view_name == 'approve' or view_name == 'save_draft' or view_name == 'calendar' %}
                   <a href="{% url 'content_studio:dashboard' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                    Content Studio
+                    AI Content Studio
                   </a>
                   <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                  <span class="text-slate-900 font-semibold p-2 capitalize">{{ view_name }}</span>
+                  <span class="text-slate-900 font-semibold p-2 capitalize">{{ view_name|title }}</span>
+                {% elif view_name == 'excel_sheets' or view_name == 'excel_sheets_add' or view_name == 'excel_sheets_sync' or view_name == 'sheets_auth_start' or view_name == 'sheets_auth_callback' or view_name == 'sheets_auth_disconnect' or view_name == 'sheets_list' or view_name == 'sheets_create' or view_name == 'sheets_select' %}
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    Google Sheets
+                  </span>
                 {% endif %}
 
               <!-- Media Assets Section -->
@@ -560,31 +613,20 @@
                   </a>
                   <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                   <span class="text-slate-900 font-semibold p-2">Connect Inbox</span>
-                {% elif view_name == 'thread_list' or view_name == 'thread_detail' or view_name == 'thread_summarize' or view_name == 'generate_draft' %}
-                  <a href="{% url 'inbox:thread_list' %}" class="text-slate-900 font-semibold transition-colors flex items-center gap-1 p-2 rounded-lg">
+                {% elif view_name == 'message_detail' or view_name == 'message_summarize' or view_name == 'generate_draft' or view_name == 'trash' or view_name == 'message_delete' or view_name == 'message_restore' or view_name == 'sync' %}
+                  <a href="{% url 'inbox:dashboard' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                    Threads
-                  </a>
-                  {% if view_name == 'thread_detail' or view_name == 'thread_summarize' or view_name == 'generate_draft' %}
-                    <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                    <span class="text-slate-900 font-semibold p-2">Detail</span>
-                  {% endif %}
-                {% elif view_name == 'draft_detail' or view_name == 'draft_review' or view_name == 'draft_approve' %}
-                  <a href="{% url 'inbox:thread_list' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                    Threads
+                    AI Email Agent
                   </a>
                   <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                   <span class="text-slate-900 font-semibold p-2 capitalize">{{ view_name|cut:'_'|title }}</span>
-                {% elif view_name == 'prompt_list' or view_name == 'prompt_create' or view_name == 'prompt_edit' %}
-                  <a href="{% url 'inbox:prompt_list' %}" class="{% if view_name == 'prompt_list' %}text-slate-900 font-semibold{% else %}hover:text-primary{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'prompt_list' %}hover:bg-slate-100{% endif %}">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                    Prompt Templates
+                {% elif view_name == 'draft_detail' or view_name == 'draft_review' or view_name == 'draft_approve' or view_name == 'draft_send' or view_name == 'draft_send_test' %}
+                  <a href="{% url 'inbox:dashboard' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    AI Email Agent
                   </a>
-                  {% if view_name != 'prompt_list' %}
-                    <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                    <span class="text-slate-900 font-semibold p-2 capitalize">{{ view_name|cut:'prompt_'|title }}</span>
-                  {% endif %}
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <span class="text-slate-900 font-semibold p-2 capitalize">{{ view_name|cut:'_'|title }}</span>
                 {% endif %}
 
               <!-- Workspaces Section -->
@@ -642,7 +684,7 @@
                 {% endif %}
                 <svg class="w-3 h-3 text-slate-400 ml-auto flex-shrink-0 ws-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
               </button>
-              <div id="ws-dropdown" class="absolute right-0 top-12 w-64 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-[61] ws-dropdown" style="display:none; visibility:hidden; opacity:0;">
+              <div id="ws-dropdown" class="absolute right-0 top-12 w-64 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-[61] opacity-0 pointer-events-none ws-dropdown">
                 <div class="px-4 py-3 border-b border-slate-100">
                   <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Switch Workspace</p>
                 </div>
@@ -681,22 +723,18 @@
               var dd = document.getElementById('ws-dropdown');
               var chevron = document.querySelector('.ws-chevron');
               var notifDd = document.getElementById('notif-dropdown');
-              if (!dd) return;
               // Close notifications dropdown when opening workspace
-              if (dd.style.display === 'none' || dd.style.visibility === 'hidden') {
-                if (notifDd && (notifDd.style.display !== 'none' && notifDd.style.visibility !== 'hidden')) {
-                  notifDd.style.display = 'none';
-                  notifDd.style.visibility = 'hidden';
-                  notifDd.style.opacity = '0';
+              if (dd.classList.contains('opacity-0')) {
+                if (notifDd && !notifDd.classList.contains('opacity-0')) {
+                  notifDd.classList.add('opacity-0', 'pointer-events-none');
+                  notifDd.classList.remove('opacity-100');
                 }
-                dd.style.display = 'block';
-                dd.style.visibility = 'visible';
-                dd.style.opacity = '1';
+                dd.classList.remove('opacity-0', 'pointer-events-none');
+                dd.classList.add('opacity-100', 'pointer-events-auto');
                 if (chevron) chevron.classList.add('rotate-180');
               } else {
-                dd.style.display = 'none';
-                dd.style.visibility = 'hidden';
-                dd.style.opacity = '0';
+                dd.classList.add('opacity-0', 'pointer-events-none');
+                dd.classList.remove('opacity-100', 'pointer-events-auto');
                 if (chevron) chevron.classList.remove('rotate-180');
               }
             }
@@ -709,10 +747,9 @@
               var notifChevron = document.querySelector('.notif-chevron');
               
               // Close workspace dropdown if click is outside
-              if (sw && !sw.contains(e.target) && wsDd && (wsDd.style.display !== 'none' && wsDd.style.visibility !== 'hidden')) {
-                wsDd.style.display = 'none';
-                wsDd.style.visibility = 'hidden';
-                wsDd.style.opacity = '0';
+              if (sw && !sw.contains(e.target) && wsDd && !wsDd.classList.contains('opacity-0')) {
+                wsDd.classList.add('opacity-0', 'pointer-events-none');
+                wsDd.classList.remove('opacity-100', 'pointer-events-auto');
                 if (wsChevron) wsChevron.classList.remove('rotate-180');
               }
               // Close notification dropdown if click is outside
@@ -725,7 +762,7 @@
             </script>
 
             <div class="flex items-center gap-3 sm:gap-4">
-              <div class="relative" id="notif-wrapper" data-clear-url="{% url 'dashboard:clear_notifications' %}" data-csrf-token="{{ csrf_token }}">
+              <div class="relative" id="notif-wrapper" data-clear-url="{% url 'dashboard:clear_notifications' %}" data-check-url="{% url 'dashboard:check_notifications' %}" data-csrf-token="{{ csrf_token }}">
                 <button onclick="toggleNotifications()" class="w-9 h-9 flex items-center justify-center text-slate-600 bg-white border border-slate-200 shadow-sm hover:text-primary hover:border-primary/30 hover:bg-primary-light rounded-xl transition-all relative hover-scale-soft">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
                   <span id="notif-badge" class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white {% if dashboard_notification_count == 0 %}hidden{% endif %}"></span>
@@ -819,13 +856,39 @@
       </main>
 
       <footer class="mt-auto px-4 sm:px-6 lg:px-8 py-3.5 bg-white border-t border-gray-100 flex flex-col sm:flex-row gap-2 sm:gap-0 justify-between sm:items-center text-xs text-gray-400 font-medium">
-        <p>&copy; {% now "Y" %} Intelligence Digital Automation (IDA). High-Deliverability Command Center.</p>
+        <p>&copy; {% now "Y" %} Intelligent Digital Automation (IDA). High-Deliverability Command Center.</p>
         <div class="flex gap-6">
           <a href="#" class="hover:text-primary transition-colors">Documentation</a>
           <a href="#" class="hover:text-primary transition-colors">System Status</a>
         </div>
       </footer>
     </div>
+
+    <!-- Mobile Bottom Tab Bar (visible on screens <1024px) -->
+    <nav class="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 safe-area-bottom">
+      <div class="flex items-center justify-around h-14 px-1">
+        <a href="{% url 'dashboard:dashboard' %}" class="mobile-nav-item flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg {% if request.resolver_match.namespace == 'dashboard' and request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          <span class="text-[10px] font-semibold">Home</span>
+        </a>
+        <a href="{% url 'campaigns:campaign_list' %}" class="mobile-nav-item flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg {% if request.resolver_match.namespace == 'campaigns' %}active{% endif %}">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          <span class="text-[10px] font-semibold">Campaigns</span>
+        </a>
+        <a href="{% url 'social_accounts:social_hub' %}" class="mobile-nav-item flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg {% if request.resolver_match.namespace == 'social_accounts' %}active{% endif %}">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+          <span class="text-[10px] font-semibold">Social</span>
+        </a>
+        <a href="{% url 'contacts:list' %}" class="mobile-nav-item flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg {% if request.resolver_match.namespace == 'contacts' %}active{% endif %}">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span class="text-[10px] font-semibold">Contacts</span>
+        </a>
+        <button onclick="toggleAiSidebar()" class="mobile-nav-item flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          <span class="text-[10px] font-semibold">AI</span>
+        </button>
+      </div>
+    </nav>
 
     <!-- Global Scripts -->
     <script>
@@ -893,6 +956,63 @@
           closeNotifications();
         }
       });
+
+      // Poll for new notifications every 15 seconds — syncs toast + bell dropdown + badge
+      var lastNotifCount = {{ dashboard_notification_count }};
+      var toneMap = {
+        success: { bg: 'bg-emerald-50 text-emerald-600', icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>', toastClass: 'text-emerald-700' },
+        warning: { bg: 'bg-amber-50 text-amber-600', icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.2 16c-.77 1.333.192 3 1.73 3z"/></svg>', toastClass: 'text-amber-700' },
+        danger:  { bg: 'bg-red-50 text-red-600', icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M4.93 19h14.14c1.54 0 2.502-1.667 1.732-3L13.73 4c-.77-1.333-2.694-1.333-3.464 0L3.2 16c-.77 1.333.192 3 1.73 3z"/></svg>', toastClass: 'text-red-700' },
+      };
+      var defaultTone = { bg: 'bg-primary-light text-primary', icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>', toastClass: 'text-slate-700' };
+      setInterval(function() {
+        var wrapper = document.getElementById('notif-wrapper');
+        if (!wrapper) return;
+        fetch(wrapper.dataset.checkUrl, {
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        }).then(function(r) { return r.json(); }).then(function(data) {
+          var badge = document.getElementById('notif-badge');
+          if (badge) {
+            if (data.count > 0) badge.classList.remove('hidden');
+            else badge.classList.add('hidden');
+          }
+          // If new notifications arrived, sync toast + dropdown
+          data.notifications.forEach(function(n) {
+            var list = document.getElementById('notif-list');
+            if (!list) return;
+            // Skip if already in the dropdown
+            if (list.querySelector('[data-nid="' + n.id + '"]')) return;
+            var t = toneMap[n.tone] || defaultTone;
+            // Add to bell dropdown
+            var item = document.createElement('a');
+            item.setAttribute('href', n.url);
+            item.setAttribute('data-nid', n.id);
+            item.className = 'px-5 py-4 hover:bg-slate-100 transition-colors flex gap-3 group';
+            item.innerHTML = '<div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center ' + t.bg + '">' + t.icon + '</div><div><p class="text-sm font-semibold text-slate-800 group-hover:text-primary transition-colors">' + n.title + '</p><p class="text-xs text-gray-400 mt-0.5">' + n.message + '</p></div>';
+            list.appendChild(item);
+            list.classList.remove('hidden');
+            var empty = document.getElementById('notif-empty');
+            if (empty) empty.classList.add('hidden');
+            // Show toast popup
+            var toast = document.createElement('div');
+            toast.className = 'toast-msg animate-toast-in px-5 py-4 rounded-2xl shadow-2xl glass border border-white/50 flex items-center gap-3 ' + t.toastClass;
+            toast.innerHTML = '<div class="w-8 h-8 rounded-full flex items-center justify-center bg-white/80">' + t.icon + '</div><div><p class="text-sm font-bold">' + n.title + '</p><p class="text-xs opacity-80 mt-0.5">' + n.message + '</p></div>';
+            var container = document.getElementById('toast-container');
+            if (!container) {
+              container = document.createElement('div');
+              container.id = 'toast-container';
+              container.className = 'fixed top-24 right-10 z-[60] flex flex-col gap-3';
+              document.body.appendChild(container);
+            }
+            container.appendChild(toast);
+            setTimeout(function() {
+              toast.classList.add('animate-toast-out');
+              setTimeout(function() { toast.remove(); }, 400);
+            }, 5000);
+          });
+          lastNotifCount = data.count;
+        }).catch(function() {});
+      }, 15000);
 
       // Sidebar collapsible groups
       function toggleSidebarGroup(btn) {
@@ -1022,15 +1142,28 @@
           if (e.lengthComputable) { bar.style.width = (e.loaded / e.total * 80) + '%'; }
         };
         xhr.onload = function() {
-          bar.style.width = '100%';
-          status.textContent = 'Complete!';
-          setTimeout(function() {
-            closeUploadModal();
-            window.location.reload();
-          }, 800);
+          if (xhr.status >= 200 && xhr.status < 300) {
+            bar.style.width = '100%';
+            status.textContent = 'Complete!';
+            setTimeout(function() {
+              closeUploadModal();
+              window.location.reload();
+            }, 800);
+          } else {
+            var errMsg = 'Upload failed';
+            try { var resp = JSON.parse(xhr.responseText); errMsg = resp.error || errMsg; } catch(e) {}
+            status.textContent = errMsg;
+            status.className = 'text-xs text-red-500 mt-1 text-center';
+            bar.style.backgroundColor = '#ef4444';
+            setTimeout(function() {
+              btn.disabled = false;
+              btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg> Upload';
+            }, 2000);
+          }
         };
         xhr.onerror = function() {
-          status.textContent = 'Upload failed. Try again.';
+          status.textContent = 'Network error — could not reach server.';
+          status.className = 'text-xs text-red-500 mt-1 text-center';
           btn.disabled = false;
           btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg> Upload';
           progress.classList.add('hidden');
@@ -1041,144 +1174,44 @@
       });
       document.getElementById('upload-modal').addEventListener('click', closeUploadModal);
     </script>
-    <div id="logout-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full mx-4 p-6 text-center">
-        <div class="w-14 h-14 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
-          <svg class="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-        </div>
-        <h3 class="text-lg font-bold text-slate-900 mb-2">Sign Out</h3>
-        <p class="text-sm text-slate-600 mb-6">Are you sure you want to sign out?</p>
-        <div class="flex gap-3">
-          <button type="button" onclick="hideLogoutModal()" class="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors">Cancel</button>
-          <button type="button" onclick="confirmLogout()" class="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition-colors">Sign Out</button>
-        </div>
-      </div>
-    </div>
+    {% include "components/modal.html" with id="logout-modal" title="Sign Out" content='<div class="text-center"><div class="w-14 h-14 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center"><svg class="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg></div><p class="text-sm text-slate-600 mb-6">Are you sure you want to sign out?</p><div class="flex gap-3"><button type="button" onclick="hideLogoutModal()" class="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors">Cancel</button><button type="button" onclick="confirmLogout()" class="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition-colors">Sign Out</button></div></div>' %}
     <script>
-      function showLogoutModal() {
-        document.getElementById('logout-modal').classList.remove('hidden');
-      }
-      function hideLogoutModal() {
-        document.getElementById('logout-modal').classList.add('hidden');
-      }
-      function confirmLogout() {
-        document.getElementById('logout-form').submit();
-      }
-      document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') hideLogoutModal();
-      });
-            // Force-hide dropdowns on page unload to prevent flash
-            window.addEventListener("beforeunload", function() {
-              var wsDd = document.getElementById("ws-dropdown");
-              var notifDd = document.getElementById("notif-dropdown");
-              if (wsDd) { wsDd.style.display = "none"; wsDd.style.visibility = "hidden"; wsDd.style.opacity = "0"; }
-              if (notifDd) { notifDd.style.display = "none"; notifDd.style.visibility = "hidden"; notifDd.style.opacity = "0"; }
-            });
-            // Ensure dropdowns are hidden on page load
-            document.addEventListener("DOMContentLoaded", function() {
-              var wsDd = document.getElementById("ws-dropdown");
-              var notifDd = document.getElementById("notif-dropdown");
-              if (wsDd) { wsDd.style.display = "none"; wsDd.style.visibility = "hidden"; wsDd.style.opacity = "0"; }
-              if (notifDd) { notifDd.style.display = "none"; notifDd.style.visibility = "hidden"; notifDd.style.opacity = "0"; }
-            });
-            
-            // Notification system polling
-            (function() {
-              function fetchNotifications() {
-                fetch("{% url 'notifications:list' %}")
-                  .then(response => response.json())
-                  .then(data => {
-                    updateNotificationUI(data);
-                  })
-                  .catch(err => console.warn('Failed to fetch notifications:', err));
-              }
-              
-              function updateNotificationUI(data) {
-                const badge = document.getElementById('notif-badge');
-                const list = document.getElementById('notif-list');
-                const empty = document.getElementById('notif-empty');
-                const wrapper = document.getElementById('notif-wrapper');
-                
-                if (badge) {
-                  if (data.unread_count > 0) {
-                    badge.classList.remove('hidden');
-                    badge.textContent = data.unread_count > 99 ? '99+' : data.unread_count;
-                  } else {
-                    badge.classList.add('hidden');
-                  }
-                }
-                
-                if (list) {
-                  if (data.notifications && data.notifications.length > 0) {
-                    list.classList.remove('hidden');
-                    list.innerHTML = data.notifications.map(n => `
-                      <a href="${n.action_url || '#'}" class="px-5 py-4 hover:bg-slate-100 transition-colors flex gap-3 group">
-                        <div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center
-                          ${n.type === 'draft_created' || n.type === 'campaign_sent' || n.type === 'sync_completed' ? 'bg-emerald-50 text-emerald-600' :
-                           n.type === 'sync_failed' || n.type === 'campaign_failed' ? 'bg-red-50 text-red-600' :
-                           n.type === 'auto_reply_draft' ? 'bg-amber-50 text-amber-600' :
-                           'bg-primary-light text-primary'}">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${getIconPath(n.type)}"/>
-                        </svg>
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <p class="text-sm font-semibold text-slate-800 truncate group-hover:text-primary transition-colors">${escapeHtml(n.title)}</p>
-                        <p class="text-[10px] text-slate-400 truncate">${escapeHtml(n.message)}</p>
-                      </div>
-                    </a>
-                  `).join('');
-                    list.classList.remove('hidden');
-                  } else {
-                    list.classList.add('hidden');
-                  }
-                  
-                  if (empty) {
-                    if (data.notifications && data.notifications.length > 0) {
-                      empty.classList.add('hidden');
-                    } else {
-                      empty.classList.remove('hidden');
-                    }
-                  }
-                }
-                
-                function getIconPath(type) {
-                  const icons = {
-                    'draft_created': 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
-                    'campaign_sent': 'M12 19l9 2-9-18-9 18 9-2zm0 0v-8',
-                    'sync_completed': 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15',
-                    'sync_failed': 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
-                    'auto_reply_draft': 'M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09ZM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456ZM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423Z',
-                    'campaign_failed': 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-                    'campaign_sent': 'M12 19l9 2-9-18-9 18 9-2zm0 0v-8',
-                    'campaign_completed': 'M12 19l9 2-9-18-9 18 9-2zm0 0v-8',
-                    'sender_issue': 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
-                    'dns_audit_completed': 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'
-                  };
-                  return icons[type] || 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z';
-                }
-                
-                function escapeHtml(text) {
-                  const div = document.createElement('div');
-                  div.textContent = text;
-                  return div.innerHTML;
-                }
-                
-                // Initial fetch
-                fetchNotifications();
-                
-                // Poll every 30 seconds
-                setInterval(fetchNotifications, 30000);
-                
-                // Also fetch when tab becomes visible
-                document.addEventListener('visibilitychange', () => {
-                  if (!document.hidden) {
-                    fetchNotifications();
-                  }
-                });
-              })();
+      function showLogoutModal() { openModal('logout-modal'); }
+      function hideLogoutModal() { closeModal('logout-modal'); }
+      function confirmLogout() { document.getElementById('logout-form').submit(); }
     </script>
     {% block extra_scripts %}{% endblock %}
+
+    <style>
+      /* Mobile Bottom Navigation */
+      .mobile-bottom-nav { padding-bottom: env(safe-area-inset-bottom, 0px); }
+      .mobile-nav-item { color: #94A3B8; transition: all 0.15s; }
+      .mobile-nav-item.active, .mobile-nav-item:active { color: #6D28D9; }
+      .mobile-nav-item.active svg, .mobile-nav-item:active svg { stroke: #6D28D9; }
+      .mobile-nav-item.active span, .mobile-nav-item:active span { color: #6D28D9; }
+
+      @media (max-width: 1023px) {
+        .ida-main { padding-bottom: 56px; }
+        #ai-trigger { bottom: 70px; }
+      }
+      @media (min-width: 1024px) {
+        .mobile-bottom-nav { display: none !important; }
+      }
+      @media (max-width: 640px) {
+        .ida-content { padding: 12px; }
+        .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        .grid-2, .grid-3 { grid-template-columns: 1fr; }
+        .dash-main { padding: 12px; }
+        .page-title { font-size: 1.25rem !important; }
+        .section-card { padding: 0.85rem; }
+        .table-wrap { margin: 0 -12px; }
+        .card { padding: 14px; }
+      }
+
+      .safe-area-bottom {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+    </style>
 
 </body>
 </html>

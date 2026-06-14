@@ -7,45 +7,32 @@
     0% { transform: scale(0.8); opacity: 0; }
     100% { transform: scale(1); opacity: 1; }
   }
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(16px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .animate-slide-up { animation: slideUp 0.5s ease-out forwards; }
-  .delay-1 { animation-delay: 0.05s; }
-  .delay-2 { animation-delay: 0.1s; }
-  .delay-3 { animation-delay: 0.15s; }
-  .delay-4 { animation-delay: 0.2s; }
-  .delay-5 { animation-delay: 0.25s; }
-  .delay-6 { animation-delay: 0.3s; }
 </style>
 {% endblock %}
 {% block content %}
-<div class="min-h-screen flex items-center justify-center px-4 py-16 bg-gradient-to-br from-slate-50 via-white to-slate-50">
-  <div class="relative z-10 w-full max-w-[480px]">
-    <div class="bg-white border border-slate-100 shadow-sm shadow-slate-200/50 rounded-2xl p-8 sm:p-10">
-    <div class="text-center mb-10 animate-slide-up">
-      <div class="flex justify-center mb-8" style="animation: logoPop .5s ease-out both;">
-        <img src="{% static 'images/logo-mark.svg' %}?v={{ STATIC_VERSION }}" alt="Intelligent Digital Automation (IDA) Logo" class="w-12 h-12" />
+<div class="min-h-screen flex items-center justify-center px-4 py-8">
+  <div class="auth-card !max-w-[480px]">
+    <div class="text-center mb-6">
+      <div class="flex justify-center mb-5" style="animation: logoPop .5s ease-out both;">
+        <img src="{% static 'images/logo-mark.svg' %}?v={{ STATIC_VERSION }}" alt="Intelligent Digital Automation (IDA) Logo" class="w-10 h-10" />
       </div>
-      <div class="flex justify-center animate-slide-up delay-1">
+      <div class="flex justify-center">
         <p class="eyebrow">Get started</p>
       </div>
-      <h1 class="page-title mt-2 animate-slide-up delay-2">Create your account</h1>
-      <p class="page-lead text-center animate-slide-up delay-3">Build campaigns, manage senders, and launch with fewer deliverability surprises.</p>
+      <h1 class="page-title mt-1">Create your account</h1>
     </div>
 
     {% if form.non_field_errors %}
-      <div class="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl text-red-700 text-sm font-medium flex items-center gap-3">
+      <div class="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-red-700 text-sm font-medium flex items-center gap-3">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         {{ form.non_field_errors.0 }}
       </div>
     {% endif %}
 
-    <form method="post" action="{% url 'accounts:register' %}" class="space-y-6">
+    <form method="post" action="{% url 'accounts:register' %}" class="space-y-4">
       {% csrf_token %}
       
-      <div class="grid grid-cols-2 gap-4 animate-slide-up delay-4">
+      <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="block text-sm font-semibold text-slate-700 mb-2">First Name</label>
           {{ form.first_name|add_class:"auth-input"|attr:"placeholder:John"|attr:"autofocus:autofocus" }}
@@ -58,34 +45,33 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-2 gap-4 animate-slide-up delay-5">
-        <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-2">Username</label>
-          <div class="relative">
-            {{ form.username|add_class:"auth-input"|attr:"placeholder:johndoe"|attr:"id:id_username"|attr:"autofocus:autofocus" }}
-            <div id="username-availability-indicator" class="absolute right-3 top-1/2 -translate-y-1/2 hidden flex items-center gap-1.5">
-              <svg id="username-availability-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              <span id="username-availability-text" class="text-xs font-medium"></span>
-            </div>
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">Username</label>
+        <div class="relative">
+          {{ form.username|add_class:"auth-input"|attr:"placeholder:johndoe"|attr:"id:id_username" }}
+          <div id="username-availability-indicator" class="absolute right-3 top-1/2 -translate-y-1/2 hidden flex items-center gap-1.5">
+            <svg id="username-availability-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span id="username-availability-text" class="text-xs font-medium"></span>
           </div>
-          {% if form.username.errors %}<p class="mt-2 text-sm text-red-600 font-medium">{{ form.username.errors.0 }}</p>{% endif %}
-          <p id="username-availability-hint" class="mt-1 text-xs text-slate-400 hidden"></p>
         </div>
-        <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
-          <div class="relative">
-            {{ form.email|add_class:"auth-input"|attr:"placeholder:john@company.com"|attr:"id:id_email" }}
-            <div id="email-availability-indicator" class="absolute right-3 top-1/2 -translate-y-1/2 hidden flex items-center gap-1.5">
-              <svg id="email-availability-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              <span id="email-availability-text" class="text-xs font-medium"></span>
-            </div>
-          </div>
-          {% if form.email.errors %}<p class="mt-2 text-sm text-red-600 font-medium">{{ form.email.errors.0 }}</p>{% endif %}
-          <p id="email-availability-hint" class="mt-1 text-xs text-slate-400 hidden"></p>
-        </div>
+        {% if form.username.errors %}<p class="mt-2 text-sm text-red-600 font-medium">{{ form.username.errors.0 }}</p>{% endif %}
+        <p id="username-availability-hint" class="mt-1 text-xs text-slate-400 hidden"></p>
       </div>
 
-      <div class="animate-slide-up delay-6">
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
+        <div class="relative">
+          {{ form.email|add_class:"auth-input"|attr:"placeholder:john@company.com"|attr:"id:id_email" }}
+          <div id="email-availability-indicator" class="absolute right-3 top-1/2 -translate-y-1/2 hidden flex items-center gap-1.5">
+            <svg id="email-availability-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span id="email-availability-text" class="text-xs font-medium"></span>
+          </div>
+        </div>
+        {% if form.email.errors %}<p class="mt-2 text-sm text-red-600 font-medium">{{ form.email.errors.0 }}</p>{% endif %}
+        <p id="email-availability-hint" class="mt-1 text-xs text-slate-400 hidden"></p>
+      </div>
+
+      <div>
         <label class="block text-sm font-semibold text-slate-700 mb-2">Password</label>
         <div class="relative">
           {{ form.password1|add_class:"auth-input pr-12"|attr:"id:reg_password"|attr:"placeholder:••••••••" }}
@@ -93,7 +79,6 @@
             <svg id="p-eye-1" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
           </button>
         </div>
-        <!-- Strength Meter -->
         <div class="mt-3">
           <div class="flex gap-1">
             <div id="strength-seg-1" class="h-1.5 flex-1 rounded-full bg-gray-200 transition-colors duration-300"></div>
@@ -118,14 +103,14 @@
         {% if form.password2.errors %}<p class="mt-2 text-sm text-red-600 font-medium">{{ form.password2.errors.0 }}</p>{% endif %}
       </div>
 
-      <button type="submit" class="btn-primary w-full justify-center py-3.5 text-lg shadow-lg shadow-indigo-500/25">
+      <button type="submit" class="btn-primary w-full justify-center py-3">
         Create Account
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9l3 3m0 0l-3 3m3-3H8m-4 -2a2 2 0 0 0 -2 2v1a2 2 0 0 0 2 2"/></svg>
       </button>
     </form>
 
-    <div class="mt-10 pt-8 border-t border-gray-100 text-center">
-      <p class="text-gray-600 font-medium">Already have an account? <a href="{% url 'accounts:login' %}" class="text-primary font-bold hover:underline">Sign In</a></p>
+    <div class="mt-6 pt-5 border-t border-gray-100 text-center">
+      <p class="text-gray-600 text-sm">Already have an account? <a href="{% url 'accounts:login' %}" class="text-primary font-bold hover:underline">Sign In</a></p>
     </div>
   </div>
 </div>
@@ -223,61 +208,59 @@
       firstNameInput.focus();
     }
 
-    // Generic availability check function
-function checkAvailability(inputElement, indicatorId, iconId, textId, hintId, fieldType) {
-    const input = inputElement;
-    const indicator = document.getElementById(indicatorId);
-    const icon = document.getElementById(iconId);
-    const textEl = document.getElementById(textId);
-    const hint = document.getElementById(hintId);
-    let checkTimeout = null;
+    function checkAvailability(inputElement, indicatorId, iconId, textId, hintId, fieldType) {
+      const input = inputElement;
+      const indicator = document.getElementById(indicatorId);
+      const icon = document.getElementById(iconId);
+      const textEl = document.getElementById(textId);
+      const hint = document.getElementById(hintId);
+      let checkTimeout = null;
 
-    function check(value) {
+      function check(value) {
         const val = value.trim();
         if (!val || (fieldType === 'email' && !val.includes('@')) || (fieldType === 'username' && val.length < 2)) {
-            document.getElementById(indicatorId).classList.add('hidden');
-            document.getElementById(hintId).classList.add('hidden');
-            return;
+          indicator.classList.add('hidden');
+          hint.classList.add('hidden');
+          return;
         }
 
-        document.getElementById(hintId).classList.remove('hidden');
-        document.getElementById(hintId).textContent = 'Checking...';
-        document.getElementById(hintId).className = 'mt-1 text-xs text-slate-400';
+        hint.classList.remove('hidden');
+        hint.textContent = 'Checking...';
+        hint.className = 'mt-1 text-xs text-slate-400';
 
-        clearTimeout(window[`${fieldType}CheckTimeout`]);
-        window[`${fieldType}CheckTimeout`] = setTimeout(() => {
-            const params = `field=${encodeURIComponent(val)}`;
-            fetch(`{% url 'accounts:check_availability' %}?${params}`)
+        clearTimeout(checkTimeout);
+        checkTimeout = setTimeout(() => {
+          fetch(`{% url 'accounts:check_availability' %}?field=${encodeURIComponent(val)}`)
             .then(response => response.json())
             .then(data => {
-                document.getElementById(indicatorId).classList.remove('hidden');
-                document.getElementById(hintId).classList.remove('hidden');
+              indicator.classList.remove('hidden');
+              hint.classList.remove('hidden');
 
-                if (data.available) {
-                    document.getElementById(iconId).innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>';
-                    document.getElementById(iconId).className = 'w-5 h-5 text-emerald-500';
-                    document.getElementById(textId).textContent = data.field === 'email' ? 'Available' : 'Available';
-                    document.getElementById(textId).className = 'text-xs font-medium text-emerald-600';
-                    document.getElementById(hintId).textContent = data.message;
-                    document.getElementById(hintId).className = 'mt-1 text-xs text-emerald-500';
-                } else {
-                    document.getElementById(iconId).innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>';
-                    document.getElementById(iconId).className = 'w-5 h-5 text-red-500';
-                    document.getElementById(textId).textContent = data.field === 'email' ? 'Taken' : 'Taken';
-                    document.getElementById(textId).className = 'text-xs font-medium text-red-600';
-                    document.getElementById(hintId).textContent = data.message;
-                    document.getElementById(hintId).className = 'mt-1 text-xs text-red-500';
-                }
+              if (data.available) {
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>';
+                icon.className = 'w-5 h-5 text-emerald-500';
+                textEl.textContent = 'Available';
+                textEl.className = 'text-xs font-medium text-emerald-600';
+                hint.textContent = data.message;
+                hint.className = 'mt-1 text-xs text-emerald-500';
+              } else {
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>';
+                icon.className = 'w-5 h-5 text-red-500';
+                textEl.textContent = 'Taken';
+                textEl.className = 'text-xs font-medium text-red-600';
+                hint.textContent = data.message;
+                hint.className = 'mt-1 text-xs text-red-500';
+              }
             })
             .catch(() => {
-                document.getElementById(indicatorId).classList.add('hidden');
-                document.getElementById(hintId).classList.add('hidden');
+              indicator.classList.add('hidden');
+              hint.classList.add('hidden');
             });
         }, 300);
-    }
+      }
 
-    return check;
-}
+      return check;
+    }
 
     const emailCheck = checkAvailability(
       document.getElementById('id_email'),
@@ -311,6 +294,4 @@ function checkAvailability(inputElement, indicatorId, iconId, textId, hintId, fi
   });
 </script>
 {% endblock %}
-    </div>
-  </div>
 </div>

@@ -38,6 +38,9 @@ class EmailInbox(models.Model):
     class Meta:
         unique_together = ('user', 'email_address')
         ordering = ['email_address']
+        indexes = [
+            models.Index(fields=['is_active', 'last_sync_status']),
+        ]
 
     @staticmethod
     def _normalize_key(raw_key):
@@ -238,6 +241,10 @@ class EmailDraft(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['original_message']),
+        ]
 
     def __str__(self):
         return f"Draft for {self.thread.subject[:40]} — {self.status}"

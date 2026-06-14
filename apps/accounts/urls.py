@@ -3,11 +3,13 @@ from django.contrib.auth import views as auth_views
 from .views import (
     login_view, register_view, logout_view, verify_email_view, resend_verification_view,
     password_reset_choice_view, password_reset_code_view, password_reset_resend_code,
+    check_availability,
 )
 
 app_name = "accounts"
 
 urlpatterns = [
+    path("check-availability/", check_availability, name="check_availability"),
     path("login/", login_view, name="login"),
     path("register/", register_view, name="register"),
     path("logout/", logout_view, name="logout"),

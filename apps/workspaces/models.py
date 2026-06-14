@@ -26,6 +26,9 @@ class Workspace(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['name']),
+        ]
 
     def __str__(self):
         return self.name
@@ -65,6 +68,10 @@ class WorkspaceMembership(models.Model):
     class Meta:
         unique_together = ('workspace', 'user')
         verbose_name_plural = 'Workspace memberships'
+        indexes = [
+            models.Index(fields=['user', 'workspace']),
+            models.Index(fields=['role']),
+        ]
 
     def __str__(self):
         return f"{self.user.email} — {self.workspace.name} ({self.get_role_display()})"

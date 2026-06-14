@@ -125,10 +125,6 @@ def resend_verification_view(request):
 
 @ratelimit(key='ip', rate='5/m', method='POST', block=True)
 def password_reset_choice_view(request):
-    """
-    First step: User enters email and chooses reset method.
-    Options: 'link' (email link) or 'code' (6-digit verification code).
-    """
     if request.user.is_authenticated:
         return redirect('dashboard:dashboard')
 
@@ -143,16 +139,13 @@ def password_reset_choice_view(request):
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            # Don't reveal if user exists (security best practice)
             messages.success(request, 'If an account exists with this email, you will receive password reset instructions.')
             return redirect('accounts:login')
 
         if method == 'code':
-            # Generate and send code
             code = PasswordResetCode.generate_code()
             PasswordResetCode.objects.create(user=user, code=code)
 
-            # Send code via email
             try:
                 send_mail(
                     subject='Password Reset Code - Intelligent Digital Automation (IDA)',
@@ -167,7 +160,6 @@ def password_reset_choice_view(request):
                     recipient_list=[user.email],
                     fail_silently=False,
                 )
-                # Store email in session for code verification page
                 request.session['password_reset_email'] = email
                 messages.success(request, 'A 6-digit code has been sent to your email. Enter it below.')
                 return redirect('accounts:password_reset_code')
@@ -176,16 +168,13 @@ def password_reset_choice_view(request):
                 return redirect('accounts:password_reset_choice')
 
         elif method == 'link':
-            # Use Django's built-in password reset
             from django.contrib.auth.views import PasswordResetView
-            # Create a POST request to the built-in view
             reset_view = PasswordResetView.as_view(
                 template_name='auth/reset_password.html',
                 email_template_name='auth/password_reset_email.txt',
                 subject_template_name='auth/password_reset_subject.txt',
                 success_url=reverse_lazy('accounts:password_reset_done')
             )
-            # Fake a POST request to the built-in view
             from django.test import RequestFactory
             factory = RequestFactory()
             post_request = factory.post('/password-reset/', {'email': email})
@@ -201,9 +190,6 @@ def password_reset_choice_view(request):
 
 @ratelimit(key='ip', rate='10/m', method='POST', block=True)
 def password_reset_code_view(request):
-    """
-    Second step (code method): User enters the 6-digit code received via email.
-    """
     if request.user.is_authenticated:
         return redirect('dashboard:dashboard')
 
@@ -225,22 +211,18 @@ def password_reset_code_view(request):
             messages.error(request, 'Invalid request. Please start over.')
             return redirect('accounts:password_reset_choice')
 
-        # Validate the code
         reset_code = PasswordResetCode.get_valid_code(user, code)
 
         if not reset_code:
             messages.error(request, 'Invalid or expired code. Please try again or request a new code.')
             return redirect('accounts:password_reset_code')
 
-        # Code is valid - mark as used and redirect to password change
         reset_code.used = True
         reset_code.save(update_fields=['used'])
 
-        # Generate token for password reset (same as Django's built-in)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
 
-        # Redirect to password change page
         return redirect('accounts:password_reset_confirm', uidb64=uid, token=token)
 
     return render(request, 'auth/password_reset_code.html', {'email': email})
@@ -248,7 +230,6 @@ def password_reset_code_view(request):
 
 @ratelimit(key='ip', rate='5/m', method='POST', block=True)
 def password_reset_resend_code(request):
-    """Resend a new code to the user's email."""
     if request.user.is_authenticated:
         return redirect('dashboard:dashboard')
 
@@ -263,7 +244,6 @@ def password_reset_resend_code(request):
         messages.error(request, 'Invalid request. Please start over.')
         return redirect('accounts:password_reset_choice')
 
-    # Generate new code
     code = PasswordResetCode.generate_code()
     PasswordResetCode.objects.create(user=user, code=code)
 
@@ -291,9 +271,8 @@ def password_reset_resend_code(request):
 @ratelimit(key='ip', rate='20/m', method='GET', block=True)
 @require_GET
 def check_availability(request):
-    """Check if email or username is available for registration. Accepts a single field that can be either email or username."""
     field_value = request.GET.get('field', '').strip().lower()
-    
+
     if not field_value:
         return JsonResponse({
             'available': False,
@@ -301,11 +280,9 @@ def check_availability(request):
             'field': 'field'
         })
 
-    # Check if field_value looks like an email (contains @)
     is_email = '@' in field_value
-    
+
     if is_email:
-        # Check email availability
         exists = User.objects.filter(email__iexact=field_value).exists()
         if exists:
             return JsonResponse({
@@ -319,7 +296,6 @@ def check_availability(request):
             'field': 'email'
         })
     else:
-        # Check username availability
         exists = User.objects.filter(username__iexact=field_value).exists()
         if exists:
             return JsonResponse({
@@ -332,5 +308,3 @@ def check_availability(request):
             'message': 'Username is available',
             'field': 'username'
         })
-
-
