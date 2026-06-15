@@ -143,24 +143,20 @@ class MediaService:
         if self.storage.backend.backend_name == 'google_drive':
             return self._proxy_url(asset, 'original')
         if asset.storage_path:
-            if self.storage.exists(asset.storage_path):
-                url = self.storage.url(asset.storage_path)
-                if url:
-                    return url
+            url = self.storage.url(asset.storage_path)
+            if url:
+                return url
         if asset.file and asset.file.name:
-            if self.storage.exists(asset.file.name):
-                return asset.file.url
+            return asset.file.url
         return ''
 
     def get_thumbnail_url(self, asset):
         if self.storage.backend.backend_name == 'google_drive':
             return self._proxy_url(asset, 'thumbnail')
         if asset.thumbnail_path:
-            if self.storage.exists(asset.thumbnail_path):
-                url = self.storage.url(asset.thumbnail_path)
-                if url:
-                    return url
+            url = self.storage.url(asset.thumbnail_path)
+            if url:
+                return url
         if asset.thumbnail and asset.thumbnail.name:
-            if self.storage.exists(asset.thumbnail.name):
-                return asset.thumbnail.url
+            return asset.thumbnail.url
         return self.get_asset_url(asset)

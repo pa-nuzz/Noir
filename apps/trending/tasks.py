@@ -9,10 +9,8 @@ logger = logging.getLogger(__name__)
 @shared_task(queue='low')
 def collect_all_sources():
     from .models import ContentSource
-    from .services.content_cleaner import ContentCleaner
     from .services.github_collector import GitHubCollector
     from .services.rss_collector import RSSCollector
-    from .services.scorer import Scorer
     from .services.web_scraper import WebScraper
 
     sources = ContentSource.objects.filter(is_active=True)
@@ -23,8 +21,6 @@ def collect_all_sources():
     }
 
     total_created = 0
-    cleaner = ContentCleaner()
-    scorer = Scorer()
 
     for source in sources:
         collector = collectors.get(source.source_type)
@@ -53,10 +49,14 @@ def collect_all_sources():
 @shared_task(queue='low')
 def recalculate_trending_scores():
     from .models import FeedItem
+    from .services.categorizer import Categorizer
     from .services.content_cleaner import ContentCleaner
     from .services.scorer import Scorer
+    from .services.summarizer import Summarizer
 
     cleaner = ContentCleaner()
+    categorizer = Categorizer()
+    summarizer = Summarizer()
     scorer = Scorer()
 
     items = FeedItem.objects.filter(is_duplicate=False, trending_score=0)[:200]
@@ -65,9 +65,13 @@ def recalculate_trending_scores():
     for item in items:
         try:
             item = cleaner.clean(item)
-            item = cleaner.classify_topic(item)
+            item = categorizer.categorize(item)
+            item = summarizer.summarize(item)
             item.trending_score = scorer.score(item)
-            item.save(update_fields=['content_cleaned', 'topic', 'trending_score', 'language'])
+            item.save(update_fields=[
+                'content_cleaned', 'topic', 'trending_score', 'language',
+                'ai_summary', 'ai_categories',
+            ])
             updated += 1
         except Exception as e:
             logger.exception("Failed to score item %d: %s", item.id, e)
