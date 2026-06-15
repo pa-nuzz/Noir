@@ -388,7 +388,7 @@ document.getElementById('folder-upload-form').addEventListener('submit', functio
   fetch('{% url "media_assets:upload" %}', {
     method: 'POST',
     body: fd,
-    headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken')},
+    headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCSRFToken()},
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {

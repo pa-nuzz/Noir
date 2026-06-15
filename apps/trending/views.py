@@ -18,10 +18,12 @@ def feed_data(request):
 
     items = FeedItem.objects.filter(
         is_duplicate=False,
-    ).select_related('topic', 'source').order_by('-trending_score')[:100]
+    ).select_related('topic', 'source').order_by('-trending_score')
 
     if topic_id:
         items = items.filter(topic_id=topic_id)
+
+    items = items[:100]
 
     personalizer = Personalizer()
     ranked = personalizer.personalize(request.user, list(items))
@@ -134,28 +136,30 @@ def save_as_draft(request, item_id):
     except ImportError:
         return JsonResponse({'error': 'Content Studio unavailable'}, status=500)
 
-    content_item = ContentItem.objects.create(
-        user=request.user,
-        title=feed_item.title[:255],
-        content_type='full_post',
-        body=feed_item.ai_summary or feed_item.content_cleaned or feed_item.content_raw or '',
-        status='draft',
-        is_auto_generated=True,
-        source_prompt=f'Imported from Trending Topics: {feed_item.url}',
-        tags=feed_item.ai_categories or [],
-        metadata={
-            'source': 'trending',
-            'feed_item_id': feed_item.id,
-            'source_url': feed_item.url,
-            'source_name': feed_item.source.name if feed_item.source else '',
-        },
-    )
+    from core.tenant import tenant_context
+    with tenant_context(None):
+        content_item = ContentItem.objects.create(
+            user=request.user,
+            title=feed_item.title[:255],
+            content_type='full_post',
+            body=feed_item.ai_summary or feed_item.content_cleaned or feed_item.content_raw or '',
+            status='draft',
+            is_auto_generated=True,
+            source_prompt=f'Imported from Trending Topics: {feed_item.url}',
+            tags=feed_item.ai_categories or [],
+            metadata={
+                'source': 'trending',
+                'feed_item_id': feed_item.id,
+                'source_url': feed_item.url,
+                'source_name': feed_item.source.name if feed_item.source else '',
+            },
+        )
 
-    if request.user.trending_profile:
-        from django.utils import timezone
-        profile = request.user.trending_profile
-        profile.last_analyzed_at = timezone.now()
-        profile.save(update_fields=['last_analyzed_at'])
+    from .models import UserActivityProfile
+    from django.utils import timezone
+    profile, _ = UserActivityProfile.objects.get_or_create(user=request.user)
+    profile.last_analyzed_at = timezone.now()
+    profile.save(update_fields=['last_analyzed_at'])
 
     UserFeedInteraction.objects.get_or_create(
         user=request.user,
