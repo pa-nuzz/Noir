@@ -545,7 +545,7 @@ def send_campaign_with_smtp(campaign, base_url: str, recipients_override=None):
             try:
                 from apps.campaigns.tasks import evaluate_ab_test_winner
                 evaluate_ab_test_winner.apply_async(
-                    (campaign.id,), countdown=campaign.ab_test_duration_hours * 3600
+                    (campaign.id, campaign.workspace_id), countdown=campaign.ab_test_duration_hours * 3600
                 )
             except Exception:
                 logger.warning(f"Failed to schedule ab_test evaluation for campaign {campaign.id}")

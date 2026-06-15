@@ -193,7 +193,7 @@ def _campaign_form_view(request, campaign=None, read_only=False):
                 
                 try:
                     logger.info("[Campaign Send] Attempting Celery async send")
-                    result = async_send_campaign.delay(campaign_obj.id, base_url)
+                    result = async_send_campaign.delay(campaign_obj.id, base_url, workspace_id=campaign_obj.workspace_id)
                     logger.info(f"[Campaign Send] Celery task submitted: {result}")
                     messages.success(request, f'Campaign "{campaign_obj.name}" is now sending in the background.')
                 except Exception as celery_exc:

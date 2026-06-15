@@ -146,6 +146,7 @@ INSTALLED_APPS = [
     'django_otp',
     'django_otp.plugins.otp_totp',
     'django_otp.plugins.otp_static',
+    'debug_toolbar',
 
     # Local Apps
     'apps.accounts',
@@ -176,19 +177,23 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'core.middleware.DevHTTPMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'core.middleware.CSPMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django_otp.middleware.OTPMiddleware',
-    'apps.audit.middleware.AuditContextMiddleware',
+
     'core.middleware.TenantMiddleware',
+    'apps.audit.middleware.AuditContextMiddleware',
     'apps.mfa.middleware.MfaEnforcementMiddleware',
+
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'core.middleware.CSPMiddleware',
 
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'

@@ -57,7 +57,7 @@ class WebhookEndpoint(models.Model):
 
     def deliver(self, event_type, payload):
         from .tasks import deliver_webhook
-        deliver_webhook.delay(self.id, event_type, payload)
+        deliver_webhook.delay(self.id, event_type, payload, workspace_id=self.workspace_id)
 
 
 class WebhookDelivery(models.Model):
