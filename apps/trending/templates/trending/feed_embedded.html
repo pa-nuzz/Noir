@@ -21,6 +21,7 @@
   .tr-topic-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; cursor: pointer; border: 1px solid #E2E8F0; background: #FFFFFF; color: #64748B; transition: all 0.12s; }
   .tr-topic-chip:hover { border-color: #06B6D4; color: #06B6D4; }
   .tr-topic-chip.active { border-color: #06B6D4; color: #FFFFFF; background: #06B6D4; }
+  .tr-topic-chip.subscribed { border-width: 2px; }
   .tr-loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: #94A3B8; font-size: 0.875rem; }
   .tr-empty { text-align: center; padding: 40px 20px; color: #94A3B8; }
   .tr-empty svg { width: 40px; height: 40px; margin: 0 auto 12px; opacity: 0.4; }
@@ -64,7 +65,7 @@ function loadTrendingFeed(topicId) {
   var list = document.getElementById('tr-feed-list');
   list.innerHTML = '<div class="tr-loading">Loading trending feed…</div>';
 
-  var url = '/trending/api/feed/';
+  var url = '{% url "trending:feed_data" %}';
   if (topicId) url += '?topic_id=' + topicId;
 
   fetch(url)
@@ -100,6 +101,9 @@ function loadTrendingFeed(topicId) {
               '<svg fill="' + (item.is_bookmarked ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>' +
               ' Bookmark' +
             '</button>' +
+            '<button onclick="dismissItem(' + item.id + ', this)" class="tr-feed-btn" title="Dismiss">' +
+              '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>' +
+            '</button>' +
             '<span class="tr-feed-score">Score: ' + item.score.toFixed(1) + '</span>' +
           '</div>' +
         '</div>';
@@ -115,7 +119,7 @@ function loadTrendingFeed(topicId) {
 function loadTrendingTopics() {
   var chips = document.getElementById('tr-topic-chips');
 
-  fetch('/trending/api/topics/')
+  fetch('{% url "trending:topic_list" %}')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (!data.topics || data.topics.length === 0) return;
@@ -123,10 +127,11 @@ function loadTrendingTopics() {
       var html = '<button class="tr-topic-chip active" onclick="filterTrending(this, null)">All Topics</button>';
       data.topics.forEach(function(t) {
         var cls = 'tr-topic-chip';
-        if (t.is_subscribed) cls += ' active';
-        html += '<button class="' + cls + '" onclick="filterTrending(this, ' + t.id + ')" style="' +
+        if (t.is_subscribed) cls += ' subscribed';
+        html += '<button class="' + cls + '" onclick="filterTrending(this, ' + t.id + ')" data-color="' + t.color + '" style="' +
           (t.is_subscribed ? 'background:' + t.color + ';border-color:' + t.color + ';color:#fff' : '') + '">' +
           t.icon + ' ' + escapeHtml(t.name) +
+          '<span class="tr-sub-btn" onclick="event.stopPropagation();toggleSubscription(' + t.id + ', this)" data-subscribed="' + t.is_subscribed + '" style="margin-left:4px;font-size:0.75rem;cursor:pointer;opacity:0.7">' + (t.is_subscribed ? '\u2713' : '+') + '</span>' +
         '</button>';
       });
       chips.innerHTML = html;
@@ -137,27 +142,23 @@ function loadTrendingTopics() {
 function filterTrending(btn, topicId) {
   document.querySelectorAll('.tr-topic-chip').forEach(function(c) { c.classList.remove('active'); c.style.background = ''; c.style.borderColor = ''; c.style.color = ''; });
   btn.classList.add('active');
-  if (btn.style) {
-    var color = btn.textContent.trim().match(/[#][0-9a-fA-F]{6}/);
-    if (color) { btn.style.background = color[0]; btn.style.borderColor = color[0]; btn.style.color = '#fff'; }
-  }
+  var color = btn.dataset.color;
+  if (color) { btn.style.background = color; btn.style.borderColor = color; btn.style.color = '#fff'; }
   loadTrendingFeed(topicId);
 }
 
 function saveDraft(itemId) {
-  fetch('/trending/api/feed/' + itemId + '/save-draft/', { method: 'POST', headers: {'X-CSRFToken': getCookie('csrftoken')} })
+  fetch('{% url "trending:save_as_draft" 0 %}'.replace('0', itemId), { method: 'POST', headers: {'X-CSRFToken': getCookie('csrftoken')} })
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      showTrendingToast('Saved as draft!', 'success');
-      setTimeout(function() {
-        if (data.redirect_url) window.location.href = data.redirect_url;
-      }, 1000);
+      showTrendingToast('Draft created!', 'success');
+      if (data.redirect_url) window.open(data.redirect_url, '_blank');
     })
     .catch(function() { showTrendingToast('Failed to save draft', 'error'); });
 }
 
 function toggleBookmark(itemId, btn) {
-  fetch('/trending/api/feed/' + itemId + '/bookmark/', { method: 'POST', headers: {'X-CSRFToken': getCookie('csrftoken')} })
+  fetch('{% url "trending:toggle_bookmark" 0 %}'.replace('0', itemId), { method: 'POST', headers: {'X-CSRFToken': getCookie('csrftoken')} })
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var isBookmarked = data.bookmarked;
@@ -169,14 +170,45 @@ function toggleBookmark(itemId, btn) {
 }
 
 function refreshTrendingProfile() {
-  fetch('/trending/api/profile/refresh/', { method: 'POST', headers: {'X-CSRFToken': getCookie('csrftoken')} })
+  fetch('{% url "trending:refresh_profile" %}', { method: 'POST', headers: {'X-CSRFToken': getCookie('csrftoken')} })
     .then(function(r) { return r.json(); })
-    .then(function() {
-      showTrendingToast('Interests refreshed!', 'success');
+    .then(function(data) {
+      if (data.status === 'uptodate') {
+        showTrendingToast('Already up to date', 'success');
+      } else {
+        showTrendingToast('Interests refreshed!', 'success');
+      }
       loadTrendingFeed();
       loadTrendingTopics();
     })
     .catch(function() { showTrendingToast('Failed to refresh profile', 'error'); });
+}
+
+function toggleSubscription(topicId, el) {
+  var isSubscribed = el.dataset.subscribed === 'true';
+  fetch('{% url "trending:toggle_subscription" %}', {
+    method: 'POST',
+    headers: {'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/json'},
+    body: JSON.stringify({topic_id: topicId, subscribe: !isSubscribed}),
+  })
+    .then(function(r) { return r.json(); })
+    .then(function() {
+      showTrendingToast(isSubscribed ? 'Unsubscribed' : 'Subscribed', 'success');
+      loadTrendingTopics();
+    })
+    .catch(function() { showTrendingToast('Failed to update subscription', 'error'); });
+}
+
+function dismissItem(itemId, btn) {
+  fetch('{% url "trending:dismiss_item" 0 %}'.replace('0', itemId), {
+    method: 'POST',
+    headers: {'X-CSRFToken': getCookie('csrftoken')},
+  })
+    .then(function() {
+      btn.closest('.tr-feed-card').remove();
+      showTrendingToast('Item dismissed', 'success');
+    })
+    .catch(function() { showTrendingToast('Failed to dismiss', 'error'); });
 }
 
 function escapeHtml(text) {

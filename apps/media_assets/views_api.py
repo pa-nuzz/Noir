@@ -203,6 +203,8 @@ def serve_asset(request, asset_id, file_type='original'):
         else:
             content_type, _ = mimetypes.guess_type(asset.original_filename)
         return HttpResponse(content, content_type=content_type or 'application/octet-stream')
+    except FileNotFoundError:
+        return HttpResponse(status=404)
     except Exception:
         logger.exception('Failed to serve asset %s (%s)', asset_id, file_type)
         return HttpResponse(status=404)

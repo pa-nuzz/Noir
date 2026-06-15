@@ -1,12 +1,12 @@
 import json
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import F
+from django.db.models import F, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET, require_POST
 
-from .models import ContentSource, FeedItem, Topic, UserFeedInteraction, UserTopicPreference
+from .models import ContentSource, FeedItem, Topic, UserActivityProfile, UserFeedInteraction, UserTopicPreference
 from .services.personalizer import Personalizer
 from .services.user_profiler import UserProfiler
 
@@ -171,8 +171,20 @@ def save_as_draft(request, item_id):
 
 @login_required
 @require_POST
+def dismiss_item(request, item_id):
+    feed_item = get_object_or_404(FeedItem, id=item_id, is_duplicate=False)
+    UserFeedInteraction.objects.get_or_create(
+        user=request.user,
+        feed_item=feed_item,
+        interaction_type='dismissed',
+    )
+    return JsonResponse({'dismissed': True})
+
+
+@login_required
+@require_POST
 def toggle_bookmark(request, item_id):
-    feed_item = get_object_or_404(FeedItem, id=item_id)
+    feed_item = get_object_or_404(FeedItem, id=item_id, is_duplicate=False)
 
     existing = UserFeedInteraction.objects.filter(
         user=request.user,
@@ -195,10 +207,48 @@ def toggle_bookmark(request, item_id):
 @login_required
 @require_POST
 def refresh_profile(request):
+    profile = UserActivityProfile.objects.filter(user=request.user).first()
+
+    if profile and profile.last_analyzed_at:
+        last = profile.last_analyzed_at
+        has_new = False
+        try:
+            ContentItem = __import__('apps.content_studio.models', fromlist=['ContentItem']).ContentItem
+            if ContentItem.objects.filter(user=request.user, created_at__gt=last).exists():
+                has_new = True
+        except Exception:
+            pass
+        if not has_new:
+            try:
+                SocialPost = __import__('apps.social_accounts.models', fromlist=['SocialPost']).SocialPost
+                if SocialPost.objects.filter(user=request.user, created_at__gt=last).exists():
+                    has_new = True
+            except Exception:
+                pass
+        if not has_new:
+            try:
+                Campaign = __import__('apps.campaigns.models', fromlist=['Campaign']).Campaign
+                if Campaign.objects.filter(
+                    Q(owner=request.user) | Q(workspace__members__user=request.user),
+                    created_at__gt=last,
+                ).exists():
+                    has_new = True
+            except Exception:
+                pass
+
+        if not has_new:
+            return JsonResponse({
+                'status': 'uptodate',
+                'keywords': profile.inferred_keywords,
+                'topic_ids': profile.inferred_topic_ids,
+                'last_analyzed': profile.last_analyzed_at.isoformat() if profile.last_analyzed_at else None,
+            })
+
     profiler = UserProfiler()
     profile = profiler.analyze(request.user)
 
     return JsonResponse({
+        'status': 'updated',
         'keywords': profile.inferred_keywords,
         'topic_ids': profile.inferred_topic_ids,
         'last_analyzed': profile.last_analyzed_at.isoformat() if profile.last_analyzed_at else None,
