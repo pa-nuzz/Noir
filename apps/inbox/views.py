@@ -122,7 +122,7 @@ def inbox_connect(request):
 
             from .tasks import sync_inbox_task
             try:
-                sync_inbox_task.delay(inbox.id)
+                sync_inbox_task.delay(inbox.id, workspace_id=inbox.workspace_id)
                 if reconnect_inbox:
                     messages.success(request, f'{inbox.get_provider_display()} inbox reconnected. Sync started.')
                 else:
@@ -130,7 +130,7 @@ def inbox_connect(request):
             except Exception:
                 logger.warning("Celery unavailable, running sync synchronously")
                 try:
-                    count = sync_inbox_task(inbox.id)
+                    count = sync_inbox_task(inbox.id, workspace_id=inbox.workspace_id)
                     messages.success(request, f'{inbox.get_provider_display()} inbox {"re" if reconnect_inbox else ""}connected. Synced {count} messages.')
                 except Exception as e2:
                     logger.error(f"Sync failed: {e2}")
@@ -173,7 +173,7 @@ def inbox_sync(request, inbox_id):
 
     from .tasks import sync_inbox_task
     try:
-        count = sync_inbox_task(inbox.id)
+        count = sync_inbox_task(inbox.id, workspace_id=inbox.workspace_id)
         messages.success(request, f'Synced {inbox.email_address}: {count} new message(s).')
         return redirect(f'{reverse("inbox:dashboard")}?refresh={int(timezone.now().timestamp())}')
     except Exception as e2:

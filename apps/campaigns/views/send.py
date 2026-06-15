@@ -63,7 +63,7 @@ def campaign_send(request, campaign_id):
         campaign.save(update_fields=['status', 'total_recipients', 'updated_at'])
     base_url = (settings.TRACKING_BASE_URL or request.build_absolute_uri('/')).rstrip('/')
     try:
-        async_send_campaign.delay(campaign.id, base_url)
+        async_send_campaign.delay(campaign.id, base_url, workspace_id=campaign.workspace_id)
     except Exception:
         logger.warning("Celery unavailable, sending campaign synchronously")
         from apps.campaigns.tasks import run_send_campaign
@@ -119,7 +119,7 @@ def campaign_retry_failed(request, campaign_id):
     campaign.save(update_fields=['status', 'updated_at'])
     base_url = (settings.TRACKING_BASE_URL or request.build_absolute_uri('/')).rstrip('/')
     try:
-        async_send_campaign.delay(campaign.id, base_url, recipients_override=retry_recipients)
+        async_send_campaign.delay(campaign.id, base_url, recipients_override=retry_recipients, workspace_id=campaign.workspace_id)
     except Exception:
         logger.warning("Celery unavailable, retrying campaign synchronously")
         from apps.campaigns.tasks import run_send_campaign
