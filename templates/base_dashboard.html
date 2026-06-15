@@ -235,19 +235,12 @@
               <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
               AI Content Studio
             </a>
-            <a href="{% url 'content_studio:excel_sheets' %}" class="sidebar-link sub-link {% if request.resolver_match.url_name == 'excel_sheets' or request.resolver_match.url_name == 'excel_sheets_add' or request.resolver_match.url_name == 'excel_sheets_sync' or request.resolver_match.url_name == 'sheets_auth_start' or request.resolver_match.url_name == 'sheets_auth_callback' or request.resolver_match.url_name == 'sheets_auth_disconnect' or request.resolver_match.url_name == 'sheets_list' or request.resolver_match.url_name == 'sheets_create' or request.resolver_match.url_name == 'sheets_select' %}active{% endif %}">
-              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
-              Google Sheets
-            </a>
-            
-            <a href="{% url 'media_assets:library' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'media_assets' %}active{% endif %}">
-              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
-              Media Library
-            </a>
+           
             <a href="{% url 'social_accounts:analytics_overview' %}" class="sidebar-link sub-link {% if request.resolver_match.url_name == 'analytics_overview' or request.resolver_match.url_name == 'analytics_detail' %}active{% endif %}">
               <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
               Analytics
             </a>
+            
           </div>
         </div>
 

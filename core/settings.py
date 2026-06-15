@@ -171,7 +171,7 @@ INSTALLED_APPS = [
     'apps.mfa',
     'apps.audit',
     'apps.creative',
-    'apps.notifications',
+    'apps.trending',
 ]
 
 MIDDLEWARE = [
@@ -390,6 +390,9 @@ ML_VECTORIZER_PATH = Path(config('ML_VECTORIZER_PATH', default=str(BASE_DIR / 'm
 
 # Gemini AI
 GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
+
+# DeepSeek AI
+DEEPSEEK_API_KEY = config('DEEPSEEK_API_KEY', default='')
 
 # Silencing django-ratelimit strict cache checks for development
 SILENCED_SYSTEM_CHECKS = ['django_ratelimit.E003']
