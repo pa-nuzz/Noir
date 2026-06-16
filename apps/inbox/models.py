@@ -42,45 +42,20 @@ class EmailInbox(models.Model):
             models.Index(fields=['is_active', 'last_sync_status']),
         ]
 
-    @staticmethod
-    def _normalize_key(raw_key):
-        if not raw_key:
-            return None
-        key = str(raw_key).strip().encode()
-        missing_padding = len(key) % 4
-        if missing_padding:
-            key += b'=' * (4 - missing_padding)
-        try:
-            base64.urlsafe_b64decode(key)
-        except Exception:
-            return None
-        return key
-
-    @staticmethod
-    def _dev_fallback_key():
-        secret = getattr(settings, 'SECRET_KEY', '')
-        if not secret:
-            return None
-        return base64.urlsafe_b64encode(hashlib.sha256(secret.encode('utf-8')).digest())
-
-    def _candidate_fernets(self, include_expired=False):
-        raw_keys = [getattr(settings, 'FERNET_KEY', '')]
-        if include_expired:
-            raw_keys.extend(getattr(settings, 'PREVIOUS_FERNET_KEYS', []))
-        for raw_key in raw_keys:
-            key = self._normalize_key(raw_key)
-            if key:
-                yield Fernet(key)
-        if getattr(settings, 'DEBUG', False):
-            dev_key = self._dev_fallback_key()
-            if dev_key:
-                yield Fernet(dev_key)
-
     def get_fernet(self):
-        key = self._normalize_key(getattr(settings, 'FERNET_KEY', ''))
+        from apps.common.crypto import normalize_key
+        key = normalize_key(getattr(settings, 'FERNET_KEY', ''))
         if not key:
             raise ValueError("FERNET_KEY is not set or invalid in settings")
         return Fernet(key)
+
+    def _candidate_fernets(self, include_expired=False):
+        from apps.common.crypto import candidate_fernets as _cf
+        return _cf(include_expired=include_expired)
+
+    def _dev_fallback_key(self):
+        from apps.common.crypto import dev_fallback_key
+        return dev_fallback_key()
 
     def set_token(self, raw_token):
         try:
@@ -198,6 +173,7 @@ class EmailMessage(models.Model):
 
     received_at = models.DateTimeField()
     is_incoming = models.BooleanField(default=True, help_text='True if received, False if sent')
+    is_read = models.BooleanField(default=False, help_text='Whether the message has been opened')
     is_deleted = models.BooleanField(default=False, help_text='Soft delete flag')
     deleted_at = models.DateTimeField(blank=True, null=True)
 

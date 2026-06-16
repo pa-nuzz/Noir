@@ -13,6 +13,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from apps.accounts.models import User
 from .models import AuditLog, TeamInvitation, Workspace, WorkspaceMembership, WorkspacePermission, WorkspaceSocialAccount, WorkspaceStorageConfig, seed_default_permissions
 from .onboarding import get_or_create_onboarding
 from apps.dashboard.models import Notification
@@ -180,10 +181,12 @@ def member_list(request, workspace_id):
         'members': members,
         'pending_invites': pending_invites,
         'invite_sent_email': invite_sent_email,
+        'role_labels': dict(WorkspaceMembership.ROLE_CHOICES),
     })
 
 
 @login_required
+@require_POST
 def remove_member(request, workspace_id, membership_id):
     workspace, membership = _get_workspace_and_check_access(workspace_id, request.user)
     if not membership or membership.role not in ('owner', 'admin'):
@@ -281,6 +284,16 @@ def invite_member(request, workspace_id):
         except Exception:
             logger.warning(f'Failed to send invitation email to {email}')
 
+        invited_user = User.objects.filter(email__iexact=email).first()
+        if invited_user:
+            Notification.objects.create(
+                user=invited_user,
+                title='Workspace Invitation',
+                message=f'{request.user.get_full_name() or request.user.email} invited you to join "{workspace.name}" as {invitation.get_role_display()}.',
+                tone='info',
+                url=reverse('workspaces:my_invitations'),
+            )
+
         request.session['invite_sent_email'] = email
         return redirect('workspaces:member_list', workspace_id=workspace.id)
     return redirect('workspaces:member_list', workspace_id=workspace.id)
@@ -368,6 +381,8 @@ def accept_invitation(request, invitation_id):
     seed_default_permissions(invitation.workspace)
     invitation.status = 'accepted'
     invitation.save(update_fields=['status'])
+    request.session['active_workspace_id'] = invitation.workspace.id
+    request.session.modified = True
     _log_action(invitation.workspace, request.user, f'Accepted invitation (joined as {invitation.role})',
                 ip_address=request.META.get('REMOTE_ADDR'))
     try:
@@ -457,6 +472,7 @@ def decline_invitation(request, invitation_id):
 
 
 @login_required
+@require_POST
 def cancel_invitation(request, invitation_id):
     invitation = get_object_or_404(TeamInvitation, id=invitation_id)
     workspace = invitation.workspace

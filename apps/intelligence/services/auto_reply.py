@@ -6,10 +6,10 @@ from .llm_client import get_llm_client
 logger = logging.getLogger(__name__)
 
 NO_REPLY_PATTERNS = [
-    r'no-?reply', r'noreply', r'do-?not-?reply', r'donotreply',
+    r'no-?reply', r'\.noreply', r'^noreply', r'do-?not-?reply', r'donotreply',
     r'mailer-?daemon', r'postmaster', r'notification', r'alerts?@',
     r'newsletter', r'marketing', r'bulk@', r'mailman', r' automated',
-    r'robot', r'bot@',
+    r'robot', r'bot@', r'^nobody@', r'^non-?reply',
 ]
 
 SKIP_DOMAINS = [
@@ -128,10 +128,10 @@ def generate_auto_reply(
 
 def process_auto_reply(message_id: int) -> bool:
     """Process single message for auto-reply.
-    
+
     Args:
         message_id: EmailMessage ID
-        
+
     Returns:
         True if draft created, False otherwise
     """
@@ -164,8 +164,8 @@ def process_auto_reply(message_id: int) -> bool:
         msg.body_text or '',
     )
 
-    if importance not in ('medium', 'high', 'urgent'):
-        logger.info(f"Auto-reply skipped: importance={importance} for message {message_id}")
+    if importance == 'low':
+        logger.info(f"Auto-reply skipped: importance=low for message {message_id}")
         return False
 
     thread_summary = msg.thread.ai_summary or ''
@@ -191,7 +191,9 @@ def process_auto_reply(message_id: int) -> bool:
         user=msg.thread.inbox.user,
         original_message=msg,
         ai_generated_body=draft_body,
+        edited_body=draft_body,
         status='pending_review',
+        final_body='',
     )
 
     logger.info(

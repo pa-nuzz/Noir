@@ -36,8 +36,16 @@ def sync_inbox_task(inbox_id: int, password: str = '', workspace_id: int = None)
             inbox.save(update_fields=['last_sync_status', 'last_sync_error'])
             return 0
 
-        count = sync_inbox(inbox, pwd)
-        logger.info(f"Synced inbox {inbox.email_address}: {count} new message(s)")
+        try:
+            count = sync_inbox(inbox, pwd)
+        except Exception as exc:
+            logger.exception("Sync failed for inbox %s", inbox.id)
+            inbox.last_sync_status = 'error'
+            inbox.last_sync_error = str(exc)[:1000]
+            inbox.save(update_fields=['last_sync_status', 'last_sync_error'])
+            return 0
+
+        logger.info("Synced inbox %s: %s new message(s)", inbox.email_address, count)
 
         if count > 0:
             process_auto_replies_for_inbox.delay(inbox_id, workspace_id)

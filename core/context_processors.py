@@ -2,6 +2,8 @@ from django.conf import settings
 from django.db.models import Count, OuterRef, Subquery
 from apps.workspaces.models import Workspace, WorkspaceMembership, WorkspacePermission
 
+PERMISSIONS_SESSION_KEY = '_wp_cache'
+
 
 def static_version(request):
     return {
@@ -30,9 +32,15 @@ def active_workspace(request):
         if membership:
             active_workspace = membership.workspace
             active_membership = membership
-            workspace_permissions = WorkspacePermission.user_permissions_dict(
-                membership.workspace, request.user
-            )
+            perms_cache = request.session.get(PERMISSIONS_SESSION_KEY, {})
+            cache_key = f'{ws_id}:{membership.role}'
+            workspace_permissions = perms_cache.get(cache_key)
+            if workspace_permissions is None:
+                workspace_permissions = WorkspacePermission.user_permissions_dict(
+                    membership.workspace, request.user
+                )
+                perms_cache[cache_key] = workspace_permissions
+                request.session[PERMISSIONS_SESSION_KEY] = perms_cache
 
     membership_counts = WorkspaceMembership.objects.filter(
         workspace=OuterRef('pk')

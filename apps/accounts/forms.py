@@ -1,3 +1,5 @@
+import re
+
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import get_user_model
@@ -9,7 +11,15 @@ class RegisterForm(UserCreationForm):
     first_name = forms.CharField(max_length=30, required=True)
     last_name = forms.CharField(max_length=30, required=True)
     email = forms.EmailField(required=True)
-    username = forms.CharField(max_length=150, required=True)
+    username = forms.CharField(
+        max_length=150,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'autocomplete': 'username',
+            'inputmode': 'text',
+            'pattern': r'[A-Za-z0-9_@.+-]+',
+        })
+    )
     company = forms.CharField(max_length=255, required=False)
 
     class Meta:
@@ -25,12 +35,16 @@ class RegisterForm(UserCreationForm):
         return email.lower()
 
     def clean_username(self):
-        username = self.cleaned_data.get('username')
+        username = (self.cleaned_data.get('username') or '').strip().lower()
         if not username:
             raise forms.ValidationError("Username is required.")
+        if re.search(r'\s', username):
+            raise forms.ValidationError("Username must be one word with no spaces.")
+        if not re.fullmatch(r'[\w.@+-]+', username):
+            raise forms.ValidationError("Username can only use letters, numbers, and @/./+/-/_.")
         if User.objects.filter(username__iexact=username).exists():
             raise forms.ValidationError("This username is already taken.")
-        return username.lower()
+        return username
 
     def save(self, commit=True):
         user = super().save(commit=False)

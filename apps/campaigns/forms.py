@@ -5,6 +5,7 @@ from django.utils import timezone
 from .models import Campaign, CampaignVariant
 from apps.senders.models import Sender
 from apps.contacts.models import ContactList
+from apps.workspaces.query_helpers import filter_by_context
 from .services.content import text_to_html
 
 class CampaignForm(forms.ModelForm):
@@ -80,15 +81,22 @@ class CampaignForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
+        request = kwargs.pop('request', None)
+        user = kwargs.pop('user', request.user if request else None)
         super().__init__(*args, **kwargs)
         if user:
             sender_field = self.fields['sender']
             if isinstance(sender_field, forms.ModelChoiceField):
-                sender_field.queryset = Sender.objects.filter(user=user, is_active=True)
+                if request:
+                    sender_field.queryset = filter_by_context(request, Sender.objects.filter(is_active=True))
+                else:
+                    sender_field.queryset = Sender.objects.filter(user=user, is_active=True)
             contact_list_field = self.fields['contact_list']
             if isinstance(contact_list_field, forms.ModelChoiceField):
-                contact_list_field.queryset = ContactList.objects.filter(user=user)
+                if request:
+                    contact_list_field.queryset = filter_by_context(request, ContactList.objects.all())
+                else:
+                    contact_list_field.queryset = ContactList.objects.filter(user=user)
 
         # If editing an existing A/B campaign, pre-fill variant fields
         if self.instance and self.instance.pk and self.instance.is_ab_test:

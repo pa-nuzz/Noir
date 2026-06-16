@@ -11,9 +11,9 @@
       <h1 class="page-title mt-2">Connect Inbox</h1>
       <p class="page-lead">Connect your email and let AI manage replies</p>
     </div>
-    <div class="flex gap-3">
+    <div class="flex gap-3 w-full sm:w-auto">
       {% url 'inbox:dashboard' as inbox_dashboard_url %}
-      {% include "components/button.html" with label="Dashboard" variant="secondary" href=inbox_dashboard_url icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" class="whitespace-nowrap" %}
+      {% include "components/button.html" with label="Dashboard" variant="secondary" href=inbox_dashboard_url icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" class="w-full sm:w-auto whitespace-nowrap justify-center" %}
     </div>
   </div>
 
@@ -51,12 +51,18 @@
           <div>
             <label class="block text-sm font-semibold text-slate-700 mb-1.5">{{ field.label }}</label>
             {{ field }}
+            <p class="text-xs text-red-500 mt-1 field-error" data-field="{{ field.name }}" style="display:none"></p>
             {% for error in field.errors %}
             <p class="text-xs text-red-500 mt-1">{{ error }}</p>
             {% endfor %}
           </div>
           {% endfor %}
-          {% include 'campaigns/_button.html' with type='primary' text=reconnect_inbox|yesno:'Reconnect Inbox,Connect Inbox' button_type='submit' id='connectSubmitBtn' extra_class='w-full justify-center' %}
+          <button type="submit" id="connectSubmitBtn"
+                  class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover transition-all shadow-sm cursor-pointer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span id="connectBtnLabel">{{ reconnect_inbox|yesno:'Reconnect Inbox,Connect Inbox' }}</span>
+          </button>
+          <div id="connectFormError" class="text-xs text-red-500 text-center font-medium hidden"></div>
         </form>
 
         <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
@@ -119,13 +125,13 @@
         {% if existing_inboxes %}
         <div class="space-y-3">
           {% for inbox in existing_inboxes %}
-          <div class="flex items-center justify-between p-4 rounded-xl bg-slate-50">
-            <div class="flex items-center gap-3">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-xl bg-slate-50">
+            <div class="flex items-center gap-3 min-w-0">
               <div class="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold
                 {% if inbox.provider == 'gmail' %}bg-red-50 text-red-600{% else %}bg-blue-50 text-blue-600{% endif %}">
                 {{ inbox.get_provider_display|slice:':2'|upper }}
               </div>
-              <div>
+              <div class="min-w-0">
                 <p class="text-sm font-semibold text-slate-800">{{ inbox.email_address }}</p>
                 <p class="text-xs text-slate-400">{{ inbox.get_provider_display }}
                   {% if inbox.last_sync_status == 'error' %}
@@ -139,15 +145,18 @@
                 {% endif %}
               </div>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center justify-end gap-2 w-full sm:w-auto">
               {% if inbox.last_sync_status == 'error' and 'password' in inbox.last_sync_error|lower %}
               <a href="{% url 'inbox:connect' %}?reconnect={{ inbox.id }}" class="btn-action btn-action-secondary btn-sm" title="Reconnect">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
               </a>
               {% endif %}
-              <a href="{% url 'inbox:sync' inbox.id %}" class="btn-action btn-action-secondary btn-sm" title="Sync now">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-              </a>
+              <form method="post" action="{% url 'inbox:sync' inbox.id %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="btn-action btn-action-secondary btn-sm" title="Sync now">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                </button>
+              </form>
               <form method="post" action="{% url 'inbox:disconnect' inbox.id %}" class="inline" data-confirm="Disconnect this inbox?">{% csrf_token %}<button type="submit" class="p-2 rounded-lg hover:bg-white text-slate-400 hover:text-red-500 transition-colors cursor-pointer">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
               </button></form>
@@ -187,12 +196,65 @@
 (function() {
   var form = document.getElementById('connectForm');
   if (!form) return;
+
   form.addEventListener('submit', function(e) {
+    e.preventDefault();
+
     var btn = document.getElementById('connectSubmitBtn');
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<svg class="w-4 h-4 animate-spin inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Connecting...';
-    }
+    var label = document.getElementById('connectBtnLabel');
+    var errorDiv = document.getElementById('connectFormError');
+
+    // Reset errors
+    errorDiv.classList.add('hidden');
+    errorDiv.textContent = '';
+    document.querySelectorAll('.field-error').forEach(function(el) {
+      el.style.display = 'none';
+      el.textContent = '';
+    });
+
+    btn.disabled = true;
+    label.textContent = 'Connecting...';
+    btn.innerHTML = '<svg class="w-4 h-4 animate-spin inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Connecting...';
+
+    var csrf = form.querySelector('[name=csrfmiddlewaretoken]').value;
+    var formData = new FormData(form);
+
+    fetch(form.action, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrf,
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: formData,
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        showToast('success', 'Inbox connected! Syncing messages...');
+        window.location.href = data.redirect_url;
+      } else {
+        // Show errors
+        if (data.field_errors) {
+          Object.keys(data.field_errors).forEach(function(field) {
+            var errEl = document.querySelector('.field-error[data-field="' + field + '"]');
+            if (errEl) {
+              errEl.textContent = data.field_errors[field].join(', ');
+              errEl.style.display = 'block';
+            }
+          });
+        }
+        errorDiv.textContent = data.error || 'Connection failed. Please try again.';
+        errorDiv.classList.remove('hidden');
+        btn.disabled = false;
+        label.textContent = 'Try Again';
+      }
+    })
+    .catch(function(err) {
+      errorDiv.textContent = 'Network error: ' + err.message;
+      errorDiv.classList.remove('hidden');
+      btn.disabled = false;
+      label.textContent = 'Try Again';
+    });
   });
 })();
 </script>

@@ -787,6 +787,8 @@
   </div>
 </div>
 
+</form>
+
 <style>
 .copilot-drawer {
   position: fixed; right: 20px; bottom: 90px; width: 420px; max-width: calc(100% - 40px);
@@ -962,7 +964,7 @@ function switchTab(tab) {
 
 // ── Template Selector ──────────────────────────────────────────
 (function () {
-  var templateData = {{ templates_json|safe }};
+  var templateData = JSON.parse('{{ templates_json|escapejs }}');
   var selector = document.getElementById('template-selector');
   var applyBtn = document.getElementById('apply-template-btn');
   if (!selector || !applyBtn) return;

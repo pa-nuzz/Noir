@@ -1,330 +1,656 @@
 {% extends 'base_dashboard.html' %}
+<<<<<<< Updated upstream
 {% load inbox_tags %}
 {% block title %}Draft — Intelligent Digital Automation (IDA){% endblock %}
 {% block page_title %}Draft Detail{% endblock %}
 
+=======
+{% load inbox_filters %}
+{% block title %}Draft — {{ draft.thread.subject|default:'Email' }}{% endblock %}
+{% block page_title %}Draft{% endblock %}
+>>>>>>> Stashed changes
 {% block content %}
-<div class="page-shell max-w-5xl mx-auto space-y-6">
+<div class="page-shell max-w-none mx-auto space-y-6">
   {% if draft.original_message %}
-  <a href="{% url 'inbox:message_detail' draft.original_message.id %}" 
+  <a href="{% url 'inbox:message_detail' draft.original_message.id %}"
      class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-primary transition-colors">
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 12H5m7 7l-7-7 7-7"/></svg>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
     Back to Message
   </a>
   {% endif %}
 
-  <div class="glass-card rounded-2xl p-6 space-y-6">
-    <div class="flex items-center justify-between gap-4">
-      <div class="flex items-center gap-3 min-w-0">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center text-sm font-bold shadow-sm shrink-0">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/></svg>
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="px-4 sm:px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div class="flex items-center gap-3 min-w-0 w-full">
+        {% if draft.original_message %}
+        <div class="w-10 h-10 rounded-full overflow-hidden relative shrink-0" style="background: hsl({{ draft.original_message.from_email|hash_hue }}, 55%, 50%);">
+          <img src="{{ draft.original_message.from_email|sender_logo_url }}" alt=""
+               class="absolute inset-0 w-full h-full object-cover z-[1]"
+               onload="if(this.naturalWidth<5||this.naturalHeight<5)this.style.display='none'"
+               onerror="this.style.display='none'">
+          <span class="absolute inset-0 flex items-center justify-center text-sm font-bold text-white z-0">{{ draft.original_message.from_name|default:draft.original_message.from_email|first|upper }}</span>
         </div>
+        {% else %}
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center text-sm font-bold shadow-sm shrink-0">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+        </div>
+        {% endif %}
         <div class="min-w-0">
-          <h1 class="text-lg font-bold text-slate-900 truncate">Re: {{ draft.original_message.subject|default:draft.thread.subject|default:'(No subject)' }}</h1>
-          <p class="text-xs text-slate-500 mt-0.5 truncate flex items-center gap-1.5">
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-            {{ draft.thread.inbox.email_address|default:draft.original_message.from_email }}
+          <h1 class="text-base font-bold text-slate-900 break-words sm:truncate">Re: {{ draft.thread.subject|default:'(No subject)' }}</h1>
+          <p class="text-xs text-slate-500 truncate">
+            To: {{ draft.original_message.from_name|default:draft.original_message.from_email|default:'Unknown' }}
+            {% if draft.original_message %}&middot; {{ draft.thread.inbox.email_address|default:'N/A' }}{% endif %}
           </p>
         </div>
       </div>
-      <span class="shrink-0">
+      <div class="flex items-center gap-2 shrink-0 w-full sm:w-auto">
         {% if draft.status == 'pending_review' %}
           {% include "components/badge.html" with label=draft.get_status_display variant="yellow" %}
         {% elif draft.status == 'edited' %}
           {% include "components/badge.html" with label=draft.get_status_display variant="purple" %}
         {% elif draft.status == 'approved' %}
           {% include "components/badge.html" with label=draft.get_status_display variant="green" %}
-        {% elif draft.status == 'discarded' %}
-          {% include "components/badge.html" with label=draft.get_status_display variant="red" %}
+        {% elif draft.status == 'sent' %}
+          {% include "components/badge.html" with label=draft.get_status_display variant="blue" %}
         {% else %}
           {% include "components/badge.html" with label=draft.get_status_display variant="gray" %}
         {% endif %}
-      </span>
+      </div>
     </div>
 
-    <div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
-      <div class="xl:col-span-3 space-y-4">
-        <div class="flex items-center justify-between">
-          <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Edit Your Draft</p>
-          <div class="flex items-center gap-2">
-            <button type="button" class="text-xs text-slate-400 hover:text-primary transition-colors flex items-center gap-1" onclick="AIClient.generateDraft('{{ draft.original_message.id }}', 'professional', function(body) { if (window.tiptapEditor) { tiptapEditor.commands.setContent(body); } })">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+    <div class="grid grid-cols-1 xl:grid-cols-5 divide-y xl:divide-y-0 xl:divide-x divide-slate-100">
+      <div class="xl:col-span-3 p-0 flex flex-col">
+        <div class="px-4 sm:px-5 py-3 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Edit Draft</p>
+          <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <button type="button" id="regenerate-btn" onclick="DraftDetail.regenerate()"
+                    class="inline-flex items-center justify-center gap-1.5 text-xs font-medium text-violet-600 hover:text-violet-700 bg-white hover:bg-violet-50 transition-colors px-3 py-1.5 rounded-lg border border-violet-200 shadow-sm flex-1 sm:flex-none">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
               Regenerate
             </button>
-            <button type="button" onclick="if(window.tiptapEditor) tiptapEditor.commands.setContent('{{ draft.ai_generated_body|escapejs }}')" 
-                    class="text-xs text-slate-400 hover:text-primary transition-colors">Reset</button>
-          </div>
-        </div>
-
-        <!-- TipTap Rich Text Editor -->
-        <div class="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
-          <div class="bg-slate-50 border-b border-slate-200 px-3 py-2 flex items-center gap-1 flex-wrap" id="tiptap-toolbar">
-            <button type="button" data-tiptap="bold" class="p-1.5 rounded hover:bg-slate-200 text-slate-600" title="Bold"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M15.6 10.79c.97-.67 1.65-1.77 1.65-2.79 0-2.26-1.75-4-4-4H7v14h7.04c2.09 0 3.71-1.7 3.71-3.79 0-1.52-.86-2.82-2.15-3.42zM10 6.5h3c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-3v-3zm3.5 9H10v-3h3.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5z"/></svg></button>
-            <button type="button" data-tiptap="italic" class="p-1.5 rounded hover:bg-slate-200 text-slate-600" title="Italic"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4v3h2.21l-3.42 8H6v3h8v-3h-2.21l3.42-8H18V4z"/></svg></button>
-            <button type="button" data-tiptap="underline" class="p-1.5 rounded hover:bg-slate-200 text-slate-600" title="Underline"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 16c-2.21 0-4-1.79-4-4V5H6v7c0 3.31 2.69 6 6 6s6-2.69 6-6V5h-2v7c0 2.21-1.79 4-4 4zm-6 4h12v-2H6v2z"/></svg></button>
-            <span class="w-px h-5 bg-slate-300 mx-1"></span>
-            <button type="button" data-tiptap="bulletList" class="p-1.5 rounded hover:bg-slate-200 text-slate-600" title="Bullet List"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M4 10.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm0-6c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm0 12c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zM7 19h14v-2H7v2zm0-6h14v-2H7v2zm0-8v2h14V5H7z"/></svg></button>
-            <button type="button" data-tiptap="orderedList" class="p-1.5 rounded hover:bg-slate-200 text-slate-600" title="Ordered List"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M2 17h2v.5H3v1h1v.5H2v1h3v-4H2v1zm1-9h1V4H2v1h1v3zm-1 3h1.8L2 13.1v.9h3v-1H3.2L5 10.9V10H2v1zm5-6v2h14V5H7zm0 14h14v-2H7v2zm0-6h14v-2H7v2z"/></svg></button>
-            <span class="w-px h-5 bg-slate-300 mx-1"></span>
-            <button type="button" data-tiptap="link" class="p-1.5 rounded hover:bg-slate-200 text-slate-600" title="Insert Link"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg></button>
-            <button type="button" data-tiptap="undo" class="p-1.5 rounded hover:bg-slate-200 text-slate-600" title="Undo"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg></button>
-            <button type="button" data-tiptap="redo" class="p-1.5 rounded hover:bg-slate-200 text-slate-600" title="Redo"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.4 10.6C16.55 9.01 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.06-5.5 7.6-5.5 1.96 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg></button>
-          </div>
-          <div id="draft-editor" class="min-h-[250px]"></div>
-        </div>
-
-        <div class="flex items-center justify-between">
-          <p class="text-xs text-slate-400"><span id="draft-editor_counter">0 characters</span></p>
-        </div>
-
-        {% if draft.feedback %}
-        <div>
-          <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-2">Feedback</p>
-          <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800 flex items-start gap-2">
-            <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <span>{{ draft.feedback }}</span>
-          </div>
-        </div>
-        {% endif %}
-
-        <div class="pt-4 border-t border-slate-100 flex items-center gap-3 flex-wrap">
-        {% url 'inbox:draft_approve' draft.id as approve_url %}
-        {% url 'inbox:draft_send' draft.id as send_url %}
-        {% url 'inbox:draft_send_test' draft.id as test_url %}
-        {% if draft.status != 'approved' %}
-          <form method="post" action="{{ approve_url }}" class="inline">
-            {% csrf_token %}
-            <input type="hidden" name="body" id="final-body-input" value="">
-            <button type="submit" data-loading="Saving..." 
-                    class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-600 text-white text-sm font-semibold hover:bg-slate-700 transition-all shadow-sm">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
-              Save to Drafts
+            <button type="button" id="reset-btn" onclick="DraftDetail.reset()"
+                    class="inline-flex items-center justify-center gap-1.5 text-xs font-medium text-slate-400 hover:text-slate-600 bg-white hover:bg-slate-50 transition-colors px-3 py-1.5 rounded-lg border border-slate-200 flex-1 sm:flex-none">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+              Reset
             </button>
-          </form>
-        {% endif %}
-        {% if draft.status == 'approved' %}
-          <form method="post" action="{{ send_url }}" class="inline" id="send-draft-form">
-            {% csrf_token %}
-            <input type="hidden" name="body" id="final-body-input" value="">
-            <button type="button" onclick="openSendModal(this.form)" 
-                    class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover transition-all shadow-sm">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-              Review & Send
-            </button>
-          </form>
-        {% endif %}
-        <form method="post" action="{{ test_url }}" class="inline">
-          {% csrf_token %}
-          <button type="submit" 
-                  class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 hover:text-primary transition-all">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-            Send Test to Myself
+          </div>
+        </div>
+
+        <div id="editor-toolbar" class="flex items-center gap-0.5 px-3 sm:px-4 py-2 bg-slate-50 border-b border-slate-200 overflow-x-auto">
+          <button type="button" onclick="DraftDetail.format('bold')" class="format-btn p-1.5 rounded hover:bg-slate-200 text-slate-600" title="Bold" data-cmd="bold">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M15.6 10.79c.97-.67 1.65-1.77 1.65-2.79 0-2.26-1.75-4-4-4H7v14h7.04c2.09 0 3.71-1.7 3.71-3.79 0-1.52-.86-2.82-2.15-3.42zM10 6.5h3c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-3v-3zm3.5 9H10v-3h3.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5z"/></svg>
           </button>
-        </form>
+          <button type="button" onclick="DraftDetail.format('italic')" class="format-btn p-1.5 rounded hover:bg-slate-200 text-slate-600" title="Italic" data-cmd="italic">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4v3h2.21l-3.42 8H6v3h8v-3h-2.21l3.42-8H18V4z"/></svg>
+          </button>
+          <button type="button" onclick="DraftDetail.format('underline')" class="format-btn p-1.5 rounded hover:bg-slate-200 text-slate-600" title="Underline" data-cmd="underline">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 16c-2.21 0-4-1.79-4-4V5H6v7c0 3.31 2.69 6 6 6s6-2.69 6-6V5h-2v7c0 2.21-1.79 4-4 4zm-6 4h12v-2H6v2z"/></svg>
+          </button>
+          <span class="w-px h-5 bg-slate-300 mx-1"></span>
+          <button type="button" onclick="DraftDetail.format('insertUnorderedList')" class="format-btn p-1.5 rounded hover:bg-slate-200 text-slate-600" title="Bullet List" data-cmd="insertUnorderedList">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M4 10.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm0-6c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm0 12c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zM7 19h14v-2H7v2zm0-6h14v-2H7v2zm0-8v2h14V5H7z"/></svg>
+          </button>
+          <button type="button" onclick="DraftDetail.format('insertOrderedList')" class="format-btn p-1.5 rounded hover:bg-slate-200 text-slate-600" title="Ordered List" data-cmd="insertOrderedList">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M2 17h2v.5H3v1h1v.5H2v1h3v-4H2v1zm1-9h1V4H2v1h1v3zm-1 3h1.8L2 13.1v.9h3v-1H3.2L5 10.9V10H2v1zm5-6v2h14V5H7zm0 14h14v-2H7v2zm0-6h14v-2H7v2z"/></svg>
+          </button>
+          <span class="w-px h-5 bg-slate-300 mx-1"></span>
+          <button type="button" onclick="DraftDetail.format('undo')" class="format-btn p-1.5 rounded hover:bg-slate-200 text-slate-600" title="Undo" data-cmd="undo">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+          </button>
+          <button type="button" onclick="DraftDetail.format('redo')" class="format-btn p-1.5 rounded hover:bg-slate-200 text-slate-600" title="Redo" data-cmd="redo">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.4 10.6C16.55 9.01 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.06-5.5 7.6-5.5 1.96 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg>
+          </button>
+        </div>
+
+        <div id="draft-editor" contenteditable="true"
+             class="flex-1 prose prose-sm max-w-none focus:outline-none p-3 sm:p-4 min-h-[280px] sm:min-h-[300px] text-slate-800 leading-relaxed"
+             data-placeholder="Write your reply here..."
+             spellcheck="true"></div>
+
+        <div class="px-3 sm:px-4 py-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 bg-white">
+          <p class="text-xs text-slate-400"><span id="draft-counter">0 characters</span></p>
+          <p class="text-xs text-slate-400">AI-generated &middot; edit as needed</p>
         </div>
       </div>
 
-      <div class="xl:col-span-2 space-y-4">
-        <div>
-          <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-2">Preview</p>
-          <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-            <div class="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
-              <div class="w-2 h-2 rounded-full bg-red-400"></div>
-              <div class="w-2 h-2 rounded-full bg-amber-400"></div>
-              <div class="w-2 h-2 rounded-full bg-emerald-400"></div>
-              <span class="text-[10px] text-slate-400 ml-2">Live Preview</span>
-            </div>
-            <div class="p-4 max-h-[400px] overflow-y-auto prose prose-sm max-w-none" id="draft-preview">
-              {{ draft.edited_body|default:draft.ai_generated_body|safe }}
+      <div class="xl:col-span-2 bg-slate-50/50 p-0">
+        <div class="p-4 sm:p-5 space-y-4">
+          <div>
+            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Live Preview</p>
+            <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+              <div class="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full bg-red-400"></div>
+                <div class="w-2 h-2 rounded-full bg-amber-400"></div>
+                <div class="w-2 h-2 rounded-full bg-emerald-400"></div>
+                <span class="text-[10px] text-slate-400 ml-1">Preview</span>
+              </div>
+              <div id="draft-preview" class="p-4 max-h-[350px] overflow-y-auto prose prose-sm max-w-none text-slate-700"></div>
             </div>
           </div>
-        </div>
 
-        {% if draft.original_message %}
-        <details class="group">
-          <summary class="text-xs text-slate-500 font-medium cursor-pointer hover:text-slate-700 list-none flex items-center gap-1 select-none">
-            <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-            Original message
-            <span class="text-slate-400 font-normal">({{ draft.original_message.from_name|default:draft.original_message.from_email }})</span>
-          </summary>
-          <div class="mt-2 bg-slate-50 rounded-xl p-4 text-xs text-slate-600 space-y-2">
-            <div class="flex items-center gap-2 text-slate-400">
-              <span class="font-medium">From:</span> {{ draft.original_message.from_name|default:draft.original_message.from_email }}
-              <span class="font-medium ml-2">Subject:</span> {{ draft.original_message.subject }}
+          {% if draft.original_message %}
+          <div class="grid grid-cols-1 gap-3">
+            <div>
+              <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">To</label>
+              <input id="draft-to" type="email" value="{{ draft.original_message.from_email }}" class="mt-1 input-field w-full text-sm" placeholder="recipient@example.com">
             </div>
-            <div class="whitespace-pre-wrap mt-2 text-slate-700 leading-relaxed">{{ draft.original_message.body_text|default:'(No text content)' }}</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Cc</label>
+                <input id="draft-cc" type="text" class="mt-1 input-field w-full text-sm" placeholder="Optional">
+              </div>
+              <div>
+                <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Bcc</label>
+                <input id="draft-bcc" type="text" class="mt-1 input-field w-full text-sm" placeholder="Optional">
+              </div>
+            </div>
           </div>
-        </details>
-        {% endif %}
 
-        <div class="bg-gradient-to-br from-indigo-50 to-violet-50 rounded-xl p-4 border border-indigo-100">
-          <div class="flex items-center gap-2 mb-2">
-            <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
-            <span class="text-xs font-semibold text-indigo-700">AI Assistant</span>
+          <details class="group">
+            <summary class="text-xs font-medium text-slate-500 cursor-pointer hover:text-slate-700 list-none flex items-center gap-1 select-none">
+              <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              Original message
+            </summary>
+            <div class="mt-2 bg-white rounded-xl p-4 border border-slate-200 text-xs text-slate-600 space-y-2">
+              <div><span class="font-semibold text-slate-400">From:</span> {{ draft.original_message.from_name|default:draft.original_message.from_email }}</div>
+              <div><span class="font-semibold text-slate-400">Subject:</span> {{ draft.original_message.subject }}</div>
+              <div class="pt-2 border-t border-slate-100 whitespace-pre-wrap text-slate-700 leading-relaxed max-h-40 overflow-y-auto">{{ draft.original_message.body_text|default:'(No text)' }}</div>
+            </div>
+          </details>
+          {% endif %}
+
+          <div class="bg-indigo-50 rounded-xl p-4 border border-indigo-100">
+            <div class="flex items-center gap-2 mb-1.5">
+              <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+              <span class="text-xs font-semibold text-indigo-700">AI Assistant</span>
+            </div>
+            <p class="text-xs text-indigo-600/70 leading-relaxed">Edit the draft on the left. Click <strong>Save Draft</strong> when ready, then <strong>Send</strong> to deliver via SMTP.</p>
           </div>
-          <p class="text-xs text-indigo-600/70 leading-relaxed">Edit the draft above or click <strong>Regenerate</strong> for a new AI version. When you're happy, <strong>Approve & Save</strong> then <strong>Send</strong>.</p>
         </div>
       </div>
+    </div>
+
+    <div class="px-4 sm:px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center gap-3 bg-slate-50/50">
+      <form method="post" action="{% url 'inbox:draft_approve' draft.id %}" class="inline w-full sm:w-auto" id="approve-form">
+        {% csrf_token %}
+        <input type="hidden" name="body" id="approve-body" value="">
+        <button type="button" onclick="DraftDetail.saveDraft()"
+                class="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-slate-600 text-white text-sm font-semibold hover:bg-slate-700 transition-all shadow-sm cursor-pointer w-full sm:w-auto">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          Save Draft
+        </button>
+      </form>
+      <form method="post" action="{% url 'inbox:draft_send' draft.id %}" class="inline w-full sm:w-auto" id="send-form">
+        {% csrf_token %}
+        <input type="hidden" name="body" id="send-body" value="">
+        <input type="hidden" name="to_address" id="send-to" value="">
+        <input type="hidden" name="cc_addresses" id="send-cc" value="">
+        <input type="hidden" name="bcc_addresses" id="send-bcc" value="">
+        <button type="button" onclick="DraftDetail.openSendModal()"
+                class="inline-flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-all shadow-lg cursor-pointer w-full sm:w-auto">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+          Send to {{ draft.original_message.from_name|default:draft.original_message.from_email|default:'Recipient' }}
+        </button>
+      </form>
+      <form method="post" action="{% url 'inbox:draft_send_test' draft.id %}" class="inline w-full sm:w-auto" id="test-form">
+        {% csrf_token %}
+        <input type="hidden" name="body" id="test-body" value="">
+        <button type="button" onclick="DraftDetail.sendTest()"
+                class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-white hover:text-primary transition-all cursor-pointer w-full sm:w-auto">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          Test to myself
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="send-confirmation-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm p-4" style="display:none">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-auto overflow-hidden">
+    <div class="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-primary to-violet-600">
+      <h3 class="text-lg font-bold text-white flex items-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+        Send Email
+      </h3>
+    </div>
+    <div class="p-6 space-y-4">
+      <div class="space-y-3 text-sm">
+        <div class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-slate-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/></svg>
+          <div><p class="text-xs text-slate-500 font-semibold uppercase">To</p><p class="text-slate-900 font-medium" id="send-modal-to">{{ draft.original_message.from_email|default:'Recipient' }}</p></div>
+        </div>
+        <div class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-slate-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          <div><p class="text-xs text-slate-500 font-semibold uppercase">From</p><p class="text-slate-900 font-medium">{{ sender.from_email|default:'Your email' }}</p></div>
+        </div>
+        <div class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-slate-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <div><p class="text-xs text-slate-500 font-semibold uppercase">Subject</p><p class="text-slate-900 font-medium">Re: {{ draft.thread.subject|default:'(No subject)' }}</p></div>
+        </div>
+      </div>
+      <div class="pt-3 border-t border-slate-100">
+        <p class="text-xs text-amber-600 font-medium flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.25c-.77.833.192 2.5 1.732 2.5z"/></svg>
+          This email will be sent immediately. Confirm?
+        </p>
+      </div>
+    </div>
+    <div class="px-6 py-4 bg-slate-50 flex items-center justify-end gap-3">
+      <button type="button" onclick="DraftDetail.closeSendModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-white transition-colors">Cancel</button>
+      <button type="button" onclick="DraftDetail.confirmSend()" class="px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover transition-colors shadow-sm">Send Now</button>
     </div>
   </div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="https://cdn.jsdelivr.net/npm/@tiptap/core@2.11.5/dist/tiptap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tiptap/starter-kit@2.11.5/dist/index.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tiptap/link@2.11.5/dist/index.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tiptap/underline@2.11.5/dist/index.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tiptap/placeholder@2.11.5/dist/index.min.js"></script>
+<style>
+  #draft-editor:empty:before {
+    content: attr(data-placeholder);
+    color: #94a3b8;
+    pointer-events: none;
+  }
+  #draft-editor:focus {
+    box-shadow: inset 0 0 0 2px rgba(109, 40, 217, 0.15);
+    border-radius: 0;
+  }
+  #draft-editor ul, #draft-editor ol {
+    padding-left: 1.5em;
+    margin: 0.5em 0;
+  }
+  #draft-editor p {
+    margin: 0 0 0.5em 0;
+  }
+  #draft-editor li {
+    margin: 0.2em 0;
+  }
+  #draft-editor p:last-child {
+    margin-bottom: 0;
+  }
+</style>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  var editorElement = document.getElementById('draft-editor');
-  if (!editorElement || typeof Tiptap === 'undefined') return;
+var DraftDetail = {
+  editor: null,
+  originalContent: '',
+  initialContent: '',
+  history: [],
+  redoStack: [],
+  historyTimer: null,
+  allowedTags: ['A', 'B', 'BR', 'DIV', 'EM', 'I', 'LI', 'OL', 'P', 'SPAN', 'STRONG', 'U', 'UL'],
+  allowedAttrs: {
+    'A': ['href', 'target', 'rel'],
+    'SPAN': ['style'],
+    'P': ['style'],
+    'DIV': ['style'],
+  },
 
-  window.tiptapEditor = new Tiptap.Editor({
-    element: editorElement,
-    extensions: [
-      Tiptap.StarterKit.configure({
-        bulletList: { keepMarks: true, keepAttributes: false },
-        orderedList: { keepMarks: true, keepAttributes: false },
-      }),
-      Tiptap.Placeholder.configure({ placeholder: 'Write your reply here...' }),
-      Tiptap.Link.configure({ openOnClick: false }),
-      Tiptap.Underline,
-      Tiptap.History.configure({ depth: 100 }),
-    ],
-    editorProps: {
-      attributes: {
-        class: 'prose prose-sm max-w-none focus:outline-none min-h-[200px] p-4',
-      },
-    },
-    onUpdate: function() {
-      var html = window.tiptapEditor.getHTML();
-      var text = window.tiptapEditor.getText();
-      var counter = document.getElementById('draft-editor_counter');
-      if (counter) counter.textContent = text.length + ' characters';
-      var preview = document.getElementById('draft-preview');
-      if (preview) preview.innerHTML = html;
-      var input = document.getElementById('final-body-input');
+  init: function() {
+    this.editor = document.getElementById('draft-editor');
+    if (!this.editor) return;
+
+    this.initialContent = '{{ draft.final_body|default:draft.edited_body|default:draft.ai_generated_body|escapejs }}';
+    this.originalContent = '{{ draft.ai_generated_body|escapejs }}';
+
+    this.editor.innerHTML = this.initialContent || '';
+    this.history = [this.getContent()];
+    var self = this;
+    this.editor.addEventListener('input', function() {
+      self.syncAll();
+      self.scheduleHistory();
+    });
+    this.editor.addEventListener('keydown', function(e) {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        self.insertTextAtSelection('    ');
+      } else if ((e.metaKey || e.ctrlKey) && ['b', 'i', 'u'].indexOf(e.key.toLowerCase()) !== -1) {
+        e.preventDefault();
+        var shortcutMap = { b: 'bold', i: 'italic', u: 'underline' };
+        self.format(shortcutMap[e.key.toLowerCase()]);
+      }
+    });
+    this.editor.addEventListener('paste', function(e) {
+      e.preventDefault();
+      var html = e.clipboardData.getData('text/html');
+      var text = e.clipboardData.getData('text/plain');
+      if (html) {
+        self.insertHtmlAtSelection(self.sanitizeHtml(html));
+      } else if (text) {
+        self.insertTextAtSelection(text);
+      }
+    });
+
+    this.syncAll();
+  },
+
+  syncAll: function() {
+    if (!this.editor) return;
+    var html = this.editor.innerHTML;
+    if (html === '<br>') html = '';
+    var text = this.editor.innerText || '';
+
+    var counter = document.getElementById('draft-counter');
+    if (counter) counter.textContent = (text || '').length + ' characters';
+
+    var preview = document.getElementById('draft-preview');
+    if (preview) preview.innerHTML = html || '<span class="text-slate-300 italic">Start typing to see a preview...</span>';
+
+    ['approve-body', 'send-body', 'test-body'].forEach(function(id) {
+      var input = document.getElementById(id);
       if (input) input.value = html;
-    },
+    });
+    this.syncRecipients();
+  },
+
+  sanitizeHtml: function(html) {
+    var template = document.createElement('template');
+    template.innerHTML = html || '';
+    var self = this;
+
+    template.content.querySelectorAll('script, style, iframe, object, embed, meta, link').forEach(function(node) {
+      node.remove();
+    });
+
+    Array.from(template.content.querySelectorAll('*')).forEach(function(node) {
+      if (self.allowedTags.indexOf(node.tagName) === -1) {
+        node.replaceWith(document.createTextNode(node.textContent || ''));
+        return;
+      }
+
+      Array.from(node.attributes).forEach(function(attr) {
+        var allowed = self.allowedAttrs[node.tagName] || [];
+        var name = attr.name.toLowerCase();
+        var value = attr.value || '';
+        if (name.indexOf('on') === 0 || allowed.indexOf(attr.name) === -1) {
+          node.removeAttribute(attr.name);
+          return;
+        }
+        if (name === 'href' && !/^https?:\/\//i.test(value) && !/^mailto:/i.test(value)) {
+          node.removeAttribute(attr.name);
+        }
+        if (name === 'style') {
+          node.setAttribute('style', value.replace(/url\s*\(|expression\s*\(/gi, ''));
+        }
+      });
+
+      if (node.tagName === 'A') {
+        node.setAttribute('target', '_blank');
+        node.setAttribute('rel', 'noopener noreferrer');
+      }
+    });
+
+    return template.innerHTML;
+  },
+
+  getEditorRange: function() {
+    var selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return null;
+    var range = selection.getRangeAt(0);
+    var container = range.commonAncestorContainer;
+    if (container.nodeType === Node.TEXT_NODE) container = container.parentNode;
+    return this.editor.contains(container) ? range : null;
+  },
+
+  placeCaretAfter: function(node) {
+    var range = document.createRange();
+    var selection = window.getSelection();
+    range.setStartAfter(node);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  },
+
+  insertNodeAtSelection: function(node) {
+    if (!this.editor) return;
+    this.editor.focus();
+    var range = this.getEditorRange();
+    if (!range) {
+      this.editor.appendChild(node);
+      this.placeCaretAfter(node);
+    } else {
+      range.deleteContents();
+      range.insertNode(node);
+      this.placeCaretAfter(node);
+    }
+    this.syncAll();
+    this.recordHistory();
+  },
+
+  insertTextAtSelection: function(text) {
+    this.insertNodeAtSelection(document.createTextNode(text));
+  },
+
+  insertHtmlAtSelection: function(html) {
+    var template = document.createElement('template');
+    template.innerHTML = html || '';
+    var fragment = template.content;
+    var lastNode = fragment.lastChild;
+    if (!lastNode) return;
+    this.editor.focus();
+    var range = this.getEditorRange();
+    if (!range) {
+      this.editor.appendChild(fragment);
+    } else {
+      range.deleteContents();
+      range.insertNode(fragment);
+    }
+    this.placeCaretAfter(lastNode);
+    this.syncAll();
+    this.recordHistory();
+  },
+
+  wrapSelection: function(tagName) {
+    var range = this.getEditorRange();
+    if (!range) return;
+
+    var wrapper = document.createElement(tagName);
+    if (range.collapsed) {
+      wrapper.appendChild(document.createTextNode(''));
+      range.insertNode(wrapper);
+      var innerRange = document.createRange();
+      innerRange.selectNodeContents(wrapper);
+      var selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(innerRange);
+    } else {
+      wrapper.appendChild(range.extractContents());
+      range.insertNode(wrapper);
+      this.placeCaretAfter(wrapper);
+    }
+
+    this.syncAll();
+    this.recordHistory();
+  },
+
+  createList: function(listTag) {
+    var range = this.getEditorRange();
+    if (!range) return;
+
+    var selectedText = range.toString();
+    var lines = selectedText
+      ? selectedText.split(/\r?\n/).map(function(line) { return line.trim(); }).filter(Boolean)
+      : [''];
+    var list = document.createElement(listTag);
+    lines.forEach(function(line) {
+      var item = document.createElement('li');
+      if (line) item.textContent = line;
+      else item.appendChild(document.createElement('br'));
+      list.appendChild(item);
+    });
+
+    this.insertNodeAtSelection(list);
+  },
+
+  scheduleHistory: function() {
+    var self = this;
+    clearTimeout(this.historyTimer);
+    this.historyTimer = setTimeout(function() {
+      self.recordHistory();
+    }, 500);
+  },
+
+  recordHistory: function() {
+    var html = this.getContent();
+    if (this.history[this.history.length - 1] === html) return;
+    this.history.push(html);
+    if (this.history.length > 50) this.history.shift();
+    this.redoStack = [];
+  },
+
+  restoreContent: function(html) {
+    if (!this.editor) return;
+    this.editor.innerHTML = html || '';
+    this.syncAll();
+  },
+
+  undo: function() {
+    if (this.history.length <= 1) return;
+    this.redoStack.push(this.history.pop());
+    this.restoreContent(this.history[this.history.length - 1]);
+  },
+
+  redo: function() {
+    if (!this.redoStack.length) return;
+    var html = this.redoStack.pop();
+    this.history.push(html);
+    this.restoreContent(html);
+  },
+
+  syncRecipients: function() {
+    var to = document.getElementById('draft-to');
+    var cc = document.getElementById('draft-cc');
+    var bcc = document.getElementById('draft-bcc');
+    var sendTo = document.getElementById('send-to');
+    var sendCc = document.getElementById('send-cc');
+    var sendBcc = document.getElementById('send-bcc');
+    var modalTo = document.getElementById('send-modal-to');
+    if (sendTo && to) sendTo.value = to.value.trim();
+    if (sendCc && cc) sendCc.value = cc.value.trim();
+    if (sendBcc && bcc) sendBcc.value = bcc.value.trim();
+    if (modalTo && to) modalTo.textContent = to.value.trim() || 'Recipient';
+  },
+
+  format: function(command) {
+    if (!this.editor) return;
+    this.editor.focus();
+    var commands = {
+      bold: function() { DraftDetail.wrapSelection('strong'); },
+      italic: function() { DraftDetail.wrapSelection('em'); },
+      underline: function() { DraftDetail.wrapSelection('u'); },
+      insertUnorderedList: function() { DraftDetail.createList('ul'); },
+      insertOrderedList: function() { DraftDetail.createList('ol'); },
+      undo: function() { DraftDetail.undo(); },
+      redo: function() { DraftDetail.redo(); },
+    };
+    if (commands[command]) commands[command]();
+  },
+
+  getContent: function() {
+    if (!this.editor) return '';
+    var html = this.editor.innerHTML;
+    return html === '<br>' ? '' : html;
+  },
+
+  regenerate: function() {
+    var btn = document.getElementById('regenerate-btn');
+    if (!btn) return;
+    btn.disabled = true;
+    btn.innerHTML = '<svg class="animate-spin -ml-1 mr-1.5 h-3.5 w-3.5 inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Regenerating...';
+
+    var csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+    fetch('/inbox/messages/' + '{{ draft.original_message.id }}' + '/generate-draft/', {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrf ? csrf.value : '',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-Tone': 'professional',
+        'X-Draft-Id': '{{ draft.id }}',
+      },
+      body: new URLSearchParams({ draft_id: '{{ draft.id }}' }),
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success && data.draft_body) {
+        DraftDetail.editor.innerHTML = data.draft_body;
+        DraftDetail.syncAll();
+        if (window.showToast) showToast('success', 'Draft regenerated!');
+      } else {
+        if (window.showToast) showToast('error', data.error || 'Regeneration failed');
+      }
+    })
+    .catch(function() {
+      if (window.showToast) showToast('error', 'Could not regenerate draft');
+    })
+    .finally(function() {
+      btn.disabled = false;
+      btn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Regenerate';
+    });
+  },
+
+  reset: function() {
+    if (!this.editor) return;
+    this.editor.innerHTML = this.originalContent || '';
+    this.syncAll();
+    if (window.showToast) showToast('info', 'Reset to AI original');
+  },
+
+  saveDraft: function() {
+    this.syncAll();
+    if (window.showToast) showToast('info', 'Saving draft...');
+    document.getElementById('approve-form').submit();
+  },
+
+  openSendModal: function() {
+    this.syncAll();
+    this.syncRecipients();
+    var to = document.getElementById('send-to');
+    if (to && !to.value.trim()) {
+      if (window.showToast) showToast('warning', 'Add a recipient before sending.');
+      return;
+    }
+    var modal = document.getElementById('send-confirmation-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+      document.body.classList.add('overflow-hidden');
+    }
+  },
+
+  closeSendModal: function() {
+    var modal = document.getElementById('send-confirmation-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+      document.body.classList.remove('overflow-hidden');
+    }
+  },
+
+  confirmSend: function() {
+    this.syncAll();
+    this.closeSendModal();
+    var form = document.getElementById('send-form');
+    if (form) form.submit();
+  },
+
+  sendTest: function() {
+    this.syncAll();
+    if (window.showToast) showToast('info', 'Sending test...');
+    document.getElementById('test-form').submit();
+  }
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+  DraftDetail.init();
+
+  var modal = document.getElementById('send-confirmation-modal');
+  if (modal) {
+    modal.addEventListener('click', function(e) {
+      if (e.target === this) DraftDetail.closeSendModal();
+    });
+  }
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') DraftDetail.closeSendModal();
   });
-
-  // Set initial content
-  var initialContent = '{{ draft.edited_body|default:draft.ai_generated_body|escapejs }}';
-  if (initialContent) {
-    window.tiptapEditor.commands.setContent(initialContent);
-  }
-
-  // Initialize AI client
-  AIClient.init();
-});
-</script>
-
-<!-- Send Confirmation Modal -->
-<div id="send-confirmation-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm" style="display:none">
-  <div class="bg-white rounded-2xl shadow-2xl max-w-md mx-4 overflow-hidden" style="max-width: 500px;">
-    <div class="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-primary to-violet-600">
-      <h3 class="text-lg font-bold text-white flex items-center gap-2">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-        Confirm Email Send
-      </h3>
-    </div>
-    
-    <div class="p-6 space-y-4">
-      <div class="space-y-3 text-sm">
-        <div class="flex items-start gap-3">
-          <svg class="w-5 h-5 text-slate-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/></svg>
-          <div>
-            <p class="text-xs text-slate-500 font-semibold uppercase">To</p>
-            <p class="text-slate-900 font-medium" id="modal-recipient">{{ draft.original_message.from_email|default:'Recipient' }}</p>
-          </div>
-        </div>
-        
-        <div class="flex items-start gap-3">
-          <svg class="w-5 h-5 text-slate-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-          <div>
-            <p class="text-xs text-slate-500 font-semibold uppercase">From</p>
-            <p class="text-slate-900 font-medium" id="modal-sender">{{ sender.from_email|default:'Your email' }}</p>
-          </div>
-        </div>
-        
-        <div class="flex items-start gap-3">
-          <svg class="w-5 h-5 text-slate-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-          <div>
-            <p class="text-xs text-slate-500 font-semibold uppercase">Subject</p>
-            <p class="text-slate-900 font-medium" id="modal-subject">Re: {{ draft.thread.subject|default:'(No subject)' }}</p>
-          </div>
-        </div>
-        
-        <div class="flex items-start gap-3">
-          <svg class="w-5 h-5 text-slate-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-          <div>
-            <p class="text-xs text-slate-500 font-semibold uppercase">Daily Quota</p>
-            <p class="text-slate-900 font-medium" id="modal-quota">{{ sender.emails_sent_today }}/{{ sender.daily_limit }} emails sent today</p>
-            {% with quota_pct=sender.emails_sent_today|floatformat:0|add:0|div:sender.daily_limit|floatformat:2 %}
-            <div class="mt-1.5 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-              <div class="h-1.5 rounded-full {% if quota_pct > 0.9 %}bg-red-500{% elif quota_pct > 0.7 %}bg-amber-500{% else %}bg-emerald-500{% endif %}" style="width: {{ quota_pct|multiply:100 }}%;"></div>
-            </div>
-            {% endwith %}
-          </div>
-        </div>
-      </div>
-      
-      <div class="pt-4 border-t border-slate-100">
-        <p class="text-xs text-amber-600 font-medium flex items-center gap-1.5">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.25c-.77.833.192 2.5 1.732 2.5z"/></svg>
-          This email will be sent immediately. Are you sure?
-        </p>
-      </div>
-    </div>
-    
-    <div class="px-6 py-4 bg-slate-50 flex items-center justify-end gap-3">
-      <button type="button" onclick="closeSendModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-100 transition-colors">
-        Cancel
-      </button>
-      <button type="button" onclick="confirmAndSend()" class="px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover transition-colors shadow-sm">
-        Yes, Send Email
-      </button>
-    </div>
-  </div>
-</div>
-
-<script>
-// Send Confirmation Modal Functions
-var sendModalForm = null;
-
-function openSendModal(formElement) {
-  sendModalForm = formElement;
-  document.getElementById('send-confirmation-modal').style.display = 'flex';
-  document.body.classList.add('overflow-hidden');
-}
-
-function closeSendModal() {
-  document.getElementById('send-confirmation-modal').style.display = 'none';
-  document.body.classList.remove('overflow-hidden');
-  sendModalForm = null;
-}
-
-function confirmAndSend() {
-  if (sendModalForm) {
-    closeSendModal();
-    sendModalForm.submit();
-  }
-}
-
-// Close modal on backdrop click
-document.getElementById('send-confirmation-modal').addEventListener('click', function(e) {
-  if (e.target === this) {
-    closeSendModal();
-  }
-});
-
-// Close modal on ESC key
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    closeSendModal();
-  }
 });
 </script>
 {% endblock %}

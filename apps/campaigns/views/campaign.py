@@ -55,7 +55,7 @@ def _campaign_form_view(request, campaign=None, read_only=False):
     })
 
     if read_only:
-        form = CampaignForm(user=request.user, instance=campaign)
+        form = CampaignForm(request=request, instance=campaign)
         for _, field in form.fields.items():
             field.disabled = True
         return render(request, 'campaigns/create.html', {
@@ -71,7 +71,7 @@ def _campaign_form_view(request, campaign=None, read_only=False):
         })
 
     if request.method == 'POST':
-        form = CampaignForm(request.POST, request.FILES, user=request.user, instance=campaign)
+        form = CampaignForm(request.POST, request.FILES, request=request, instance=campaign)
         action = request.POST.get('action', 'save_draft')
         test_email = request.POST.get('test_email')
 
@@ -229,12 +229,12 @@ def _campaign_form_view(request, campaign=None, read_only=False):
                 initial['body_html'] = selected_template.body_html or ''
             except (EmailTemplate.DoesNotExist, AttributeError):
                 logger.warning(f"Template {template_id} not found for campaign creation")
-        form = CampaignForm(user=request.user, instance=campaign, initial=initial or None)
+        form = CampaignForm(request=request, instance=campaign, initial=initial or None)
 
         return render(request, 'campaigns/create.html', {
             'form': form, 'senders': senders, 'campaign': campaign,
-            'contact_lists': ContactList.objects.filter(user=request.user),
-            'available_tags': ContactTag.objects.filter(user=request.user),
+            'contact_lists': filter_by_context(request, ContactList.objects.all()),
+            'available_tags': filter_by_context(request, ContactTag.objects.all()),
             'templates': user_templates, 'templates_json': templates_json,
             'selected_template': selected_template, 'csv_columns': [],
             'wizard_steps': wizard_steps, 'current_step': 4,
@@ -250,7 +250,7 @@ def _campaign_form_view(request, campaign=None, read_only=False):
             initial['body_html'] = selected_template.body_html or ''
         except EmailTemplate.DoesNotExist:
             logger.warning(f"Template {template_id} not found for campaign creation")
-    form = CampaignForm(user=request.user, instance=campaign, initial=initial or None)
+    form = CampaignForm(request=request, instance=campaign, initial=initial or None)
 
     csv_columns = []
     if campaign and campaign.recipient_context:
@@ -488,9 +488,7 @@ def campaign_delete(request, campaign_id):
 @require_workspace_permission('campaigns', 'read')
 def campaign_trash(request):
     """Show soft-deleted campaigns."""
-    campaigns = Campaign.objects.filter(
-        user=request.user, is_deleted=True
-    ).select_related('sender').order_by('-deleted_at')
+    campaigns = filter_by_context(request, Campaign.objects.filter(is_deleted=True)).select_related('sender').order_by('-deleted_at')
     paginator = Paginator(campaigns, 10)
     page_obj = paginator.get_page(request.GET.get('page'))
     return render(request, 'campaigns/trash.html', {
