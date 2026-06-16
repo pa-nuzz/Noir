@@ -223,15 +223,18 @@ def bulk_update_contact_tags(request):
 def import_csv(request):
     if request.method == 'POST':
         csv_file = request.FILES.get('csv_file')
+        list_id = request.POST.get('list_id', '').strip()
         list_name = request.POST.get('list_name', '').strip()
+        next_url = request.POST.get('next', '').strip()
+        default_gdpr_consent = request.POST.get('default_gdpr_consent') == 'on'
 
-        if not csv_file or not list_name:
-            messages.error(request, 'Please provide both a list name and a CSV file.')
-            return redirect('contacts:list')
+        if not csv_file:
+            messages.error(request, 'Please provide a CSV file.')
+            return redirect(next_url or 'contacts:list')
 
         if not csv_file.name.endswith('.csv'):
             messages.error(request, 'File must be a .csv')
-            return redirect('contacts:list')
+            return redirect(next_url or 'contacts:list')
 
         try:
             decoded = csv_file.read().decode('utf-8')
@@ -240,16 +243,34 @@ def import_csv(request):
 
             if 'email' not in headers:
                 messages.error(request, 'CSV must have an "email" column.')
-                return redirect('contacts:list')
+                return redirect(next_url or 'contacts:list')
 
             ws = _get_active_workspace(request)
-            contact_list_obj = ContactList.objects.create(
-                user=request.user,
-                workspace=ws,
-                name=list_name,
-                description=f'Imported from {csv_file.name}',
-            )
 
+            if list_id:
+                contact_list_obj = get_object_or_404(
+                    filter_by_context(request, ContactList.objects.all()),
+                    id=list_id,
+                )
+            elif list_name:
+                contact_list_obj = ContactList.objects.create(
+                    user=request.user,
+                    workspace=ws,
+                    name=list_name,
+                    description=f'Imported from {csv_file.name}',
+                )
+            else:
+                base_qs = filter_by_context(request, ContactList.objects.all()).filter(name='Default List')
+                contact_list_obj = base_qs.first()
+                if not contact_list_obj:
+                    contact_list_obj = ContactList.objects.create(
+                        name='Default List',
+                        description='Auto-created default list',
+                        user=request.user,
+                        workspace=ws,
+                    )
+
+            has_consent_col = 'gdpr_consent' in headers
             created = 0
             skipped = 0
             for row in reader:
@@ -267,6 +288,26 @@ def import_csv(request):
                     }
                 )
 
+                if not was_created:
+                    if row.get('first_name'):
+                        contact_obj.first_name = row['first_name']
+                    if row.get('last_name'):
+                        contact_obj.last_name = row['last_name']
+                    contact_obj.save()
+
+                consent_granted = False
+                if has_consent_col:
+                    consent_val = row.get('gdpr_consent', '').strip().lower()
+                    consent_granted = consent_val in ('yes', 'true', '1', 'y', 't', '✓', 'checked', 'on')
+                elif default_gdpr_consent:
+                    consent_granted = True
+
+                if consent_granted:
+                    contact_obj.gdpr_consent = True
+                    contact_obj.gdpr_consent_at = timezone.now()
+                    contact_obj.gdpr_notes = (contact_obj.gdpr_notes or '') + '\n[Imported via CSV with consent]'
+                    contact_obj.save(update_fields=['gdpr_consent', 'gdpr_consent_at', 'gdpr_notes', 'updated_at'])
+
                 tag_values = Contact.parse_tags(row.get('tags', ''))
                 if tag_values:
                     tag_objects = []
@@ -280,12 +321,14 @@ def import_csv(request):
                 else:
                     skipped += 1
 
-            messages.success(request, f'List "{list_name}" created with {created} contacts ({skipped} skipped).')
-            return redirect('contacts:list')
+            list_label = contact_list_obj.name
+            messages.success(request, f'List "{list_label}" updated with {created} new contacts ({skipped} skipped).')
+            return redirect(next_url or 'contacts:list')
 
         except Exception as e:
+            logger.exception('CSV import failed')
             messages.error(request, f'Failed to import CSV: {e}')
-            return redirect('contacts:list')
+            return redirect(next_url or 'contacts:list')
 
     return render(request, 'contacts/import_csv.html')
 
@@ -301,6 +344,7 @@ def add_contact(request):
     last_name = request.POST.get('last_name', '').strip()
     list_id = request.POST.get('list_id', '').strip()
     tags_raw = request.POST.get('tags', '').strip()
+    gdpr_consent = request.POST.get('gdpr_consent') == 'on'
 
     if not email or '@' not in email:
         messages.error(request, 'Please enter a valid email address.')
@@ -323,8 +367,19 @@ def add_contact(request):
     contact_obj, created = Contact.objects.get_or_create(
         contact_list=contact_list,
         email=email,
-        defaults={'first_name': first_name, 'last_name': last_name}
+        defaults={
+            'first_name': first_name,
+            'last_name': last_name,
+            'gdpr_consent': gdpr_consent,
+            'gdpr_consent_at': timezone.now() if gdpr_consent else None,
+        }
     )
+
+    if not created:
+        if gdpr_consent and not contact_obj.gdpr_consent:
+            contact_obj.gdpr_consent = True
+            contact_obj.gdpr_consent_at = timezone.now()
+            contact_obj.save(update_fields=['gdpr_consent', 'gdpr_consent_at', 'updated_at'])
 
     tag_values = Contact.parse_tags(tags_raw)
     if tag_values:
