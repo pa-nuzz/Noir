@@ -13,6 +13,7 @@ urlpatterns = [
     path('accounts/<int:account_id>/disconnect/', views_api.disconnect_account, name='disconnect_account'),
     path('posts/', views_api.post_list, name='post_list'),
     path('posts/create/', views_api.post_create, name='post_create'),
+    path('posts/upload-media/', views_api.post_media_upload, name='post_media_upload'),
     path('posts/<int:post_id>/', views_api.post_detail, name='post_detail'),
     path('posts/<int:post_id>/delete/', views_api.post_delete, name='post_delete'),
     path('posts/<int:post_id>/publish/', views_api.publish_post, name='publish_post'),
