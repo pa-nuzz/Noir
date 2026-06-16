@@ -79,7 +79,9 @@ def upload(request):
                 'success': True,
                 'asset_id': asset.id,
                 'title': asset.title or asset.original_filename,
+                'file_type': asset.file_type,
                 'url': service.get_asset_url(asset),
+                'thumbnail_url': service.get_thumbnail_url(asset),
             })
 
         messages.success(request, f'"{asset.original_filename}" uploaded.')
@@ -160,24 +162,21 @@ def delete_folder(request, folder_id):
 @login_required
 def api_assets(request):
     assets = MediaAsset.objects.filter(user=request.user).select_related('folder').order_by('-created_at')[:100]
+    service = MediaService(request.user)
     data = []
     for a in assets:
-        thumbnail_url = None
-        if a.file_type == 'image':
-            try:
-                if a.thumbnail:
-                    thumbnail_url = a.thumbnail.url
-                elif a.file:
-                    thumbnail_url = a.file.url
-            except Exception:
-                thumbnail_url = None
+        asset_url = service.get_asset_url(a)
+        thumbnail_url = service.get_thumbnail_url(a)
         data.append({
             'id': a.id,
             'title': a.title or a.original_filename,
+            'original_filename': a.original_filename,
             'file_type': a.file_type,
+            'url': asset_url,
             'thumbnail_url': thumbnail_url,
             'file_size': a.file_size,
             'folder': a.folder.name if a.folder else None,
+            'folder_id': a.folder_id,
             'created_at': a.created_at.isoformat(),
         })
     return JsonResponse({'assets': data})
@@ -203,6 +202,8 @@ def serve_asset(request, asset_id, file_type='original'):
         else:
             content_type, _ = mimetypes.guess_type(asset.original_filename)
         return HttpResponse(content, content_type=content_type or 'application/octet-stream')
+    except FileNotFoundError:
+        return HttpResponse(status=404)
     except Exception:
         logger.exception('Failed to serve asset %s (%s)', asset_id, file_type)
         return HttpResponse(status=404)

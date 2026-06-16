@@ -160,7 +160,7 @@
               <div id="mediaUrls" class="space-y-2 mt-3">
                 <div class="flex items-center gap-2 media-row">
                   <div class="flex-1 relative">
-                    <input type="url" name="media_urls" class="input-field w-full pl-9 pr-3 py-2.5 media-input" placeholder="Or paste a media URL...">
+                    <input type="text" name="media_urls" class="input-field w-full pl-9 pr-3 py-2.5 media-input" placeholder="Or paste a media URL...">
                     <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                   </div>
                   <button type="button" class="remove-url w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all flex-shrink-0" style="visibility:hidden">
@@ -168,10 +168,17 @@
                   </button>
                 </div>
               </div>
-              <button type="button" id="addMediaUrl" class="mt-2 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-dashed border-slate-300 text-xs font-semibold text-slate-500 hover:border-primary/40 hover:text-primary hover:bg-primary-light/30 transition-all">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                Add Media URL
-              </button>
+              <div id="selectedAssetInputs"></div>
+              <div class="mt-2 flex flex-wrap items-center gap-2">
+                <button type="button" id="addMediaUrl" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-dashed border-slate-300 text-xs font-semibold text-slate-500 hover:border-primary/40 hover:text-primary hover:bg-primary-light/30 transition-all">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                  Add Media URL
+                </button>
+                <button type="button" id="openMediaPicker" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-600 hover:border-primary/40 hover:text-primary hover:bg-primary-light/30 transition-all">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+                  Choose from IDA Media
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -355,6 +362,33 @@
     </div>
   </form>
 
+  <div id="mediaPickerModal" class="fixed inset-0 z-[12000] hidden" aria-hidden="true">
+    <div class="absolute inset-0 bg-slate-900/50" data-close-media-picker></div>
+    <div class="absolute inset-x-4 top-8 bottom-8 max-w-5xl mx-auto bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-200 flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+          <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+        </div>
+        <div class="flex-1 min-w-0">
+          <h2 class="text-base font-bold text-slate-900">IDA Media Library</h2>
+          <p class="text-xs text-slate-500">Select images or videos from /creative/media/.</p>
+        </div>
+        <button type="button" class="w-9 h-9 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors" data-close-media-picker>
+          <svg class="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row gap-3">
+        <div class="relative flex-1">
+          <input type="search" id="mediaPickerSearch" class="input-field w-full pl-9 pr-3 py-2.5" placeholder="Search media by title, filename, or folder">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+        </div>
+        <a href="{% url 'creative:media_library' %}" target="_blank" class="inline-flex items-center justify-center px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:text-primary hover:border-primary/40 transition-colors">Open Library</a>
+      </div>
+      <div id="mediaPickerStatus" class="px-5 py-3 text-sm text-slate-500">Loading media...</div>
+      <div id="mediaPickerGrid" class="hidden flex-1 overflow-y-auto p-4 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 content-start"></div>
+    </div>
+  </div>
+
 
 </div>
 
@@ -414,12 +448,17 @@
 
   function detectContentType() {
     const inputs = document.querySelectorAll('.media-input');
-    const urls = Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
-    if (!urls.length) return 'text';
+    const media = Array.from(inputs)
+      .map(i => ({ url: i.value.trim(), fileType: i.dataset.fileType || '' }))
+      .filter(item => item.url);
+    if (!media.length) return 'text';
 
     let hasVideo = false, hasImage = false;
-    for (const url of urls) {
-      const ext = url.split('?').split('.').pop()?.toLowerCase() || '';
+    for (const item of media) {
+      const url = item.url;
+      const ext = mediaFileExt(url);
+      if (item.fileType === 'video') { hasVideo = true; break; }
+      if (item.fileType === 'image') { hasImage = true; }
       if (VIDEO_EXTS.includes(ext)) { hasVideo = true; break; }
       if (IMAGE_EXTS.includes(ext)) { hasImage = true; }
       if (url.includes('youtube.com') || url.includes('youtu.be') || url.includes('vimeo.com') || url.includes('tiktok.com')) {
@@ -446,15 +485,17 @@
     const limit = getWorstCharLimit();
     charDisplay.textContent = limit ? `${len} / ${limit}` : String(len);
     const pct = limit ? Math.min((len / limit) * 100, 100) : 0;
-    charProgress.style.width = pct + '%';
+    if (charProgress) charProgress.style.width = pct + '%';
     if (limit && len > limit * 0.9) {
-      charWarning.textContent = `${limit - len} characters remaining`;
-      charWarning.classList.remove('hidden');
-      charWarning.className = 'text-xs font-semibold ' + (len > limit ? 'text-red-500' : 'text-amber-500');
-      charProgress.className = 'h-full rounded-full ' + (len > limit ? 'bg-red-500' : 'bg-amber-500') + ' transition-all duration-300';
+      if (charWarning) {
+        charWarning.textContent = `${limit - len} characters remaining`;
+        charWarning.classList.remove('hidden');
+        charWarning.className = 'text-xs font-semibold ' + (len > limit ? 'text-red-500' : 'text-amber-500');
+      }
+      if (charProgress) charProgress.className = 'h-full rounded-full ' + (len > limit ? 'bg-red-500' : 'bg-amber-500') + ' transition-all duration-300';
     } else {
-      charWarning.classList.add('hidden');
-      charProgress.className = 'h-full rounded-full bg-primary transition-all duration-300';
+      if (charWarning) charWarning.classList.add('hidden');
+      if (charProgress) charProgress.className = 'h-full rounded-full bg-primary transition-all duration-300';
     }
     updateStrength();
   }
@@ -465,7 +506,14 @@
     const linkUrl = document.getElementById('link_url')?.value || '';
     const mediaRows = document.querySelectorAll('.media-row').length;
     const checked = document.querySelectorAll('.account-check:checked').length;
-
+    return {
+      hasText: text.trim().length > 0,
+      hasHashtags: hashtags.trim().length > 0,
+      hasLink: linkUrl.trim().length > 0,
+      hasMedia: mediaRows > 0,
+      accountCount: checked,
+    };
+  }
 
   function updatePlatformCompatibility() {
     const type = detectContentType();
@@ -553,6 +601,101 @@
     return d.innerHTML;
   }
 
+  function mediaFileExt(url) {
+    return (url || '').split('#')[0].split('?')[0].split('.').pop()?.toLowerCase() || '';
+  }
+
+  function isVideoMedia(url, fileType) {
+    return fileType === 'video' || VIDEO_EXTS.includes(mediaFileExt(url));
+  }
+
+  window.addSelectedMedia = function(url, label, assetId, thumbnailUrl, fileType) {
+    if (!url) return;
+    const mediaInputValues = Array.from(document.querySelectorAll('.media-input')).map(input => input.value.trim());
+    if (mediaInputValues.includes(url)) return;
+    if (assetId && document.querySelector('input[name="media_asset_ids"][value="' + assetId + '"]')) return;
+
+    const preview = document.getElementById('filePreview');
+    const container = document.getElementById('mediaUrls');
+    const selectedAssetInputs = document.getElementById('selectedAssetInputs');
+    const mediaLabel = label || 'media';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'relative group';
+    wrapper.style.cssText = 'display:inline-flex';
+
+    if (isVideoMedia(url, fileType)) {
+      const videoTile = document.createElement('div');
+      videoTile.className = 'w-14 h-14 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400';
+      videoTile.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+      wrapper.appendChild(videoTile);
+    } else {
+      const img = document.createElement('img');
+      img.src = thumbnailUrl || url;
+      img.alt = '';
+      img.className = 'w-14 h-14 object-cover rounded-lg border border-slate-200';
+      img.onerror = function() {
+        const fallback = document.createElement('div');
+        fallback.className = 'w-14 h-14 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 text-[10px]';
+        fallback.textContent = 'MEDIA';
+        img.replaceWith(fallback);
+      };
+      wrapper.appendChild(img);
+    }
+    preview.appendChild(wrapper);
+
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-2 media-row';
+    if (assetId) row.dataset.assetId = String(assetId);
+
+    const fieldWrap = document.createElement('div');
+    fieldWrap.className = 'flex-1 relative';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.name = 'media_urls';
+    input.value = url;
+    input.readOnly = true;
+    input.className = 'input-field w-full pl-3 pr-3 py-2 text-xs media-input';
+    input.style.paddingLeft = Math.min(Math.max(mediaLabel.length * 6 + 20, 72), 220) + 'px';
+    if (fileType) input.dataset.fileType = fileType;
+    fieldWrap.appendChild(input);
+
+    const labelEl = document.createElement('span');
+    labelEl.className = 'absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 max-w-[180px] truncate pointer-events-none';
+    labelEl.textContent = mediaLabel;
+    fieldWrap.appendChild(labelEl);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'remove-url w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all flex-shrink-0';
+    removeBtn.style.visibility = 'visible';
+    removeBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>';
+
+    let hiddenAssetInput = null;
+    if (assetId) {
+      hiddenAssetInput = document.createElement('input');
+      hiddenAssetInput.type = 'hidden';
+      hiddenAssetInput.name = 'media_asset_ids';
+      hiddenAssetInput.value = assetId;
+      selectedAssetInputs.appendChild(hiddenAssetInput);
+    }
+
+    removeBtn.addEventListener('click', function() {
+      row.remove();
+      wrapper.remove();
+      if (hiddenAssetInput) hiddenAssetInput.remove();
+      updatePlatformCompatibility();
+      updatePreview();
+    });
+
+    row.appendChild(fieldWrap);
+    row.appendChild(removeBtn);
+    container.appendChild(row);
+    updatePlatformCompatibility();
+    updatePreview();
+  };
+
   function renderMarkdown(text) {
     return escapeHtml(text)
       .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
@@ -599,11 +742,14 @@
     }
 
     const mediaInputs = document.querySelectorAll('.media-input');
-    const urls = Array.from(mediaInputs).map(i => i.value.trim()).filter(Boolean);
-    if (urls.length) {
+    const media = Array.from(mediaInputs)
+      .map(i => ({ url: i.value.trim(), fileType: i.dataset.fileType || '' }))
+      .filter(item => item.url);
+    if (media.length) {
       previewMedia.classList.remove('hidden');
-      previewMedia.innerHTML = urls.map(u => {
-        const isVid = VIDEO_EXTS.includes(u.split('?').split('.').pop()?.toLowerCase() || '');
+      previewMedia.innerHTML = media.map(item => {
+        const u = item.url;
+        const isVid = isVideoMedia(u, item.fileType);
         if (isVid) {
           return `<div class="aspect-video rounded-lg bg-slate-100 overflow-hidden border border-slate-200 flex items-center justify-center text-slate-400"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>`;
         }
@@ -751,6 +897,130 @@
     });
   }
 
+  (function() {
+    const modal = document.getElementById('mediaPickerModal');
+    const openBtn = document.getElementById('openMediaPicker');
+    const grid = document.getElementById('mediaPickerGrid');
+    const status = document.getElementById('mediaPickerStatus');
+    const search = document.getElementById('mediaPickerSearch');
+    let assets = [];
+    let loaded = false;
+
+    if (!modal || !openBtn || !grid || !status) return;
+
+    function openModal() {
+      modal.classList.remove('hidden');
+      modal.setAttribute('aria-hidden', 'false');
+      if (!loaded) loadAssets();
+      setTimeout(function() { search?.focus(); }, 50);
+    }
+
+    function closeModal() {
+      modal.classList.add('hidden');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    function loadAssets() {
+      status.textContent = 'Loading media...';
+      status.classList.remove('hidden');
+      grid.classList.add('hidden');
+
+      fetch('{% url "media_assets:api_assets" %}', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'same-origin',
+      })
+        .then(function(response) {
+          if (!response.ok) throw new Error('Could not load media.');
+          return response.json();
+        })
+        .then(function(data) {
+          assets = data.assets || [];
+          loaded = true;
+          renderAssets();
+        })
+        .catch(function(error) {
+          status.textContent = error.message || 'Could not load media.';
+          grid.classList.add('hidden');
+        });
+    }
+
+    function renderAssets() {
+      const query = (search?.value || '').trim().toLowerCase();
+      const filtered = assets.filter(function(asset) {
+        if (!query) return true;
+        return [
+          asset.title,
+          asset.original_filename,
+          asset.folder,
+          asset.file_type,
+        ].filter(Boolean).join(' ').toLowerCase().includes(query);
+      });
+
+      grid.innerHTML = '';
+      if (!filtered.length) {
+        status.textContent = assets.length ? 'No media matches your search.' : 'No media found in your IDA library.';
+        status.classList.remove('hidden');
+        grid.classList.add('hidden');
+        return;
+      }
+
+      status.classList.add('hidden');
+      grid.classList.remove('hidden');
+
+      filtered.forEach(function(asset) {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'text-left rounded-xl border border-slate-200 overflow-hidden hover:border-primary/50 hover:shadow-md transition-all bg-white group';
+
+        const previewWrap = document.createElement('div');
+        previewWrap.className = 'aspect-video bg-slate-100 flex items-center justify-center overflow-hidden';
+        if (isVideoMedia(asset.url, asset.file_type)) {
+          previewWrap.innerHTML = '<div class="w-10 h-10 rounded-full bg-white/90 border border-slate-200 flex items-center justify-center text-slate-500 shadow-sm"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg></div>';
+        } else if (asset.thumbnail_url || asset.url) {
+          const img = document.createElement('img');
+          img.src = asset.thumbnail_url || asset.url;
+          img.alt = '';
+          img.className = 'w-full h-full object-cover group-hover:scale-[1.02] transition-transform';
+          img.onerror = function() {
+            previewWrap.innerHTML = '<span class="text-xs font-semibold text-slate-400">MEDIA</span>';
+          };
+          previewWrap.appendChild(img);
+        } else {
+          previewWrap.innerHTML = '<span class="text-xs font-semibold text-slate-400">MEDIA</span>';
+        }
+
+        const body = document.createElement('div');
+        body.className = 'p-3';
+        body.innerHTML = '<p class="text-sm font-semibold text-slate-800 truncate"></p><p class="text-xs text-slate-400 truncate mt-0.5"></p>';
+        body.querySelector('p:first-child').textContent = asset.title || asset.original_filename || 'Untitled media';
+        body.querySelector('p:last-child').textContent = [asset.file_type || 'media', asset.folder || 'Library'].join(' - ');
+
+        card.appendChild(previewWrap);
+        card.appendChild(body);
+        card.addEventListener('click', function() {
+          window.addSelectedMedia(
+            asset.url,
+            asset.title || asset.original_filename,
+            asset.id,
+            asset.thumbnail_url,
+            asset.file_type
+          );
+          closeModal();
+        });
+        grid.appendChild(card);
+      });
+    }
+
+    openBtn.addEventListener('click', openModal);
+    modal.querySelectorAll('[data-close-media-picker]').forEach(function(btn) {
+      btn.addEventListener('click', closeModal);
+    });
+    search?.addEventListener('input', renderAssets);
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && modal.getAttribute('aria-hidden') === 'false') closeModal();
+    });
+  })();
+
   toggleSaveMode('draft');
   updatePlatformCompatibility();
   updateCounts();
@@ -838,6 +1108,15 @@
       });
       if (!pending.length) return;
       zone.querySelector('.drop-text').innerHTML = 'Uploading ' + pending.length + ' file(s)...';
+      var remaining = pending.length;
+      var failed = 0;
+
+      function finishOne() {
+        remaining -= 1;
+        if (remaining > 0) return;
+        if (failed === 0) input.value = '';
+        zone.querySelector('.drop-text').innerHTML = failed ? 'Some uploads failed - submit to retry' : 'Drop images or videos here';
+      }
 
       pending.forEach(function(file) {
         var fd = new FormData();
@@ -845,59 +1124,29 @@
         fd.append('csrfmiddlewaretoken', csrf);
 
         var xhr = new XMLHttpRequest();
-        xhr.open('POST', '/media-assets/upload/');
+        xhr.open('POST', '{% url "social_accounts:post_media_upload" %}');
         xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
 
         xhr.onload = function() {
           if (xhr.status === 200) {
             var data = JSON.parse(xhr.responseText);
             if (data.url) {
-              addMediaUrl(data.url, file.name);
+              window.addSelectedMedia(data.url, file.name, data.asset_id, data.thumbnail_url, data.file_type);
               markUploaded(file.name, data.url);
             }
           } else {
+            failed += 1;
             markFailed(file.name);
           }
-          var anyPending = fileList.querySelector('span:last-child');
-          if (!anyPending || anyPending.textContent !== 'uploading...') {
-            zone.querySelector('.drop-text').innerHTML = 'Drop images or videos here';
-          }
+          finishOne();
         };
         xhr.onerror = function() {
+          failed += 1;
           markFailed(file.name);
-          zone.querySelector('.drop-text').innerHTML = 'Upload failed - try again';
+          finishOne();
         };
         xhr.send(fd);
       });
-    }
-
-    function addMediaUrl(url, fileName) {
-      // Show thumbnail preview
-      var wrapper = document.createElement('div');
-      wrapper.className = 'relative group';
-      var isVid = url.match(/\.(mp4|mov|avi|mkv|webm)(\?|$)/i);
-      if (isVid) {
-        wrapper.innerHTML = '<div class="w-14 h-14 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>';
-      } else {
-        wrapper.innerHTML = '<img src="' + url + '" class="w-14 h-14 object-cover rounded-lg border border-slate-200" onerror="this.outerHTML=\'<div class=\\\'w-14 h-14 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 text-[10px]\\\'>ERR</div>\'">';
-      }
-      wrapper.style.cssText = 'display:inline-flex';
-      preview.appendChild(wrapper);
-
-      // Add URL input to list with filename shown
-      var row = document.createElement('div');
-      row.className = 'flex items-center gap-2 media-row';
-      row.innerHTML = '<div class="flex-1 relative"><input type="url" name="media_urls" value="' + url + '" class="input-field w-full pl-3 pr-3 py-2 text-xs media-input" readonly><span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">' + (fileName || 'media') + '</span></div><button type="button" class="remove-url w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all flex-shrink-0" style="visibility:visible"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>';
-      row.querySelector('.media-input').style.paddingLeft = (fileName ? fileName.length * 0.6 + 20 : 70) + 'px';
-      container.appendChild(row);
-      row.querySelector('.remove-url').addEventListener('click', function() {
-        row.remove();
-        wrapper.remove();
-        updatePlatformCompatibility();
-        updatePreview();
-      });
-      updatePlatformCompatibility();
-      updatePreview();
     }
   })();
 

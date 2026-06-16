@@ -2,6 +2,7 @@ import threading
 from contextlib import contextmanager
 
 from django.db import models
+from django.db.models import Q
 
 _thread_local = threading.local()
 
@@ -45,5 +46,8 @@ class TenantManager(models.Manager):
             if self.related_filter:
                 return qs.filter(**{self.related_filter: tenant})
             if hasattr(self.model, self.workspace_field):
-                return qs.filter(**{self.workspace_field: tenant})
+                return qs.filter(
+                    Q(**{self.workspace_field: tenant}) |
+                    Q(**{self.workspace_field + '__isnull': True})
+                )
         return qs

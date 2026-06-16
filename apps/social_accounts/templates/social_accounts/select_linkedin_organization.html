@@ -1,0 +1,38 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Select LinkedIn Page — Mailexa AI{% endblock %}
+{% block page_title %}Select LinkedIn Page{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-lg mx-auto space-y-6">
+  <div class="premium-surface rounded-2xl p-6">
+    <h2 class="text-lg font-bold text-slate-900 mb-1">Choose a LinkedIn Page</h2>
+    <p class="text-sm text-slate-500 mb-6">You manage multiple Pages. Select which one to connect.</p>
+
+    <form method="post" class="space-y-3">
+      {% csrf_token %}
+      {% for org in organizations %}
+      <label class="flex items-center gap-4 p-4 rounded-xl border border-slate-200 hover:border-blue-500/40 hover:bg-blue-50/20 transition-all cursor-pointer has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50/30 has-[:checked]:ring-1 has-[:checked]:ring-blue-600/30">
+        <input type="radio" name="org_urn" value="{{ org.urn }}" class="w-4 h-4 text-blue-600 accent-blue-600" {% if forloop.first %}checked{% endif %}>
+        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center overflow-hidden flex-shrink-0">
+          {% if org.logo_url %}
+          <img src="{{ org.logo_url }}" alt="{{ org.name }}" class="w-full h-full object-cover">
+          {% else %}
+          <span class="text-sm font-bold text-blue-600">{{ org.name|first|upper }}</span>
+          {% endif %}
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold text-slate-900 truncate">{{ org.name }}</p>
+          <p class="text-xs text-slate-400">LinkedIn Page</p>
+        </div>
+      </label>
+      {% endfor %}
+
+      <div class="flex gap-3 pt-4">
+        {% url 'social_accounts:social_hub' as hub_url %}
+        {% include "components/button.html" with label="Connect Selected Page" variant="primary" type="submit" class="flex-1" %}
+        {% include "components/button.html" with label="Cancel" variant="secondary" href=hub_url %}
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
