@@ -392,12 +392,6 @@ ML_VECTORIZER_PATH = Path(config('ML_VECTORIZER_PATH', default=str(BASE_DIR / 'm
 LLM_API_KEY = config('LLM_API_KEY', default='')
 LLM_BASE_URL = config('LLM_BASE_URL', default='https://api.openai.com/v1')
 LLM_MODEL = config('LLM_MODEL', default='gpt-4o')
-<<<<<<< HEAD
-=======
-
-# DeepSeek AI (for trending topics — falls back to LLM_* if not set)
-DEEPSEEK_API_KEY = config('DEEPSEEK_API_KEY', default='')
->>>>>>> 0ac305f (Unified LLM Vendor-Agnostic Architecture,Background Task Automation & Worker Fixes,Multi-Platform Content Generation & Image Extraction Ingestion,Interface Polish & User Experience Refinements,Layout Hierarchy Alignments & Breadcrumb Syncing)
 
 # Silencing django-ratelimit strict cache checks for development
 SILENCED_SYSTEM_CHECKS = ['django_ratelimit.E003']
