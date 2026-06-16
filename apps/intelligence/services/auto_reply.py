@@ -7,9 +7,14 @@ logger = logging.getLogger(__name__)
 
 NO_REPLY_PATTERNS = [
     r'no-?reply', r'\.noreply', r'^noreply', r'do-?not-?reply', r'donotreply',
-    r'mailer-?daemon', r'postmaster', r'notification', r'alerts?@',
+    r'mailer-?daemon', r'postmaster', r'^notification', r'^alerts?@',
     r'newsletter', r'marketing', r'bulk@', r'mailman', r' automated',
     r'robot', r'bot@', r'^nobody@', r'^non-?reply',
+    r'^auto-', r'^auto@', r'reply-?to-?nobody', r'^info@', r'^support@.*auto',
+    r'^admin@', r'^webmaster@', r'^hostmaster@', r'^abuse@',
+    r'alert@', r'^donotreply', r'^no\.reply', r'^do\.not\.reply',
+    r'undeliver', r'mail-?delivery', r'bounce', r'spam@',
+    r'^noreplyl', r'^notification@', r'^updates@', r'^notify@',
 ]
 
 SKIP_DOMAINS = [
@@ -17,6 +22,22 @@ SKIP_DOMAINS = [
     'github.com', 'gitlab.com', 'slack.com', 'zoom.us', 'calendly.com',
     'notion.com', 'atlassian.com', 'eventbrite.com', 'meetup.com',
     'mailchimp.com', 'sendgrid.com', 'hubspot.com', 'salesforce.com',
+    'amazonses.com', 'awsapps.com', 'google.com', 'apple.com',
+    'microsoft.com', 'stripe.com', 'paypal.com', 'shopify.com',
+    'medium.com', 'quora.com', 'reddit.com', 'discord.com',
+    'trello.com', 'asana.com', 'dropbox.com', 'box.com',
+    'dropboxmail.com', 'postmarkapp.com', 'mailgun.org',
+]
+
+SKIP_SUBJECT_PATTERNS = [
+    r'^unread', r'^you have', r'^new message from', r'^someone (liked|commented|followed)',
+    r'^your (order|receipt|invoice|subscription|payment)', r'^weekly digest',
+    r'^monthly report', r'^daily summary', r'^verification code',
+    r'^confirm your', r'^verify your', r'^security alert', r'^password reset',
+    r'^account (verification|activation|created|updated|suspended)',
+    r'^welcome to', r'^thank you for (subscribing|signing up|joining|registering|your purchase)',
+    r'^your (trial|subscription|membership)', r'^automatic reply',
+    r'^out of (office|town)', r'^vacation', r'^auto.?reply', r'^auto.?response',
 ]
 
 
@@ -36,8 +57,9 @@ def is_human_email(from_email: str, from_name: str, subject: str) -> bool:
         if email_lower.endswith('@' + domain) or email_lower.endswith('.' + domain):
             return False
 
-    if subject_lower.startswith('unread') or subject_lower.startswith('you have'):
-        return False
+    for pattern in SKIP_SUBJECT_PATTERNS:
+        if re.search(pattern, subject_lower):
+            return False
 
     return True
 
@@ -51,7 +73,15 @@ def classify_importance(subject: str, body_text: str) -> Tuple[str, str]:
     llm = get_llm_client()
     
     system_prompt = (
-        "You are an email triage assistant. Analyze emails and classify them.\n"
+        "You are an email triage assistant for a business professional. Analyze emails and decide if they need a response.\n"
+        "\n"
+        "RULES FOR CLASSIFICATION:\n"
+        "- If the email is a newsletter, marketing promo, notification, receipt, autoresponder, or automated update → importance=low\n"
+        "- If the email asks a direct question, requests a meeting, reports a problem, or needs a decision → importance=medium or higher\n"
+        "- If the email is from a customer, partner, or colleague with a time-sensitive request → importance=high or urgent\n"
+        "- If the email is an out-of-office reply, delivery failure, or system notification → importance=low\n"
+        "- When in doubt, classify as low (it's better to miss a reply than to auto-reply to spam)\n"
+        "\n"
         "Respond with EXACTLY two lines:\n"
         "Line 1: importance (one of: low, medium, high, urgent)\n"
         "Line 2: intent (one of: question, complaint, support, sales, feedback, introduction, meeting_request, other)"

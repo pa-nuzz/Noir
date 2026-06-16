@@ -625,13 +625,14 @@ tbody tr {
 }
 
 .btn-action-primary {
-  background: var(--primary);
+  background: linear-gradient(135deg, #6D28D9, #06B6D4);
   color: #fff;
+  border: none;
   box-shadow: 0 4px 12px var(--primary-glow);
 }
 
 .btn-action-primary:hover {
-  background: var(--primary-hover);
+  background: linear-gradient(135deg, #5B21B6, #0891B2);
   transform: translateY(-1px);
   box-shadow: 0 8px 16px var(--primary-glow);
 }

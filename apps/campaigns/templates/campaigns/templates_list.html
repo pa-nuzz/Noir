@@ -131,7 +131,7 @@
     previewModal.style.display = 'flex';
     document.body.classList.add('overflow-hidden');
     previewIframe.srcdoc = '<html><body style="display:flex;align-items:center;justify-content:center;min-height:400px;font-family:sans-serif;color:#94a3b8"><p>Loading preview…</p></body></html>';
-    fetch('/campaign/templates/' + templateId + '/preview/')
+    fetch('/campaigns/templates/' + templateId + '/preview/')
       .then(function(r) { return r.text(); })
       .then(function(html) {
         previewIframe.srcdoc = html;
