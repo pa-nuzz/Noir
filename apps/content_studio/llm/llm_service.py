@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-import time  # <--- Added for handling retry delays
+import time
 
 import httpx
 from django.conf import settings
@@ -208,15 +208,39 @@ def _build_system_prompt(content_type, platform=None, tone='professional', **kwa
     return "\n\n".join(p for p in parts if p)
 
 
-def _call_llm(system_prompt, user_prompt, api_key):
-    url = f"{LLM_BASE_URL}/chat/completions"
+def _call_llm(system_prompt, user_prompt, api_key=None):
+    if not api_key:
+        api_key = (
+            getattr(settings, 'LLM_API_KEY', None)
+            or os.environ.get('LLM_API_KEY')
+            or ''
+        )
+
+    if not api_key:
+        logger.warning("LLM_API_KEY is not configured.")
+        return {"success": False, "error": "api_key_missing", "message": "LLM API key is not configured. Please set LLM_API_KEY in your .env file.", "content": None}
+
+    base_url = (
+        getattr(settings, 'LLM_BASE_URL', None)
+        or os.environ.get('LLM_BASE_URL')
+        or 'https://api.openai.com/v1'
+    )
+    model = (
+        getattr(settings, 'LLM_MODEL', None)
+        or os.environ.get('LLM_MODEL')
+        or 'gpt-4o'
+    )
+
+    url = f"{base_url.rstrip('/')}/chat/completions"
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
 
     payload = {
-        "model": LLM_MODEL,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+        "model": model,
+        "messages": messages,
     }
 
     headers = {
