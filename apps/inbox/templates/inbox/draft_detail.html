@@ -1,14 +1,8 @@
 {% extends 'base_dashboard.html' %}
-<<<<<<< Updated upstream
 {% load inbox_tags %}
 {% block title %}Draft — Intelligent Digital Automation (IDA){% endblock %}
 {% block page_title %}Draft Detail{% endblock %}
 
-=======
-{% load inbox_filters %}
-{% block title %}Draft — {{ draft.thread.subject|default:'Email' }}{% endblock %}
-{% block page_title %}Draft{% endblock %}
->>>>>>> Stashed changes
 {% block content %}
 <div class="page-shell max-w-none mx-auto space-y-6">
   {% if draft.original_message %}

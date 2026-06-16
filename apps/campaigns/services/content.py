@@ -40,7 +40,6 @@ def sanitize_html(raw_html: str) -> str:
         tags=ALLOWED_TAGS,
         attributes=CLEAN_ATTRIBUTES,
         clean_content_tags=frozenset({'script', 'style'}),
-        url_re=nice_paragraph_url_re,
     )
 
 
