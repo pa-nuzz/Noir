@@ -1,16 +1,16 @@
 {% load workspace_tags %}
 <div class="folder-tree-item">
-  <a href="{% url 'creative:media_library' %}?folder={{ folder.id }}"
-     class="flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors text-slate-600 hover:bg-slate-50 text-xs"
+   <a href="{% url 'creative:media_library' %}?folder={{ folder.id }}"
+      class="flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors text-xs {% if current_folder == folder.id|stringformat:'i' %}bg-primary-light text-primary font-semibold{% else %}text-slate-600 hover:bg-slate-50{% endif %}"
      data-folder-id="{{ folder.id }}">
     <!-- Ancestor vertical lines -->
-    {% for c in folder.connectors %}
-    {% if c %}
-    <span class="shrink-0 text-slate-300 font-mono">│</span>
-    {% else %}
-    <span class="shrink-0 text-slate-300 font-mono">&nbsp;</span>
-    {% endif %}
-    {% endfor %}
+     {% for c in folder.connectors %}
+     {% if c %}
+     <span class="shrink-0 text-slate-300 font-mono w-6">│</span>
+     {% else %}
+     <span class="shrink-0 text-slate-300 font-mono w-6">&nbsp;</span>
+     {% endif %}
+     {% endfor %}
     <!-- Branch connector -->
     {% if folder.is_last %}
     <span class="shrink-0 text-slate-300 font-mono">└──</span>

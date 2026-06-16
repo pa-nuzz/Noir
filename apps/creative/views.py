@@ -4,14 +4,16 @@ from datetime import datetime
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from apps.intelligence.services.copilot import generate_ai_copy
 from apps.media_assets.models import MediaAsset, MediaFolder
 from apps.media_assets.services import MediaService
+
+from .services.creative_service import CreativeServiceError, generate_creative_content
 
 from .models import CreativeContext, CreativeStrategy, CreativeStrategyAsset
 
@@ -249,14 +251,14 @@ _PROMPT_TEMPLATES = {
         "Focus on modern, scalable designs suitable for digital and print."
     ),
     'post_content': (
-        "Create engaging social media content. For each post include:\n"
-        "1. Hook (first line, max 150 chars)\n"
-        "2. Body copy (engaging, value-driven)\n"
-        "3. Call to Action\n"
-        "4. Hashtag recommendations (10-15 relevant tags, including Nepali/local tags)\n"
-        "5. Visual description (what image/video should accompany)\n"
-        "6. Best posting time (based on Nepali audience behavior)\n\n"
-        "Generate 5 variations for different platforms (Facebook, Instagram, LinkedIn, TikTok)."
+        "Write platform-native social media posts for the target platforms listed above. "
+        "Each platform gets its own post with platform-appropriate hook, body, CTA, hashtags, "
+        "visual description, best posting time, and engagement tactic."
+    ),
+    'social_post': (
+        "Write platform-native social media posts for the target platforms listed above. "
+        "Each platform gets its own post with platform-appropriate hook, body, CTA, hashtags, "
+        "visual description, best posting time, and engagement tactic."
     ),
     'brand_identity': (
         "Create a complete brand identity guide. Include:\n"
@@ -281,6 +283,18 @@ _PROMPT_TEMPLATES = {
         "Structure as a table/calendar format."
     ),
 }
+
+
+@login_required
+def strategy_detail(request, strategy_id):
+    user = request.user
+    ws_id = request.session.get('active_workspace_id')
+
+    company_context = _get_workspace_context(request)
+    return render(request, 'creative/strategy_detail.html', {
+        'strategy': strategy,
+        
+    })
 
 
 @login_required
@@ -326,7 +340,11 @@ def strategy_studio(request):
     strategies = _strategies_qs(user, ws_id)
     if current_status:
         strategies = strategies.filter(status=current_status)
-    strategies = strategies.order_by('-created_at')[:100]
+    strategies = strategies.order_by('-created_at')
+
+    paginator = Paginator(strategies, 25)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
 
     if strategy_id and strategy_id.isdigit():
         selected_strategy = get_object_or_404(CreativeStrategy, id=int(strategy_id), user=user)
@@ -338,7 +356,8 @@ def strategy_studio(request):
     context_obj = _get_workspace_context(request)
 
     return render(request, 'creative/strategy_studio.html', {
-        'strategies': strategies,
+        'strategies': page_obj.object_list,
+        'page_obj': page_obj,
         'selected_strategy': selected_strategy,
         'strategy_counts': strategy_counts,
         'current_status': current_status,
@@ -539,46 +558,56 @@ def api_chat_generate(request):
         return JsonResponse({'error': 'Title is required'}, status=400)
 
     context_obj = _get_workspace_context(request)
-    context_block = ""
-    if context_obj:
-        context_block = context_obj.to_prompt_context() + "\n\n"
+    company_context = {
+        "name": context_obj.company_name if context_obj else title,
+        "industry": context_obj.industry if context_obj else "",
+        "product": context_obj.company_name if context_obj else title,
+        "audience": target_audience or (context_obj.target_audience if context_obj else ""),
+        "tone": tone or (context_obj.brand_voice if context_obj else "professional"),
+        "mission": context_obj.mission_statement if context_obj else "",
+        "uvp": context_obj.goals if context_obj else "",
+        "platforms": platforms,
+    }
 
     template_key = strategy_type if strategy_type in _PROMPT_TEMPLATES else 'full_campaign'
     strategy_prompt_section = _PROMPT_TEMPLATES[template_key]
 
-    core_instruction = (
-        f"You are a world-class creative strategist based in Nepal. "
-        f"You specialize in powerful, culturally-relevant marketing strategies "
-        f"for the South Asian market with global best practices.\n\n"
-        f"CONTEXT (Brand & Market):\n{context_block}"
+    user_input = (
         f"STRATEGY TYPE: {dict(CreativeStrategy.STRATEGY_TYPES).get(strategy_type, 'Full Campaign')}\n"
         f"Title: {title}\n"
         f"Description / Brief: {description}\n"
         f"Target Audience: {target_audience}\n"
         f"Tone: {tone}\n"
         f"Target Platforms: {', '.join(platforms) if platforms else 'All relevant'}\n\n"
-        f"INSTRUCTIONS:\n{strategy_prompt_section}\n\n"
-        f"IMPORTANT:\n"
-        f"- Tailor for the Nepal market first, then make globally competitive\n"
-        f"- Use local cultural references, festivals (Dashain, Tihar, Teej, etc.), and consumer behavior insights\n"
-        f"- Consider mobile-first consumption, social media trends in Nepal\n"
-        f"- Be specific, not generic — give real, executable ideas\n"
-        f"- Format with clear markdown headings for readability"
+        f"BRIEF:\n{strategy_prompt_section}"
     )
 
+    # For platform-specific categories, emphasize which platforms to target
+    if strategy_type in ('post_content', 'social_post') and platforms:
+        platform_labels = {
+            'facebook': 'Facebook', 'instagram': 'Instagram', 'linkedin': 'LinkedIn',
+            'twitter': 'X (Twitter)', 'tiktok': 'TikTok', 'youtube': 'YouTube',
+        }
+        label_list = ', '.join(platform_labels.get(p, p.title()) for p in platforms)
+        user_input += (
+            f"\n\nCRITICAL: Generate posts ONLY for these platforms: {label_list}.\n"
+            f"Do NOT generate posts for any other platforms."
+        )
+
     try:
-        result = generate_ai_copy(core_instruction, tone)
-        generated = result.get('body', '')
-        subject = result.get('subject', '')
-        llm_mode = result.get('mode', 'unknown')
+        result = generate_creative_content(user_input, company_context, category=strategy_type)
+        generated = result.get('content', '')
+        full_title = result.get('title', title)
+        llm_mode = 'creative_service'
+    except CreativeServiceError as e:
+        logger.exception("Creative service strategy generation failed")
+        return JsonResponse({'error': str(e)}, status=502)
     except Exception as e:
         logger.exception("Strategy generation failed")
         return JsonResponse({'error': f'Generation failed: {e}'}, status=500)
 
-    if not generated or generated.startswith('Error'):
-        return JsonResponse({'error': 'AI generation returned an error. Check API keys.'}, status=502)
-
-    full_title = subject or title
+    if not generated:
+        return JsonResponse({'error': 'Creative generation returned empty output. Check API keys.'}, status=502)
 
     scheduled_at = None
     if scheduled_raw:
