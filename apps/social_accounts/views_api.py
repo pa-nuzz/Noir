@@ -1,6 +1,7 @@
 import logging
 
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from django.contrib import messages
@@ -11,6 +12,40 @@ from .platforms import FacebookPlatform, get_platform
 from .services import SocialService
 
 logger = logging.getLogger(__name__)
+
+
+def _save_social_post_media(uploaded_file):
+    import mimetypes
+    import os
+    import re
+    import uuid
+
+    from django.core.files.storage import default_storage
+    from django.utils import timezone
+
+    if not uploaded_file:
+        raise ValueError('No file selected.')
+
+    content_type = getattr(uploaded_file, 'content_type', '') or ''
+    guessed_type, _encoding = mimetypes.guess_type(uploaded_file.name)
+    effective_type = content_type or guessed_type or 'application/octet-stream'
+    if not (effective_type.startswith('image/') or effective_type.startswith('video/')):
+        raise ValueError('Only image and video files can be attached to social posts.')
+
+    safe_name = (uploaded_file.name or 'media').replace('\\', '/').split('/')[-1]
+    safe_name = re.sub(r'[^A-Za-z0-9._-]+', '_', safe_name).strip('._') or 'media'
+    stem, ext = os.path.splitext(safe_name)
+    saved_name = f"{stem[:80]}_{uuid.uuid4().hex[:10]}{ext.lower()}"
+    prefix = timezone.now().strftime('social_post_uploads/%Y/%m/%d')
+    storage_path = default_storage.save(f"{prefix}/{saved_name}", uploaded_file)
+    return {
+        'url': default_storage.url(storage_path),
+        'storage_path': storage_path.replace('\\', '/'),
+        'title': safe_name,
+        'file_type': 'video' if effective_type.startswith('video/') else 'image',
+        'mime_type': effective_type,
+        'file_size': getattr(uploaded_file, 'size', 0),
+    }
 
 
 @login_required
@@ -369,19 +404,48 @@ def post_create(request):
         hashtags_raw = request.POST.get('hashtags', '').strip()
 
         hashtags = [h.strip().lstrip('#').strip() for h in hashtags_raw.split(',') if h.strip()] if hashtags_raw else []
-        media_urls = request.POST.getlist('media_urls')
+        media_urls = [url.strip() for url in request.POST.getlist('media_urls') if url.strip()]
 
-        # Upload files submitted directly via the form (fallback for AJAX)
+        media_asset_ids = [
+            asset_id for asset_id in request.POST.getlist('media_asset_ids')
+            if asset_id and asset_id.isdigit()
+        ]
+        if media_asset_ids:
+            from apps.media_assets.models import MediaAsset
+            from apps.media_assets.services import MediaService
+
+            media_service = MediaService(request.user)
+            selected_assets = MediaAsset.objects.filter(
+                id__in=media_asset_ids,
+                user=request.user,
+            )
+            if active_workspace:
+                from django.db.models import Q
+                selected_assets = selected_assets.filter(
+                    Q(workspace=active_workspace) | Q(workspace__isnull=True)
+                )
+
+            selected_by_id = {str(asset.id): asset for asset in selected_assets}
+            for asset_id in media_asset_ids:
+                asset = selected_by_id.get(asset_id)
+                if not asset:
+                    continue
+                asset_url = media_service.get_asset_url(asset)
+                if asset_url:
+                    media_urls.append(asset_url)
+
+        # Upload files submitted directly via the form (fallback for AJAX).
+        # These are social post attachments only; they are not saved to the IDA media library.
         uploaded_files = request.FILES.getlist('media_files')
         if uploaded_files:
-            from apps.media_assets.services import MediaService
-            media_service = MediaService(request.user)
             for f in uploaded_files:
                 try:
-                    asset = media_service.upload(f)
-                    media_urls.append(media_service.get_asset_url(asset))
+                    upload = _save_social_post_media(f)
+                    media_urls.append(upload['url'])
                 except Exception as e:
                     logger.error('Media upload via form failed: %s', e)
+
+        media_urls = list(dict.fromkeys(media_urls))
 
         if not account_ids:
             messages.error(request, 'Please select at least one social account.')
@@ -414,12 +478,35 @@ def post_create(request):
             'link_url': request.POST.get('link_url', ''),
             'scheduled_at': request.POST.get('scheduled_at', ''),
             'media_urls': media_urls,
+            'media_asset_ids': media_asset_ids,
         }
 
     return render(request, 'social_accounts/post_form.html', {
         'accounts': accounts,
         'grouped_accounts': grouped_accounts,
         'form_data': form_data,
+    })
+
+
+@login_required
+def post_media_upload(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required.'}, status=405)
+
+    uploaded_file = request.FILES.get('file')
+    try:
+        upload = _save_social_post_media(uploaded_file)
+    except Exception as e:
+        logger.exception('Social post media upload failed')
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+    return JsonResponse({
+        'success': True,
+        'title': upload['title'],
+        'file_type': upload['file_type'],
+        'url': upload['url'],
+        'thumbnail_url': upload['url'] if upload['file_type'] == 'image' else '',
+        'file_size': upload['file_size'],
     })
 
 
