@@ -281,16 +281,7 @@
               <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
               Contacts
             </a>
-            
-            <a href="{% url 'contacts:segment_list' %}" class="sidebar-link sub-link {% if request.resolver_match.url_name == 'segment_list' %}active{% endif %}">
-              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
-              Segments
-            </a>
-            <a href="{% url 'contacts:tags_manager' %}" class="sidebar-link sub-link {% if request.resolver_match.url_name == 'tags_manager' %}active{% endif %}">
-              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
-              Tags
-            </a>
-            
+          
           </div>
         </div>
 
