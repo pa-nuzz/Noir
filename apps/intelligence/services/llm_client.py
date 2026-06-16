@@ -1,6 +1,5 @@
 import logging
 import httpx
-import os
 from typing import Optional
 from decouple import config
 from django.conf import settings
@@ -28,7 +27,6 @@ class LLMClient:
         self.timeout = 30.0
 
     def is_configured(self) -> bool:
-        """Check if API key is available."""
         return bool(self.api_key)
 
     def generate(

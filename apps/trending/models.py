@@ -59,6 +59,7 @@ class FeedItem(models.Model):
     author = models.CharField(max_length=255, blank=True)
     content_raw = models.TextField(blank=True)
     content_cleaned = models.TextField(blank=True)
+    image_url = models.URLField(max_length=1000, blank=True)
     ai_summary = models.TextField(blank=True)
     ai_categories = models.JSONField(default=list, blank=True)
     trending_score = models.FloatField(default=0.0)
@@ -126,3 +127,26 @@ class UserFeedInteraction(models.Model):
 
     def __str__(self):
         return f"{self.user.email} {self.interaction_type} → {self.feed_item.title[:50]}"
+
+
+class CurrentItem(models.Model):
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('scheduled', 'Scheduled'),
+        ('published', 'Published'),
+    ]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='currents')
+    feed_item = models.ForeignKey(FeedItem, on_delete=models.CASCADE, related_name='currents')
+    scheduled_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ('user', 'feed_item')
+
+    def __str__(self):
+        return f"{self.user.email} → {self.feed_item.title[:60]}"

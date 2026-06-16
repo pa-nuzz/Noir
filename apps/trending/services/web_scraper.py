@@ -1,6 +1,8 @@
+import hashlib
 import logging
 import re
 from datetime import datetime, timezone
+from urllib.parse import urljoin
 
 import httpx
 
@@ -25,11 +27,26 @@ class WebScraper:
             return 0
 
         title_pattern = config.get('title_pattern', '<title>(.*?)</title>')
-        link_pattern = config.get('link_pattern', '<a[^>]*href="([^"]+)"[^>]*>(.*?)</a>')
+        link_pattern = config.get('link_pattern', r'<a[^>]*href="([^"]+)"[^>]*>')
         content_pattern = config.get('content_pattern', '<article[^>]*>(.*?)</article>')
+
+        # Extract og:image / twitter:image from page
+        source_image_url = ''
+        og_match = re.search(
+            r'<meta\s+property=["\']og:image["\']\s+content=["\']([^"\']+)["\']',
+            html, re.IGNORECASE
+        )
+        if not og_match:
+            og_match = re.search(
+                r'<meta\s+name=["\']twitter:image["\']\s+content=["\']([^"\']+)["\']',
+                html, re.IGNORECASE
+            )
+        if og_match:
+            source_image_url = og_match.group(1)
 
         titles = re.findall(title_pattern, html, re.IGNORECASE | re.DOTALL)
         article_matches = re.findall(content_pattern, html, re.IGNORECASE | re.DOTALL)
+        link_hrefs = re.findall(link_pattern, html, re.IGNORECASE)
 
         created = 0
         for i, article_html in enumerate(article_matches[:config.get('max_items', 30)]):
@@ -42,17 +59,23 @@ class WebScraper:
             if not clean or len(clean) < 50:
                 continue
 
-            url = f"{source.url}#item-{i}"
+            if i < len(link_hrefs):
+                href = link_hrefs[i]
+                article_url = urljoin(source.url, href)
+            else:
+                raw = title + clean
+                article_url = f"hash://sha256/{hashlib.sha256(raw.encode()).hexdigest()}"
 
-            if FeedItem.objects.filter(url=url).exists():
+            if FeedItem.objects.filter(url=article_url).exists():
                 continue
 
             FeedItem.objects.create(
                 source=source,
                 title=title[:500],
-                url=url,
+                url=article_url,
                 content_raw=clean,
                 published_at=datetime.now(timezone.utc),
+                image_url=source_image_url,
             )
             created += 1
 

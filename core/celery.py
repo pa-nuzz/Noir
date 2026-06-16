@@ -35,14 +35,15 @@ app.conf.beat_schedule = {
     },
 
     # Trending Topics
-    'collect-trending-sources-every-6-hours': {
+    'collect-trending-sources-every-5-minutes': {
         'task': 'apps.trending.tasks.collect_all_sources',
-        'schedule': crontab(hour='0,6,12,18', minute='0'),
+        # 'schedule': crontab(hour='0,6,12,18', minute='0'),
+        'schedule': crontab(minute='*/5'),
         'options': {'queue': 'low'},
     },
     'recalculate-trending-scores': {
         'task': 'apps.trending.tasks.recalculate_trending_scores',
-        'schedule': crontab(minute='*/15'),
+        'schedule': crontab(minute='*/5'),
         'options': {'queue': 'low'},
     },
     'deduplicate-trending-content': {

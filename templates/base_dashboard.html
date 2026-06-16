@@ -101,7 +101,6 @@
       .ida-topbar .logo-dot { width: 26px; height: 26px; background: var(--brand); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; letter-spacing: -0.5px; }
       .ida-topbar .breadcrumb { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-tertiary); flex: 1; }
       .ida-topbar .breadcrumb b { color: var(--text-primary); font-weight: 500; }
-      .ida-topbar .bc-sep { color: var(--border-subtle); font-size: 10px; }
       .ida-topbar .tb-actions { display: flex; align-items: center; gap: 8px; }
       .ida-topbar .tb-btn { width: 30px; height: 30px; border-radius: 8px; border: 0.5px solid var(--border-subtle); background: #fff; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 15px; cursor: pointer; position: relative; transition: all .15s; }
       .ida-topbar .tb-btn:hover { background: var(--brand-light); border-color: var(--brand-mid); color: var(--brand); }
@@ -446,6 +445,11 @@
                   </span>
                 {% elif view_name == 'social_content_hub' %}
                   <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  <a href="{% url 'dashboard:dashboard' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                    Dashboard
+                  </a>
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                   <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                     Content Hub
@@ -649,6 +653,26 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 014-4h.5a5.5 5.5 0 0110.78-1.5A4.5 4.5 0 0118 19h-1a3 3 0 00-3-3v-1a3 3 0 00-6 0v1a3 3 0 00-3 3H3z"/></svg>
                     Storage
                   </span>
+                {% elif view_name == 'social_hub' %}
+                  <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    Social Hub
+                  </span>
+                {% elif view_name == 'overview' %}
+                  <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                    Overview
+                  </span>
+                {% elif view_name == 'permissions' %}
+                  <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    Permissions
+                  </span>
+                {% elif view_name == 'onboarding' %}
+                  <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Onboarding
+                  </span>
                 {% elif view_name == 'list' or view_name == 'create' %}
                   <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -658,7 +682,7 @@
                     <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     <span class="text-slate-900 font-semibold p-2">Create</span>
                   {% endif %}
-                {% elif view_name == 'detail' or view_name == 'edit' or view_name == 'member_list' or view_name == 'remove_member' or view_name == 'leave' or view_name == 'invite' or view_name == 'audit_log' %}
+                {% elif view_name == 'detail' or view_name == 'edit' or view_name == 'member_list' or view_name == 'remove_member' or view_name == 'leave' or view_name == 'invite' or view_name == 'audit_log' or view_name == 'deactivate' or view_name == 'activate' or view_name == 'dismiss_onboarding' or view_name == 'update_member_role' %}
                   <span class="text-slate-900 font-semibold p-2 flex items-center gap-1 capitalize">{{ view_name|cut:'_'|title }}</span>
                 {% elif view_name == 'my_invitations' or view_name == 'accept_invitation' or view_name == 'decline_invitation' or view_name == 'cancel_invitation' %}
                   <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">Invitations</span>
@@ -860,9 +884,6 @@
 
       <main class="p-4 sm:p-5 lg:p-6 flex-grow max-w-[1500px] relative" style="padding-top: calc(1rem + 76px);">
         <div class="reveal-on-scroll">
-          {% block breadcrumb %}
-          <div class="flex items-center gap-1.5 text-xs text-slate-400 mb-1 empty:hidden">{% block breadcrumb_inner %}{% endblock %}</div>
-          {% endblock %}
           {% block content %}{% endblock %}
         </div>
       </main>

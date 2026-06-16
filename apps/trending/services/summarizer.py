@@ -1,4 +1,5 @@
 import logging
+import re
 
 from apps.intelligence.services.deepseek_client import get_deepseek_client
 
@@ -17,11 +18,21 @@ class Summarizer:
 
         client = get_deepseek_client()
         if not client.is_configured():
-            words = text.split()
-            item.ai_summary = ' '.join(words[:60]) + ('...' if len(words) > 60 else '')
+            sentences = re.split(r'[.!?]\s*', text)
+            sentences = [s.strip() for s in sentences if s.strip()]
+            item.ai_summary = '. '.join(sentences[:3])
             return item
 
-        system_prompt = "You are a content summarizer. Summarize the following article in 2-3 concise sentences. Focus on key takeaways."
+        system_prompt = (
+            "You are a concise news summarizer. Given a news article, produce exactly 2-3 "
+            "complete sentences that capture the core news value (who, what, why, when).\n\n"
+            "Rules:\n"
+            "- Output exactly 2-3 sentences, 30-50 words total, no more\n"
+            "- Start fresh — do NOT repeat the article's opening phrase verbatim\n"
+            "- Be specific: include numbers, names, and key facts\n"
+            '- Do NOT use "TL;DR", "In today\'s world", or filler phrases\n'
+            '- End with a complete sentence (no trailing "...")'
+        )
         user_prompt = f"Title: {item.title}\n\nContent:\n{text}"
 
         summary = client.chat(
@@ -34,7 +45,17 @@ class Summarizer:
         if summary:
             item.ai_summary = summary
         else:
-            words = text.split()
-            item.ai_summary = ' '.join(words[:60]) + ('...' if len(words) > 60 else '')
+            # Fall back to generic LLM (LLM_API_KEY) when DeepSeek fails
+            try:
+                from apps.content_studio.llm.llm_service import _call_llm
+                result = _call_llm(system_prompt, user_prompt)
+                if result['success'] and result['content']:
+                    item.ai_summary = result['content']
+                    return item
+            except Exception:
+                pass
+            sentences = re.split(r'[.!?]\s*', text)
+            sentences = [s.strip() for s in sentences if s.strip()]
+            item.ai_summary = '. '.join(sentences[:3])
 
         return item

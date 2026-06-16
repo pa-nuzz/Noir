@@ -1,0 +1,352 @@
+<style>
+  .rd-empty {
+    text-align: center; padding: 48px 20px; color: #94A3B8;
+  }
+  .rd-empty svg { width: 40px; height: 40px; margin: 0 auto 12px; opacity: 0.4; }
+  .rd-card {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 16px; border-radius: 12px;
+    border: 1px solid #E2E8F0; background: #FFFFFF;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .rd-card:hover { border-color: #06B6D4; box-shadow: 0 2px 12px rgba(6,182,212,0.08); }
+  .rd-card-title { font-size: 0.9375rem; font-weight: 600; color: #0A2540; line-height: 1.4; }
+  .rd-card-title a { color: inherit; text-decoration: none; }
+  .rd-card-title a:hover { color: #06B6D4; }
+  .rd-card-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 0.75rem; color: #94A3B8; }
+  .rd-card-actions { display: flex; align-items: center; gap: 8px; margin-top: 2px; flex-wrap: wrap; }
+  .rd-card-score { font-size: 0.6875rem; color: #94A3B8; font-weight: 500; margin-left: auto; }
+  .rd-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 999px;
+    font-size: 0.6875rem; font-weight: 600;
+  }
+  .rd-badge-topic {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 999px;
+    font-size: 0.6875rem; font-weight: 600;
+    border: 2px solid transparent;
+    background: linear-gradient(#fff, #fff) padding-box, linear-gradient(90deg, #6D28D9, #06B6D4) border-box;
+    background-clip: padding-box, border-box;
+    background-origin: padding-box, border-box;
+    color: #0A2540;
+  }
+  .rd-badge-queued {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 999px;
+    font-size: 0.6875rem; font-weight: 600;
+    background: linear-gradient(90deg, #6D28D9, #06B6D4);
+    color: #FFFFFF;
+  }
+  .rd-schedule-modal {
+    position: fixed; inset: 0; z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(15,23,42,0.5); backdrop-filter: blur(2px);
+  }
+  .rd-schedule-modal.hidden { display: none !important; }
+  .rd-schedule-modal-inner {
+    background: #FFFFFF; border-radius: 16px;
+    width: 100%; max-width: 420px; padding: 24px; margin: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  }
+  .rd-schedule-platform-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .rd-schedule-platform-label { display: flex; align-items: center; gap: 8px; font-size: 0.8125rem; font-weight: 600; color: #0A2540; cursor: pointer; }
+  .rd-schedule-platform-label input { width: 16px; height: 16px; accent-color: #6D28D9; }
+
+  .rd-platform-divider { border: none; border-top: 1px solid #E2E8F0; margin: 8px 0; }
+  .rd-platform-header { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #6D28D9; }
+  .rd-platform-body { font-size: 0.8125rem; color: #334155; line-height: 1.6; white-space: pre-wrap; }
+  .rd-platform-hashtags { display: flex; flex-wrap: wrap; gap: 4px; font-size: 0.6875rem; font-weight: 600; }
+  .rd-platform-hashtags span { color: #6D28D9; }
+  .rd-platform-check { display: flex; align-items: center; gap: 6px; font-size: 0.6875rem; color: #64748B; }
+  .rd-platform-check input { width: 14px; height: 14px; accent-color: #6D28D9; cursor: pointer; }
+</style>
+
+<div class="flex items-center justify-between mb-4">
+  <div>
+    <h3 class="text-base font-bold text-slate-900">Currents</h3>
+    <p class="text-sm text-slate-500 mt-0.5">Top 5 trending items from your selected categories, ready to publish.</p>
+  </div>
+</div>
+
+<div id="rd-list" class="space-y-3">
+  <div class="tr-loading">Loading currents…</div>
+</div>
+
+<div id="rd-empty" class="rd-empty hidden">
+  <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+  <p>Select categories first to see currents.</p>
+  <p class="text-xs text-slate-400 mt-1">Go to the Select Category tab to choose your interests.</p>
+</div>
+
+<div id="rd-no-items" class="rd-empty hidden">
+  <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+  <p>No trending items in your selected categories yet.</p>
+  <p class="text-xs text-slate-400 mt-1">Content collection runs every 5 minutes — check back soon.</p>
+</div>
+
+<!-- Schedule Modal -->
+<div id="rd-schedule-modal" class="rd-schedule-modal hidden" onclick="closeScheduleModal()">
+  <div class="rd-schedule-modal-inner" onclick="event.stopPropagation()">
+    <h4 class="text-sm font-bold text-slate-900 mb-1">Schedule for Publishing</h4>
+    <p class="text-xs text-slate-500 mb-4">Choose when to publish this item to your social accounts.</p>
+    <input type="datetime-local" id="rd-schedule-datetime" class="auth-input w-full text-sm mb-4" value="">
+    <p class="text-xs font-semibold text-slate-700 mb-2">Platforms to publish:</p>
+    <div class="rd-schedule-platform-list" id="rd-schedule-platforms">
+      <label class="rd-schedule-platform-label"><input type="checkbox" value="linkedin" checked> LinkedIn</label>
+      <label class="rd-schedule-platform-label"><input type="checkbox" value="twitter" checked> Twitter</label>
+      <label class="rd-schedule-platform-label"><input type="checkbox" value="instagram" checked> Instagram</label>
+      <label class="rd-schedule-platform-label"><input type="checkbox" value="facebook" checked> Facebook</label>
+      <label class="rd-schedule-platform-label"><input type="checkbox" value="tiktok" checked> TikTok</label>
+    </div>
+    <div class="flex gap-3 justify-end">
+      <button type="button" onclick="closeScheduleModal()" class="btn-action btn-action-secondary text-sm">Cancel</button>
+      <button type="button" onclick="confirmSchedule()" class="btn-action btn-action-primary text-sm">Schedule</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var rdScheduledItemId = null;
+var currentsContentMap = {};
+var ALL_PLATFORMS = ['linkedin', 'twitter', 'instagram', 'facebook', 'tiktok'];
+var PLATFORM_LABELS = {linkedin: 'LinkedIn', twitter: 'Twitter', instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok'};
+
+function loadCurrents() {
+  var list = document.getElementById('rd-list');
+  var empty = document.getElementById('rd-empty');
+  var noItems = document.getElementById('rd-no-items');
+  list.classList.remove('hidden');
+  empty.classList.add('hidden');
+  noItems.classList.add('hidden');
+  list.innerHTML = '<div class="tr-loading">Loading currents…</div>';
+
+  fetch('{% url "trending:currents_data" %}')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.items || data.items.length === 0) {
+        list.classList.add('hidden');
+        if (data.needs_categories) {
+          empty.classList.remove('hidden');
+        } else {
+          noItems.classList.remove('hidden');
+        }
+        return;
+      }
+
+      var html = '';
+      data.items.forEach(function(item) {
+        var topicHtml = '';
+        if (item.topic) {
+          topicHtml = '<span class="rd-badge-topic">' + item.topic.icon + ' ' + item.topic.name + '</span>';
+        }
+        var queuedLabel = item.is_queued
+          ? '<span class="rd-badge-queued">Queued</span>'
+          : '';
+
+        var platformHtml = '';
+        var content = item.generated_content || {};
+        ALL_PLATFORMS.forEach(function(p) {
+          var pdata = content[p];
+          if (!pdata || !pdata.body) return;
+          var hashtagsHtml = '';
+          if (pdata.hashtags) {
+            hashtagsHtml = '<div class="rd-platform-hashtags">' +
+              pdata.hashtags.split(' ').map(function(t) {
+                if (!t) return '';
+                return '<span>' + escapeHtml(t) + '</span>';
+              }).join('') +
+            '</div>';
+          }
+          platformHtml +=
+            '<hr class="rd-platform-divider">' +
+            '<div class="rd-platform-header">' + escapeHtml(PLATFORM_LABELS[p] || p) + '</div>' +
+            '<div class="rd-platform-body">' + escapeHtml(pdata.body) + '</div>' +
+            hashtagsHtml +
+            '<label class="rd-platform-check" style="margin-top:4px;">' +
+              '<input type="checkbox" class="rd-pf-cb-' + item.id + '" value="' + p + '" checked>' +
+              ' Select for save / schedule' +
+            '</label>';
+        });
+
+        // If no LLM content, fall back to summary
+        if (!platformHtml) {
+          platformHtml = '<div class="rd-card-summary">' + escapeHtml(item.summary) + '</div>';
+        }
+
+        currentsContentMap[item.id] = content;
+
+        html += '<div class="rd-card" id="rd-card-' + item.id + '">' +
+          '<div class="rd-card-title"><a href="' + item.url + '" target="_blank" rel="noopener">' + escapeHtml(item.title) + '</a></div>' +
+          platformHtml +
+          '<div class="rd-card-meta" style="margin-top:4px;">' +
+            topicHtml +
+            '<span>' + escapeHtml(item.source) + '</span>' +
+            (item.author ? '<span>' + escapeHtml(item.author) + '</span>' : '') +
+            (item.published_at ? '<span>' + timeAgo(item.published_at) + '</span>' : '') +
+            '<span class="rd-card-score">Score: ' + item.score.toFixed(1) + '</span>' +
+          '</div>' +
+          '<div class="rd-card-actions">' +
+            '<button onclick="saveSelectedDrafts(' + item.id + ', this)" class="tr-feed-btn">' +
+              '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>' +
+              ' Save Selected' +
+            '</button>' +
+            '<button onclick="openScheduleModal(' + item.id + ')" class="tr-feed-btn">' +
+              '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
+              ' Schedule Selected' +
+            '</button>' +
+            '<button onclick="removeFromReady(' + item.id + ', this)" class="tr-feed-btn" title="Remove">' +
+              '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>' +
+            '</button>' +
+            queuedLabel +
+          '</div>' +
+        '</div>';
+      });
+      list.innerHTML = html;
+    })
+    .catch(function(err) {
+      list.innerHTML = '<div class="tr-empty"><p>Failed to load. Please try again.</p></div>';
+      console.error('Currents error:', err);
+    });
+}
+
+function getSelectedPlatforms(itemId) {
+  var checkboxes = document.querySelectorAll('.rd-pf-cb-' + itemId + ':checked');
+  var platforms = [];
+  checkboxes.forEach(function(cb) { platforms.push(cb.value); });
+  return platforms;
+}
+
+function saveSelectedDrafts(itemId, btn) {
+  var platforms = getSelectedPlatforms(itemId);
+  if (platforms.length === 0) {
+    showTrendingToast('Select at least one platform', 'error');
+    return;
+  }
+
+  var allContent = currentsContentMap[itemId];
+  if (!allContent) {
+    showTrendingToast('No generated content available', 'error');
+    return;
+  }
+
+  var platformContent = {};
+  platforms.forEach(function(p) {
+    if (allContent[p]) {
+      platformContent[p] = allContent[p];
+    }
+  });
+
+  fetch('{% url "trending:save_as_draft" 0 %}'.replace('0', itemId), {
+    method: 'POST',
+    headers: {'X-CSRFToken': getCSRFToken(), 'Content-Type': 'application/json'},
+    body: JSON.stringify({platforms: platforms, platform_content: platformContent}),
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      showTrendingToast('Saved ' + data.count + ' draft(s)!', 'success', btn);
+    })
+    .catch(function() { showTrendingToast('Failed to save drafts', 'error', btn); });
+}
+
+function openScheduleModal(itemId) {
+  rdScheduledItemId = itemId;
+  var now = new Date();
+  var pad = function(n) { return String(n).padStart(2, '0'); };
+  var localStr = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+  var input = document.getElementById('rd-schedule-datetime');
+  input.value = localStr;
+  input.min = localStr;
+
+  // Preselect based on card checkboxes
+  var cardCheckboxes = document.querySelectorAll('.rd-pf-cb-' + itemId + ':checked');
+  var selectedPlatforms = {};
+  cardCheckboxes.forEach(function(cb) { selectedPlatforms[cb.value] = true; });
+  document.querySelectorAll('#rd-schedule-platforms input[type=checkbox]').forEach(function(cb) {
+    cb.checked = !!selectedPlatforms[cb.value];
+  });
+
+  document.getElementById('rd-schedule-modal').classList.remove('hidden');
+}
+
+function closeScheduleModal() {
+  document.getElementById('rd-schedule-modal').classList.add('hidden');
+  rdScheduledItemId = null;
+}
+
+function confirmSchedule() {
+  var dt = document.getElementById('rd-schedule-datetime').value;
+  if (!dt) { showTrendingToast('Please select a date and time', 'error'); return; }
+
+  var scheduledAt = new Date(dt).toISOString();
+  var itemId = rdScheduledItemId;
+
+  var platforms = [];
+  document.querySelectorAll('#rd-schedule-platforms input[type=checkbox]:checked').forEach(function(cb) {
+    platforms.push(cb.value);
+  });
+  if (platforms.length === 0) {
+    showTrendingToast('Select at least one platform', 'error');
+    return;
+  }
+
+  var allContent = currentsContentMap[itemId];
+  var platformContent = {};
+  if (allContent) {
+    platforms.forEach(function(p) {
+      if (allContent[p]) platformContent[p] = allContent[p];
+    });
+  }
+
+  fetch('{% url "trending:queue_for_publish" 0 %}'.replace('0', itemId), {
+    method: 'POST',
+    headers: {'X-CSRFToken': getCSRFToken(), 'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      scheduled_at: scheduledAt,
+      platforms: platforms,
+      platform_content: platformContent,
+    }),
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      closeScheduleModal();
+      showTrendingToast('Scheduled for ' + new Date(scheduledAt).toLocaleString(), 'success');
+      loadCurrents();
+    })
+    .catch(function() { showTrendingToast('Failed to schedule', 'error'); });
+}
+
+function removeFromReady(itemId, btn) {
+  fetch('{% url "trending:dequeue_currents" 0 %}'.replace('0', itemId), {
+    method: 'POST',
+    headers: {'X-CSRFToken': getCSRFToken()},
+  })
+    .then(function() {
+      var card = document.getElementById('rd-card-' + itemId);
+      if (card) card.remove();
+      showTrendingToast('Removed from currents', 'success', btn);
+    })
+    .catch(function() { showTrendingToast('Failed to remove', 'error', btn); });
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  var d = document.createElement('div');
+  d.textContent = text;
+  return d.innerHTML;
+}
+
+function timeAgo(iso) {
+  var now = new Date();
+  var then = new Date(iso);
+  var secs = Math.floor((now - then) / 1000);
+  if (secs < 60) return 'just now';
+  var mins = Math.floor(secs / 60);
+  if (mins < 60) return mins + 'm ago';
+  var hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  var days = Math.floor(hrs / 24);
+  if (days < 7) return days + 'd ago';
+  return then.toLocaleDateString();
+}
+</script>

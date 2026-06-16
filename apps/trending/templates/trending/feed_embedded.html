@@ -1,5 +1,6 @@
 <style>
   .tr-feed-card {
+    position: relative;
     display: flex; flex-direction: column; gap: 8px;
     padding: 16px; border-radius: 12px;
     border: 1px solid #E2E8F0; background: #FFFFFF;
@@ -15,13 +16,33 @@
   .tr-feed-actions { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
   .tr-feed-btn { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 600; border: 1px solid #E2E8F0; background: #FFFFFF; color: #64748B; cursor: pointer; transition: all 0.12s; text-decoration: none; }
   .tr-feed-btn:hover { border-color: #06B6D4; color: #06B6D4; background: #F0FDFA; }
-  .tr-feed-btn.active { border-color: #06B6D4; color: #06B6D4; background: #ECFEFF; }
   .tr-feed-btn svg { width: 14px; height: 14px; }
   .tr-feed-score { font-size: 0.6875rem; color: #94A3B8; font-weight: 500; margin-left: auto; }
-  .tr-topic-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; cursor: pointer; border: 1px solid #E2E8F0; background: #FFFFFF; color: #64748B; transition: all 0.12s; }
-  .tr-topic-chip:hover { border-color: #06B6D4; color: #06B6D4; }
-  .tr-topic-chip.active { border-color: #06B6D4; color: #FFFFFF; background: #06B6D4; }
-  .tr-topic-chip.subscribed { border-width: 2px; }
+  .tr-dismiss-btn { position: absolute; top: 8px; right: 8px; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; border: none; background: transparent; color: #94A3B8; cursor: pointer; transition: all 0.12s; z-index: 1; }
+  .tr-dismiss-btn:hover { background: #F1F5F9; color: #64748B; }
+  .tr-dismiss-btn svg { width: 14px; height: 14px; }
+  .tr-topic-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; cursor: pointer; border: 2px solid #E2E8F0; background: #FFFFFF; color: #64748B; transition: all 0.12s; }
+  .tr-topic-chip:hover {
+    border-color: transparent;
+    background: linear-gradient(#fff, #fff) padding-box, linear-gradient(90deg, #6D28D9, #06B6D4) border-box;
+    background-clip: padding-box, border-box;
+    background-origin: padding-box, border-box;
+    color: #0A2540;
+  }
+  .tr-topic-chip.active {
+    border-color: transparent;
+    background: linear-gradient(#fff, #fff) padding-box, linear-gradient(90deg, #6D28D9, #06B6D4) border-box;
+    background-clip: padding-box, border-box;
+    background-origin: padding-box, border-box;
+    color: #0A2540;
+  }
+  .tr-topic-chip.subscribed {
+    border-width: 2px;
+    border-color: transparent;
+    background: linear-gradient(#fff, #fff) padding-box, linear-gradient(90deg, #6D28D9, #06B6D4) border-box;
+    background-clip: padding-box, border-box;
+    background-origin: padding-box, border-box;
+  }
   .tr-loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: #94A3B8; font-size: 0.875rem; }
   .tr-empty { text-align: center; padding: 40px 20px; color: #94A3B8; }
   .tr-empty svg { width: 40px; height: 40px; margin: 0 auto 12px; opacity: 0.4; }
@@ -92,13 +113,17 @@ function loadTrendingFeed(topicId) {
   list.innerHTML = '<div class="tr-loading">Loading trending feed…</div>';
 
   var url = '{% url "trending:feed_data" %}';
-  if (topicId) url += '?topic_id=' + topicId;
+  if (topicId === 'subscribed') {
+    url += '?subscribed=1';
+  } else if (topicId) {
+    url += '?topic_id=' + topicId;
+  }
 
   fetch(url)
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (!data.items || data.items.length === 0) {
-        list.innerHTML = '<div class="tr-empty"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg><p>No trending items yet. Content collection runs every 6 hours.</p></div>';
+        list.innerHTML = '<div class="tr-empty"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg><p>No trending items yet. Content collection runs every 5 minutes.</p></div>';
         return;
       }
 
@@ -108,8 +133,10 @@ function loadTrendingFeed(topicId) {
         if (item.topic) {
           topicHtml = '<span class="tr-feed-topic" style="background:' + item.topic.color + '15;color:' + item.topic.color + '">' + item.topic.icon + ' ' + item.topic.name + '</span>';
         }
-        var bookmarkClass = item.is_bookmarked ? 'active' : '';
         html += '<div class="tr-feed-card">' +
+          '<button onclick="dismissItem(' + item.id + ', this)" class="tr-dismiss-btn" title="Dismiss">' +
+            '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>' +
+          '</button>' +
           '<div class="tr-feed-title"><a href="' + item.url + '" target="_blank" rel="noopener">' + escapeHtml(item.title) + '</a></div>' +
           '<div class="tr-feed-summary">' + escapeHtml(item.summary) + '</div>' +
           '<div class="tr-feed-meta">' +
@@ -119,17 +146,6 @@ function loadTrendingFeed(topicId) {
             (item.published_at ? '<span>' + timeAgo(item.published_at) + '</span>' : '') +
           '</div>' +
           '<div class="tr-feed-actions">' +
-            '<button onclick="saveDraft(' + item.id + ', this)" class="tr-feed-btn">' +
-              '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>' +
-              ' Save as Draft' +
-            '</button>' +
-            '<button onclick="toggleBookmark(' + item.id + ', this)" class="tr-feed-btn ' + bookmarkClass + '">' +
-              '<svg fill="' + (item.is_bookmarked ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>' +
-              ' Bookmark' +
-            '</button>' +
-            '<button onclick="dismissItem(' + item.id + ', this)" class="tr-feed-btn" title="Dismiss">' +
-              '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>' +
-            '</button>' +
             '<span class="tr-feed-score">Score: ' + item.score.toFixed(1) + '</span>' +
           '</div>' +
         '</div>';
@@ -145,54 +161,40 @@ function loadTrendingFeed(topicId) {
 function loadTrendingTopics() {
   var chips = document.getElementById('tr-topic-chips');
 
-  fetch('{% url "trending:topic_list" %}')
+  return fetch('{% url "trending:topic_list" %}')
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      if (!data.topics || data.topics.length === 0) return;
+      if (!data.topics || data.topics.length === 0) return null;
 
-      var html = '<button class="tr-topic-chip active" onclick="filterTrending(this, null)">All Topics</button>';
+      var firstSubscribedId = null;
+      data.topics.forEach(function(t) {
+        if (t.is_subscribed && firstSubscribedId === null) {
+          firstSubscribedId = t.id;
+        }
+      });
+
+      var hasSubscribed = firstSubscribedId !== null;
+      var html = '<button class="tr-topic-chip' + (!hasSubscribed ? ' active' : '') + '" onclick="filterTrending(this, null)">All Topics</button>';
+      if (hasSubscribed) {
+        html += '<button class="tr-topic-chip active" onclick="filterTrending(this, \'subscribed\')">My Topics</button>';
+      }
       data.topics.forEach(function(t) {
         var cls = 'tr-topic-chip';
         if (t.is_subscribed) cls += ' subscribed';
-        html += '<button class="' + cls + '" onclick="filterTrending(this, ' + t.id + ')" data-color="' + t.color + '" style="' +
-          (t.is_subscribed ? 'background:' + t.color + ';border-color:' + t.color + ';color:#fff' : '') + '">' +
+        html += '<button class="' + cls + '" onclick="filterTrending(this, ' + t.id + ')" data-color="' + t.color + '">' +
           t.icon + ' ' + escapeHtml(t.name) +
-          '<span class="tr-sub-btn" onclick="event.stopPropagation();toggleSubscription(' + t.id + ', this)" data-subscribed="' + t.is_subscribed + '" style="margin-left:4px;font-size:0.75rem;cursor:pointer;opacity:0.7">' + (t.is_subscribed ? '\u2713' : '+') + '</span>' +
         '</button>';
       });
       chips.innerHTML = html;
+      return hasSubscribed ? 'subscribed' : null;
     })
-    .catch(function(err) { console.error('Trending topics error:', err); });
+    .catch(function(err) { console.error('Trending topics error:', err); return null; });
 }
 
 function filterTrending(btn, topicId) {
-  document.querySelectorAll('.tr-topic-chip').forEach(function(c) { c.classList.remove('active'); c.style.background = ''; c.style.borderColor = ''; c.style.color = ''; });
+  document.querySelectorAll('.tr-topic-chip').forEach(function(c) { c.classList.remove('active'); });
   btn.classList.add('active');
-  var color = btn.dataset.color;
-  if (color) { btn.style.background = color; btn.style.borderColor = color; btn.style.color = '#fff'; }
   loadTrendingFeed(topicId);
-}
-
-function saveDraft(itemId, btn) {
-  fetch('{% url "trending:save_as_draft" 0 %}'.replace('0', itemId), { method: 'POST', headers: {'X-CSRFToken': getCSRFToken()} })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      showTrendingToast('Draft created!', 'success', btn);
-      if (data.redirect_url) window.location.href = data.redirect_url;
-    })
-    .catch(function() { showTrendingToast('Failed to save draft', 'error', btn); });
-}
-
-function toggleBookmark(itemId, btn) {
-  fetch('{% url "trending:toggle_bookmark" 0 %}'.replace('0', itemId), { method: 'POST', headers: {'X-CSRFToken': getCSRFToken()} })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      var isBookmarked = data.bookmarked;
-      btn.classList.toggle('active', isBookmarked);
-      btn.querySelector('svg').setAttribute('fill', isBookmarked ? 'currentColor' : 'none');
-      showTrendingToast(isBookmarked ? 'Bookmarked!' : 'Bookmark removed', 'success', btn);
-    })
-    .catch(function() { showTrendingToast('Failed to update bookmark', 'error', btn); });
 }
 
 function refreshTrendingProfile() {
@@ -204,25 +206,11 @@ function refreshTrendingProfile() {
       } else {
         showTrendingToast('Interests refreshed!', 'success');
       }
-      loadTrendingFeed();
-      loadTrendingTopics();
+      loadTrendingTopics().then(function(topicId) {
+        loadTrendingFeed(topicId);
+      });
     })
     .catch(function() { showTrendingToast('Failed to refresh profile', 'error'); });
-}
-
-function toggleSubscription(topicId, el) {
-  var isSubscribed = el.dataset.subscribed === 'true';
-  fetch('{% url "trending:toggle_subscription" %}', {
-    method: 'POST',
-    headers: {'X-CSRFToken': getCSRFToken(), 'Content-Type': 'application/json'},
-    body: JSON.stringify({topic_id: topicId, subscribe: !isSubscribed}),
-  })
-    .then(function(r) { return r.json(); })
-    .then(function() {
-      showTrendingToast(isSubscribed ? 'Unsubscribed' : 'Subscribed', 'success', el);
-      loadTrendingTopics();
-    })
-    .catch(function() { showTrendingToast('Failed to update subscription', 'error', el); });
 }
 
 function dismissItem(itemId, btn) {
@@ -264,7 +252,8 @@ function getCookie(name) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  loadTrendingTopics();
-  loadTrendingFeed();
+  loadTrendingTopics().then(function(topicId) {
+    loadTrendingFeed(topicId);
+  });
 });
 </script>

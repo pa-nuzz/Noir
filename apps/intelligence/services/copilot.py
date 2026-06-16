@@ -1,5 +1,5 @@
 import logging
-import os
+from django.conf import settings
 from .llm_client import get_llm_client
 
 logger = logging.getLogger(__name__)
@@ -58,10 +58,11 @@ def generate_ai_copy(prompt: str, tone: str = "professional") -> dict:
             import json
             try:
                 parsed = json.loads(structured_data)
+                model_name = getattr(settings, 'LLM_MODEL', 'gpt-4o')
                 return {
                     "subject": parsed.get("subject", "").strip(),
                     "body": parsed.get("body", "").strip(),
-                    "mode": "llm"
+                    "mode": model_name
                 }
             except (json.JSONDecodeError, TypeError):
                 pass

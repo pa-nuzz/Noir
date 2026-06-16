@@ -45,6 +45,32 @@ class RSSCollector:
 
             author = entry.get('author', '') or ''
 
+            # Extract image URL from RSS entry
+            image_url = ''
+            # 1. media:content (feedparser normalizes to entry.media_content)
+            media_content = entry.get('media_content', [])
+            if media_content:
+                for mc in media_content:
+                    url = mc.get('url', '')
+                    if url:
+                        image_url = url
+                        break
+            # 2. enclosures
+            if not image_url:
+                enclosures = entry.get('enclosures', [])
+                for enc in enclosures:
+                    mime = (enc.get('type', '') or '').lower()
+                    if mime.startswith('image/'):
+                        image_url = enc.get('href', '') or enc.get('url', '')
+                        break
+            # 3. media:thumbnail
+            if not image_url:
+                media_thumbnail = entry.get('media_thumbnail', {})
+                if isinstance(media_thumbnail, list) and media_thumbnail:
+                    image_url = media_thumbnail[0].get('url', '')
+                elif isinstance(media_thumbnail, dict):
+                    image_url = media_thumbnail.get('url', '')
+
             FeedItem.objects.create(
                 source=source,
                 title=title,
@@ -52,6 +78,7 @@ class RSSCollector:
                 author=author,
                 content_raw=raw_content,
                 published_at=pub_dt,
+                image_url=image_url,
             )
             created += 1
 
