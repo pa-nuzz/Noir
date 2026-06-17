@@ -249,6 +249,9 @@ function switchTab(tabId) {
       tabId = 'automation';
     }
   }
+  if (typeof stopCurrentsPolling === 'function') {
+    stopCurrentsPolling();
+  }
   document.querySelectorAll('.sch-tab').forEach(function(t) {
     t.classList.remove('active');
     t.setAttribute('aria-selected', 'false');

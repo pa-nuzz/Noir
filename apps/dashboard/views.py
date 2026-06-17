@@ -1573,8 +1573,8 @@ def social_content_hub(request):
     # ─── Automation data ──────────────────────────────────────────────
     all_platforms = []
     automation_rules = []
-    automation_rules_json = {}
-    recent_generated_items = []
+    automation_rules_json = []
+    content_items = []
     try:
         from apps.social_accounts.models import SocialAccount
         connected_accounts = _safe_list(
@@ -1608,12 +1608,8 @@ def social_content_hub(request):
             for rule in automation_rules
         }
         from apps.content_studio.models import ContentItem
-        recent_generated_items = _safe_list(
-            ContentItem.objects.filter(
-                user=user, is_auto_generated=True,
-            ).extra(
-                where=["metadata->>'source' = 'trending_automation'"]
-            ).order_by('-created_at')[:10]
+        content_items = _safe_list(
+            ContentItem.objects.filter(user=user).order_by('-created_at')[:20]
         )
     except Exception:
         pass
@@ -1633,7 +1629,7 @@ def social_content_hub(request):
         'all_platforms': all_platforms,
         'automation_rules': automation_rules,
         'automation_rules_json': automation_rules_json,
-        'recent_generated_items': recent_generated_items,
+        'content_items': content_items,
     }
     return render(request, 'dashboard/social_content_hub.html', context)
 
