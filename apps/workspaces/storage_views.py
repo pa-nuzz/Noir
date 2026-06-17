@@ -73,31 +73,21 @@ def storage_settings(request):
 
     config, _ = WorkspaceStorageConfig.objects.get_or_create(
         workspace=workspace,
-        defaults={'backend': WorkspaceStorageConfig.BACKEND_LOCAL},
+        defaults={'backend': WorkspaceStorageConfig.BACKEND_MINIO},
     )
 
-    drive_credentials_saved = config.is_google_drive_credentials_configured()
-    s3_filled = bool(
-        settings.S3_ENDPOINT_URL
-        and settings.S3_BUCKET
-        and settings.S3_ACCESS_KEY
-        and settings.S3_SECRET_KEY
-    )
-    dia_s3_configured = bool(
-        settings.DIA_S3_ENDPOINT_URL
-        and settings.DIA_S3_BUCKET
-        and settings.DIA_S3_ACCESS_KEY
-        and settings.DIA_S3_SECRET_KEY
+    minio_configured = bool(
+        settings.MINIO_ENDPOINT_URL
+        and settings.MINIO_BUCKET
+        and settings.MINIO_ACCESS_KEY
+        and settings.MINIO_SECRET_KEY
     )
 
     context = {
         'workspace': workspace,
         'membership': membership,
         'config': config,
-        'drive_credentials_saved': drive_credentials_saved,
-        'google_drive_redirect_uri': settings.GOOGLE_DRIVE_REDIRECT_URI,
-        's3_filled': s3_filled,
-        'dia_s3_configured': dia_s3_configured,
+        'minio_configured': minio_configured,
         'backend_choices': WorkspaceStorageConfig.BACKEND_CHOICES,
     }
     return render(request, 'workspaces/storage_settings.html', context)
@@ -364,6 +354,23 @@ def storage_dia_s3_test(request):
     from apps.media_assets.storage import DiaS3Storage
     try:
         backend = DiaS3Storage(workspace=workspace, user=request.user)
+        ok, err = backend.test_connection()
+    except Exception as exc:
+        ok, err = False, str(exc)
+
+    return JsonResponse({'ok': ok, 'error': err})
+
+
+@login_required
+@require_POST
+def storage_minio_test(request):
+    workspace, err = _resolve_storage_workspace(request)
+    if err:
+        return JsonResponse({'ok': False, 'error': err}, status=403)
+
+    from apps.media_assets.storage import MinIOStorage
+    try:
+        backend = MinIOStorage(workspace=workspace, user=request.user)
         ok, err = backend.test_connection()
     except Exception as exc:
         ok, err = False, str(exc)

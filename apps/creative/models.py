@@ -1,10 +1,11 @@
 from django.conf import settings
 from django.db import models
 
+from core.models import AuditMixin
 from core.tenant import TenantManager
 
 
-class CreativeContext(models.Model):
+class CreativeContext(AuditMixin):
     objects = TenantManager()
     COUNTRY_CHOICES = [
         ('nepal', 'Nepal'),
@@ -78,7 +79,7 @@ class CreativeContext(models.Model):
         return "\n".join(parts)
 
 
-class CreativeStrategy(models.Model):
+class CreativeStrategy(AuditMixin):
     objects = TenantManager()
     STATUS_CHOICES = [
         ('draft', 'Draft'),
@@ -139,7 +140,7 @@ class CreativeStrategy(models.Model):
         return self.title or f"Strategy {self.id} — {self.campaign_goal[:60]}"
 
 
-class CreativeStrategyAsset(models.Model):
+class CreativeStrategyAsset(AuditMixin):
     STATUS_CHOICES = [
         ('pending', 'Pending Review'),
         ('approved', 'Approved for Use'),

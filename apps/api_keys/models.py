@@ -5,8 +5,10 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+from core.models import AuditMixin
 
-class WorkspaceAPIKey(models.Model):
+
+class WorkspaceAPIKey(AuditMixin):
     workspace = models.ForeignKey('workspaces.Workspace', on_delete=models.CASCADE, related_name='api_keys')
     name = models.CharField(max_length=255, help_text='Label to identify this key')
     prefix = models.CharField(max_length=8, unique=True, editable=False)

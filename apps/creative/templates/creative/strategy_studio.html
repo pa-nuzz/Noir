@@ -200,86 +200,54 @@
 </div>
 
 <!-- Chatbot Modal -->
-<div id="chatbotModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/40 backdrop-blur-sm">
-  <div class="bg-white rounded-2xl shadow-2xl w-full mx-4 overflow-hidden flex flex-col" style="max-width: 560px; max-height: 85vh;" onclick="event.stopPropagation()">
-    <div class="flex items-center justify-between p-4 border-b border-slate-200">
-      <div class="flex items-center gap-2.5">
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
-          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
-        </div>
-        <div>
-          <h3 class="text-sm font-bold text-slate-800">New Strategy</h3>
-          <p class="text-[10px] text-slate-400" id="chatbot-step-label">Let's build your strategy</p>
-        </div>
-      </div>
-      <button onclick="closeChatbot()" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
-        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-    </div>
-
-    <div class="flex-1 overflow-y-auto p-4 space-y-4" id="chatbot-messages">
-      <div class="flex gap-3 message-bot">
-        <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-          <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
-        </div>
-        <div>
-          <p class="text-sm text-slate-700 font-medium">Hi! Let's create a powerful strategy for the Nepal market. First, what type of strategy do you need?</p>
-          <div class="mt-2 grid grid-cols-2 gap-1.5" id="chat-step-1-options">
-            {% for key, label in strategy_types %}
-            <button onclick="chatAnswer(1, '{{ key }}')" class="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-primary hover:text-white text-slate-700 transition-colors text-left">{{ label }}</button>
-            {% endfor %}
+<div id="chatbotModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-md opacity-0 transition-opacity duration-300">
+  <div class="bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] w-full mx-4 overflow-hidden flex flex-col transform scale-95 transition-transform duration-300 border border-white/20" style="max-width: 600px; max-height: 85vh;" onclick="event.stopPropagation()" id="chatbotModalInner">
+    
+    <!-- Premium Header -->
+    <div class="relative bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-5 border-b border-slate-800/50">
+      <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')] opacity-30"></div>
+      <div class="relative flex items-center justify-between z-10">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30 border border-white/10">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+          <div>
+            <h3 class="text-xl font-bold text-white tracking-tight">AI Strategy Architect</h3>
+            <p class="text-xs text-indigo-200 font-medium tracking-wide uppercase mt-0.5" id="chatbot-step-label">Initializing...</p>
           </div>
         </div>
-      </div>
-    </div>
-
-    <div class="p-4 border-t border-slate-200" id="chatbot-input-area">
-      <div class="flex gap-2">
-        <input type="text" id="chatbot-input" placeholder="Type your answer..." class="input-field flex-1 hidden" onkeydown="if(event.key==='Enter')chatInputSubmit()">
-        <button id="chatbot-input-btn" class="hidden" onclick="chatInputSubmit()">
+        <button onclick="closeChatbot()" class="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-white/10 group">
+          <svg class="w-5 h-5 text-indigo-200 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>
     </div>
 
-    <div id="chatbot-loading" class="hidden px-4 py-3 border-t border-slate-200">
-      <div class="flex items-center gap-3 text-sm text-slate-500">
-        <svg class="animate-spin h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-        Generating your strategy with AI...
+    <!-- Chat Area -->
+    <div class="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50" id="chatbot-messages">
+      <!-- Chat messages injected here -->
+    </div>
+
+    <!-- Input Area -->
+    <div class="p-5 bg-white border-t border-slate-100 shadow-[0_-10px_30px_rgba(0,0,0,0.02)] relative z-10" id="chatbot-input-area">
+      <div class="flex gap-3 items-center">
+        <input type="text" id="chatbot-input" placeholder="Type your response..." class="w-full px-5 py-3.5 bg-slate-100 border-none rounded-2xl text-slate-700 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all hidden shadow-inner" onkeydown="if(event.key==='Enter')chatInputSubmit()">
+        <button id="chatbot-input-btn" class="hidden px-5 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold text-sm transition-colors shadow-md shadow-indigo-200 hover:shadow-lg hover:shadow-indigo-300" onclick="chatInputSubmit()">
+          Send
+        </button>
       </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="chatbot-loading" class="hidden absolute inset-0 bg-white/90 backdrop-blur-sm z-20 flex flex-col items-center justify-center">
+      <div class="w-20 h-20 relative">
+        <div class="absolute inset-0 rounded-full border-4 border-indigo-100"></div>
+        <div class="absolute inset-0 rounded-full border-4 border-indigo-600 border-t-transparent animate-spin"></div>
+      </div>
+      <h3 class="mt-6 text-xl font-bold text-slate-800">Architecting Strategy...</h3>
+      <p class="mt-2 text-sm text-slate-500 font-medium animate-pulse" id="agent-status-text">Initializing AI agents...</p>
     </div>
   </div>
 </div>
-
-<!-- Strategy Result Modal -->
-<div id="strategyResultModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/40 backdrop-blur-sm">
-  <div class="bg-white rounded-2xl shadow-2xl w-full mx-4 overflow-hidden" style="max-width: 720px; max-height: 85vh;" onclick="event.stopPropagation()">
-    <div class="flex items-center justify-between p-5 border-b border-slate-200">
-      <div>
-        <h3 class="text-lg font-bold text-slate-800" id="result-title"></h3>
-        <p class="text-xs text-slate-400 mt-0.5" id="result-meta"></p>
-      </div>
-      <button onclick="closeModal('strategyResultModal')" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
-        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <div class="p-5 overflow-y-auto text-sm text-slate-600 leading-relaxed" id="result-body" style="max-height: 50vh;"></div>
-    <div class="p-5 border-t border-slate-200 flex justify-between items-center">
-      <span class="text-xs text-slate-400">Status: <span class="font-semibold text-slate-600">Draft</span></span>
-      <div class="flex gap-2">
-        <form method="post" id="result-push-form">
-          {% csrf_token %}
-          <input type="hidden" name="action" value="update_status">
-          <input type="hidden" name="strategy_id" id="result-strategy-id" value="">
-          <input type="hidden" name="status" value="pending_review">
-          {% include "components/button.html" with label="Push to Draft" type="submit" id="result-push-btn" primary_start="#D97706" primary_end="#F59E0B" %}
-        </form>
-        <a href="#" onclick="closeModal('strategyResultModal');return false" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">Close</a>
-      </div>
-    </div>
-  </div>
-</div>
-
-
 
 <script>
 // ──────────────────────────────────────────────
@@ -307,18 +275,35 @@ function getStepLabel(s, stepIdx, val) {
 
 function openChatbot() {
   chatState = { step: 0, data: {} };
-  document.getElementById('chatbotModal').classList.remove('hidden');
+  var modal = document.getElementById('chatbotModal');
+  var inner = document.getElementById('chatbotModalInner');
+  modal.classList.remove('hidden');
+  
+  // Trigger animations
+  setTimeout(function() {
+    modal.classList.remove('opacity-0');
+    inner.classList.remove('scale-95');
+    inner.classList.add('scale-100');
+  }, 10);
+  
   document.getElementById('chatbot-messages').innerHTML = '';
   document.getElementById('chatbot-loading').classList.add('hidden');
   document.getElementById('chatbot-input').classList.add('hidden');
   document.getElementById('chatbot-input-btn').classList.add('hidden');
   document.getElementById('chatbot-input-area').classList.remove('hidden');
-  document.getElementById('chatbot-step-label').textContent = "Let's build your strategy";
+  document.getElementById('chatbot-step-label').textContent = "Step 1 of " + steps.length;
   chatAsk(0);
 }
 
 function closeChatbot() {
-  document.getElementById('chatbotModal').classList.add('hidden');
+  var modal = document.getElementById('chatbotModal');
+  var inner = document.getElementById('chatbotModalInner');
+  modal.classList.add('opacity-0');
+  inner.classList.remove('scale-100');
+  inner.classList.add('scale-95');
+  setTimeout(function() {
+    modal.classList.add('hidden');
+  }, 300);
 }
 
 document.getElementById('chatbotModal').addEventListener('click', closeChatbot);
@@ -332,133 +317,156 @@ function chatAsk(stepIdx) {
   document.getElementById('chatbot-step-label').textContent = 'Step ' + (stepIdx+1) + ' of ' + steps.length;
   var msg = document.getElementById('chatbot-messages');
   var div = document.createElement('div');
-  div.className = 'flex gap-3 message-bot';
-  div.innerHTML = '<div class="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center flex-shrink-0 mt-0.5"><svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg></div><div>';
+  div.className = 'flex gap-4 message-bot items-start opacity-0 translate-y-4 transition-all duration-500 ease-out';
+  div.innerHTML = '<div class="w-10 h-10 rounded-2xl bg-indigo-100 flex items-center justify-center flex-shrink-0 border border-indigo-200 shadow-sm"><svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div><div class="flex-1 min-w-0 bg-white p-5 rounded-2xl rounded-tl-sm shadow-sm border border-slate-100"></div>';
   msg.appendChild(div);
+  
+  // Trigger animation
+  setTimeout(function() {
+    div.classList.remove('opacity-0', 'translate-y-4');
+  }, 50);
+
+  var msgBody = div.lastChild;
 
   if (s.type === 'option' || s.type === 'multi') {
     var p = document.createElement('p');
-    p.className = 'text-sm text-slate-700 font-medium';
-    p.textContent = s.type === 'multi' ? 'Select platforms:' : (stepIdx === 0 ? 'What type of strategy do you need?' : 'Choose ' + s.label + ':');
-    div.lastChild.appendChild(p);
+    p.className = 'text-base text-slate-800 font-medium mb-4';
+    p.textContent = s.type === 'multi' ? 'Select platforms:' : (stepIdx === 0 ? 'What type of strategy do you need to generate?' : 'Choose ' + s.label + ':');
+    msgBody.appendChild(p);
+    
     var grid = document.createElement('div');
-    grid.className = 'mt-2 ' + (s.type === 'multi' ? 'flex flex-wrap gap-2' : 'grid grid-cols-2 gap-1.5');
+    grid.className = s.type === 'multi' ? 'flex flex-wrap gap-2.5' : 'grid grid-cols-2 gap-2.5';
+    
     s.options.forEach(function(o) {
       var key = Array.isArray(o) ? o[0] : o[0];
       var label = Array.isArray(o) ? o[1] : o[1];
       var btn = document.createElement('button');
       btn.textContent = label;
       btn.dataset.value = key;
-      btn.className = 'px-3 py-2 rounded-xl text-xs font-semibold ';
+      btn.className = 'px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border ';
       if (s.type === 'multi') {
-        btn.className += 'bg-slate-100 hover:bg-primary hover:text-white text-slate-700 transition-colors';
+        btn.className += 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 shadow-sm hover:shadow';
         if (chatState.data[s.key] && chatState.data[s.key].indexOf(key) !== -1) {
-          btn.classList.remove('bg-slate-100', 'text-slate-700');
-          btn.classList.add('bg-primary', 'text-white');
+          btn.className = btn.className.replace('border-slate-200 bg-white text-slate-700', 'border-indigo-600 bg-indigo-600 text-white shadow-indigo-200');
         }
         btn.onclick = function() {
-          this.classList.toggle('bg-primary');
-          this.classList.toggle('text-white');
-          this.classList.toggle('bg-slate-100');
-          this.classList.toggle('text-slate-700');
+          var isSelected = this.classList.contains('bg-indigo-600');
+          if (isSelected) {
+            this.classList.remove('border-indigo-600', 'bg-indigo-600', 'text-white', 'shadow-indigo-200');
+            this.classList.add('border-slate-200', 'bg-white', 'text-slate-700');
+          } else {
+            this.classList.remove('border-slate-200', 'bg-white', 'text-slate-700', 'hover:border-indigo-300', 'hover:bg-indigo-50', 'hover:text-indigo-700');
+            this.classList.add('border-indigo-600', 'bg-indigo-600', 'text-white', 'shadow-indigo-200');
+          }
         };
       } else {
-        btn.className += 'bg-slate-100 hover:bg-primary hover:text-white text-slate-700 transition-colors text-left';
+        btn.className += 'border-slate-200 bg-white hover:border-indigo-500 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 text-left shadow-sm hover:shadow';
         if (chatState.data[s.key] === key) {
-          btn.classList.remove('bg-slate-100', 'text-slate-700');
-          btn.classList.add('bg-primary', 'text-white');
+          btn.className = btn.className.replace('border-slate-200 bg-white text-slate-700', 'border-indigo-600 bg-indigo-600 text-white');
         }
         btn.onclick = function() { chatAnswer(stepIdx, key); };
       }
       grid.appendChild(btn);
     });
+    
     if (s.type === 'multi') {
       var okBtn = document.createElement('button');
-      okBtn.textContent = 'Done';
-      okBtn.className = 'mt-2 px-4 py-2 rounded-xl text-xs font-semibold bg-primary text-white hover:opacity-90 transition-opacity';
+      okBtn.textContent = 'Continue →';
+      okBtn.className = 'mt-5 px-6 py-3 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-200 transition-all';
       okBtn.onclick = function() {
         var sel = [];
-        grid.querySelectorAll('.bg-primary').forEach(function(b) { sel.push(b.dataset.value); });
+        grid.querySelectorAll('.bg-indigo-600').forEach(function(b) { sel.push(b.dataset.value); });
         chatAnswer(stepIdx, sel);
       };
       var wrap = document.createElement('div');
       wrap.appendChild(grid);
       wrap.appendChild(okBtn);
-      div.lastChild.appendChild(wrap);
+      msgBody.appendChild(wrap);
     } else {
-      div.lastChild.appendChild(grid);
+      msgBody.appendChild(grid);
     }
   } else if (s.type === 'input') {
     var p = document.createElement('p');
-    p.className = 'text-sm text-slate-700 font-medium';
+    p.className = 'text-base text-slate-800 font-medium mb-2';
     p.textContent = 'Give it a ' + s.label + ':';
-    div.lastChild.appendChild(p);
+    msgBody.appendChild(p);
+    
     var inp = document.getElementById('chatbot-input');
+    var btn = document.getElementById('chatbot-input-btn');
     inp.classList.remove('hidden');
+    btn.classList.remove('hidden');
     inp.placeholder = s.placeholder || 'Type your answer...';
     inp.value = chatState.data[s.key] || '';
     inp.dataset.step = stepIdx;
     inp.focus();
   } else if (s.type === 'textarea') {
     var p = document.createElement('p');
-    p.className = 'text-sm text-slate-700 font-medium';
+    p.className = 'text-base text-slate-800 font-medium mb-2';
     p.textContent = 'Tell me about your ' + s.label + ':';
-    div.lastChild.appendChild(p);
+    msgBody.appendChild(p);
+    
     var inp = document.getElementById('chatbot-input');
+    var btn = document.getElementById('chatbot-input-btn');
     inp.classList.remove('hidden');
+    btn.classList.remove('hidden');
     inp.placeholder = s.placeholder || 'Type your answer...';
     inp.value = chatState.data[s.key] || '';
     inp.dataset.step = stepIdx;
     inp.focus();
   } else if (s.type === 'datetime') {
     var p = document.createElement('p');
-    p.className = 'text-sm text-slate-700 font-medium';
+    p.className = 'text-base text-slate-800 font-medium mb-4';
     p.textContent = 'Would you like to schedule publishing?';
-    div.lastChild.appendChild(p);
+    msgBody.appendChild(p);
+    
     var wrap = document.createElement('div');
-    wrap.className = 'mt-2 space-y-2';
+    wrap.className = 'flex flex-col sm:flex-row gap-3';
     var inp = document.createElement('input');
     inp.type = 'datetime-local';
     inp.id = 'chat-datetime';
-    inp.className = 'input-field w-full';
+    inp.className = 'px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all flex-1';
     inp.value = chatState.data[s.key] || '';
+    
     var btnWrap = document.createElement('div');
     btnWrap.className = 'flex gap-2';
     var skip = document.createElement('button');
     skip.textContent = 'Skip';
-    skip.className = 'px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors';
+    skip.className = 'px-6 py-3 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors border border-slate-200';
     skip.onclick = function() { chatAnswer(stepIdx, ''); };
     var ok = document.createElement('button');
-    ok.textContent = 'Next';
-    ok.className = 'px-4 py-2 rounded-xl text-xs font-semibold bg-primary text-white hover:opacity-90 transition-opacity';
+    ok.textContent = 'Next →';
+    ok.className = 'px-6 py-3 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200 hover:shadow-lg';
     ok.onclick = function() { chatAnswer(stepIdx, document.getElementById('chat-datetime').value); };
+    
     btnWrap.appendChild(skip);
     btnWrap.appendChild(ok);
     wrap.appendChild(inp);
     wrap.appendChild(btnWrap);
-    div.lastChild.appendChild(wrap);
+    msgBody.appendChild(wrap);
   }
 
   // Back link at bottom of bot message
   if (stepIdx > 0) {
     var backWrap = document.createElement('div');
-    backWrap.className = 'mt-3';
+    backWrap.className = 'mt-4 border-t border-slate-100 pt-3';
     var backBtn = document.createElement('button');
-    backBtn.textContent = '← Back';
-    backBtn.className = 'text-[11px] text-slate-400 hover:text-primary transition-colors';
+    backBtn.innerHTML = '← Go Back';
+    backBtn.className = 'text-xs font-semibold text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1';
     backBtn.onclick = function() { chatEdit(stepIdx - 1); };
     backWrap.appendChild(backBtn);
-    div.lastChild.appendChild(backWrap);
+    msgBody.appendChild(backWrap);
   }
-  msg.scrollTop = msg.scrollHeight;
+  setTimeout(function() { msg.scrollTop = msg.scrollHeight; }, 60);
 }
 
 function chatInputSubmit() {
   var inp = document.getElementById('chatbot-input');
+  var btn = document.getElementById('chatbot-input-btn');
   var stepIdx = parseInt(inp.dataset.step);
   var val = inp.value.trim();
   if (!val) return;
   inp.classList.add('hidden');
+  btn.classList.add('hidden');
   chatAnswer(stepIdx, val);
 }
 
@@ -468,32 +476,36 @@ function chatAnswer(stepIdx, val) {
 
   // Show user's answer
   var udiv = document.createElement('div');
-  udiv.className = 'flex flex-col items-end message-user';
+  udiv.className = 'flex flex-col items-end message-user opacity-0 translate-y-4 transition-all duration-500 ease-out';
   var label = getStepLabel(s, stepIdx, val);
-  udiv.innerHTML = '<div class="bg-primary/10 rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-xs inline-block"><p class="text-sm text-primary font-medium">' + label + '</p></div>';
+  udiv.innerHTML = '<div class="bg-indigo-600 rounded-2xl rounded-tr-sm px-5 py-3 max-w-[85%] inline-block shadow-md shadow-indigo-200"><p class="text-sm text-white font-medium">' + label + '</p></div>';
+  
+  var editWrap = document.createElement('div');
+  editWrap.className = 'flex items-center gap-2 mt-1.5 mr-1';
   var editLink = document.createElement('button');
-  editLink.textContent = 'Edit';
-  editLink.className = 'text-[10px] text-slate-400 hover:text-primary mt-0.5 mr-1 transition-colors';
+  editLink.textContent = 'Edit Answer';
+  editLink.className = 'text-[11px] font-medium text-slate-400 hover:text-indigo-600 transition-colors';
   editLink.onclick = function() { chatEdit(stepIdx); };
-  udiv.appendChild(editLink);
+  
+  editWrap.appendChild(editLink);
+  udiv.appendChild(editWrap);
   msg.appendChild(udiv);
+
+  setTimeout(function() {
+    udiv.classList.remove('opacity-0', 'translate-y-4');
+  }, 50);
 
   // Store
   chatState.data[s.key] = val;
   chatState.step = stepIdx + 1;
 
-  // Hide input
-  document.getElementById('chatbot-input').classList.add('hidden');
-
   // Next
-  msg.scrollTop = msg.scrollHeight;
+  setTimeout(function() { msg.scrollTop = msg.scrollHeight; }, 60);
   setTimeout(function() { chatAsk(stepIdx + 1); }, 400);
 }
 
 function chatEdit(stepIdx) {
   var msg = document.getElementById('chatbot-messages');
-  // Walk forward from the start, count user messages,
-  // remove everything from the (stepIdx)th user message onward
   var userCount = 0;
   var removeFrom = null;
   for (var i = 0; i < msg.children.length; i++) {
@@ -520,6 +532,7 @@ function chatEdit(stepIdx) {
 
   // Hide input
   document.getElementById('chatbot-input').classList.add('hidden');
+  document.getElementById('chatbot-input-btn').classList.add('hidden');
   document.getElementById('chatbot-input-area').classList.remove('hidden');
 
   // Re-ask this step
@@ -527,19 +540,25 @@ function chatEdit(stepIdx) {
 }
 
 function showReview() {
-  document.getElementById('chatbot-step-label').textContent = 'Review & Confirm';
+  document.getElementById('chatbot-step-label').textContent = 'Review & Finalize';
   document.getElementById('chatbot-input').classList.add('hidden');
+  document.getElementById('chatbot-input-btn').classList.add('hidden');
+  document.getElementById('chatbot-input-area').classList.add('hidden');
 
   var msg = document.getElementById('chatbot-messages');
   var div = document.createElement('div');
-  div.className = 'flex gap-3 message-bot';
-  div.innerHTML = '<div class="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center flex-shrink-0 mt-0.5"><svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div><p class="text-sm text-slate-700 font-medium">Here is the summary of your strategy. Review everything and generate when ready.</p></div>';
+  div.className = 'flex gap-4 message-bot items-start opacity-0 translate-y-4 transition-all duration-500 ease-out';
+  div.innerHTML = '<div class="w-10 h-10 rounded-2xl bg-indigo-100 flex items-center justify-center flex-shrink-0 border border-indigo-200 shadow-sm"><svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div><div class="flex-1 min-w-0 bg-white p-6 rounded-2xl rounded-tl-sm shadow-sm border border-slate-100"><p class="text-lg text-slate-800 font-bold mb-1">Ready to Architect?</p><p class="text-sm text-slate-500 mb-5">Review your inputs before we deploy the AI agents.</p></div>';
   msg.appendChild(div);
 
-  var icons = { strategy_type: '🎯', title: '📝', description: '📋', target_audience: '👥', tone: '🎨', platforms: '📱', scheduled_at: '📅' };
+  setTimeout(function() {
+    div.classList.remove('opacity-0', 'translate-y-4');
+  }, 50);
 
+  var msgBody = div.lastChild;
+  var icons = { strategy_type: '🎯', title: '📝', description: '📋', target_audience: '👥', tone: '🎨', platforms: '📱', scheduled_at: '📅' };
   var summaryDiv = document.createElement('div');
-  summaryDiv.className = 'ml-10 mt-3 space-y-2';
+  summaryDiv.className = 'space-y-3';
 
   steps.forEach(function(s, idx) {
     var val = chatState.data[s.key];
@@ -547,43 +566,53 @@ function showReview() {
     var label = getStepLabel(s, idx, val);
 
     var row = document.createElement('div');
-    row.className = 'flex items-start gap-2 p-2.5 rounded-xl bg-slate-50';
-    row.innerHTML = '<span class="text-sm flex-shrink-0">' + (icons[s.key] || '•') + '</span>' +
-      '<div class="flex-1 min-w-0"><p class="text-xs font-semibold text-slate-500">' + s.label + '</p><p class="text-sm text-slate-800 break-words">' + label + '</p></div>' +
-      '<button class="text-[10px] text-primary font-semibold hover:underline flex-shrink-0 mt-0.5">Edit</button>';
+    row.className = 'flex items-start gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/30 transition-colors group';
+    row.innerHTML = '<div class="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-sm flex-shrink-0 border border-slate-100">' + (icons[s.key] || '•') + '</div>' +
+      '<div class="flex-1 min-w-0 pt-0.5"><p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">' + s.label + '</p><p class="text-sm text-slate-800 font-medium break-words">' + label + '</p></div>' +
+      '<button class="text-xs text-indigo-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity hover:underline flex-shrink-0 pt-1 px-2">Edit</button>';
     row.lastChild.onclick = function() {
-      // Remove review messages (bot summary + last bot message + summary div)
       var reviewBot = div;
       if (reviewBot && reviewBot.nextSibling) msg.removeChild(reviewBot.nextSibling);
       msg.removeChild(reviewBot);
+      document.getElementById('chatbot-input-area').classList.remove('hidden');
       chatEdit(idx);
     };
     summaryDiv.appendChild(row);
   });
+  msgBody.appendChild(summaryDiv);
 
   var actionRow = document.createElement('div');
-  actionRow.className = 'flex gap-2 mt-4';
+  actionRow.className = 'mt-6 pt-5 border-t border-slate-100';
   var genBtn = document.createElement('button');
-  genBtn.textContent = 'Generate Strategy →';
-  genBtn.className = 'flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all';
-  genBtn.style.background = 'linear-gradient(135deg,#7C3AED,#6D28D9)';
+  genBtn.innerHTML = '<span class="flex items-center justify-center gap-2">Execute Strategy Generation <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></span>';
+  genBtn.className = 'w-full px-6 py-4 rounded-xl text-base font-bold text-white transition-all shadow-xl shadow-purple-500/30 hover:shadow-cyan-500/40 hover:-translate-y-0.5';
+  genBtn.style.background = 'linear-gradient(135deg, #6D28D9 0%, #06B6D4 100%)';
   genBtn.onclick = function() {
-    summaryDiv.querySelectorAll('button').forEach(function(b) { b.disabled = true; b.opacity = '0.5'; });
     genBtn.disabled = true;
-    genBtn.textContent = 'Generating...';
+    genBtn.innerHTML = 'Deploying AI Agents...';
+    genBtn.classList.add('opacity-80', 'cursor-not-allowed');
     chatGenerate();
   };
   actionRow.appendChild(genBtn);
-  summaryDiv.appendChild(actionRow);
+  msgBody.appendChild(actionRow);
 
-  div.lastChild.appendChild(summaryDiv);
-  msg.scrollTop = msg.scrollHeight;
+  setTimeout(function() { msg.scrollTop = msg.scrollHeight; }, 60);
 }
 
 function chatGenerate() {
   document.getElementById('chatbot-loading').classList.remove('hidden');
-  document.getElementById('chatbot-input-area').classList.add('hidden');
-  document.getElementById('chatbot-step-label').textContent = 'Generating...';
+  document.getElementById('chatbot-step-label').textContent = 'Processing...';
+
+  var statusText = document.getElementById('agent-status-text');
+  statusText.textContent = 'Ideator Agent drafting initial strategy...';
+  
+  var agentTimer1 = setTimeout(function() {
+    statusText.textContent = 'CMO Critic Agent evaluating constraints...';
+  }, 12000);
+  
+  var agentTimer2 = setTimeout(function() {
+    statusText.textContent = 'Refiner Agent polishing final output...';
+  }, 25000);
 
   fetch('{% url "creative:api_chat_generate" %}', {
     method: 'POST',
@@ -592,20 +621,13 @@ function chatGenerate() {
   })
   .then(function(r) { return r.json(); })
   .then(function(d) {
-    document.getElementById('chatbot-loading').classList.add('hidden');
+    clearTimeout(agentTimer1);
+    clearTimeout(agentTimer2);
     if (d.success) {
-      closeChatbot();
-      document.getElementById('result-title').textContent = d.title;
-      document.getElementById('result-meta').textContent = d.strategy_type + ' \u00b7 ' + new Date(d.created_at).toLocaleDateString();
-      document.getElementById('result-body').innerHTML = d.generated_output;
-      document.getElementById('result-strategy-id').value = d.strategy_id;
-      document.getElementById('result-push-btn').textContent = 'Push to Draft';
-      document.getElementById('result-push-btn').onclick = function() {
-        document.getElementById('result-push-form').submit();
-      };
-      openModal('strategyResultModal');
-      setTimeout(function() { location.reload(); }, 1000);
+      // Reload page immediately as requested
+      window.location.reload();
     } else {
+      document.getElementById('chatbot-loading').classList.add('hidden');
       showChatError(d.error || 'Generation failed');
     }
   })
@@ -618,12 +640,16 @@ function chatGenerate() {
 function showChatError(msg) {
   var msgDiv = document.getElementById('chatbot-messages');
   var div = document.createElement('div');
-  div.className = 'flex gap-3 message-bot';
-  div.innerHTML = '<div class="w-7 h-7 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0"><svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div><p class="text-sm text-red-600 font-medium">Error</p><p class="text-xs text-red-500 mt-1">' + msg + '</p><button onclick="openChatbot()" class="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-700 hover:bg-red-100">Try Again</button></div>';
+  div.className = 'flex gap-4 message-bot items-start opacity-0 translate-y-4 transition-all duration-500 ease-out';
+  div.innerHTML = '<div class="w-10 h-10 rounded-2xl bg-red-100 flex items-center justify-center flex-shrink-0 border border-red-200"><svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div class="flex-1 min-w-0 bg-white p-5 rounded-2xl rounded-tl-sm shadow-sm border border-red-100"><p class="text-base text-red-700 font-bold mb-1">System Error</p><p class="text-sm text-red-600 mb-4">' + msg + '</p><button onclick="openChatbot()" class="px-5 py-2.5 rounded-xl text-sm font-semibold bg-red-50 hover:bg-red-100 text-red-700 transition-colors border border-red-200">Restart Initialization</button></div>';
   msgDiv.appendChild(div);
-  msgDiv.scrollTop = msgDiv.scrollHeight;
-  document.getElementById('chatbot-input-area').classList.remove('hidden');
-  document.getElementById('chatbot-step-label').textContent = 'Something went wrong';
+  
+  setTimeout(function() {
+    div.classList.remove('opacity-0', 'translate-y-4');
+    msgDiv.scrollTop = msgDiv.scrollHeight;
+  }, 50);
+  
+  document.getElementById('chatbot-step-label').textContent = 'Error Encountered';
 }
 </script>
 {% endblock %}

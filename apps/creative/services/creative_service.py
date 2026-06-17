@@ -3,7 +3,7 @@ import logging
 from typing import Optional
 
 from .client import get_llm_client
-from .prompts import build_system_prompt
+from .prompts import build_system_prompt, build_critic_prompt, build_refiner_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -104,9 +104,10 @@ def generate_creative_content(
     category: str = "full_campaign",
     temperature: float = 0.85,
     max_tokens: int = 2048,
+    use_multi_agent: bool = True,
 ) -> dict:
     """
-    Generate creative content using a category-specific system prompt.
+    Generate creative content using an iterative multi-agent process (Ideator -> Critic -> Refiner).
 
     Args:
         user_input: The user's prompt / brief.
@@ -114,6 +115,7 @@ def generate_creative_content(
         category: Creative strategy category.
         temperature: LLM temperature (default 0.85 for creative tasks).
         max_tokens: Max tokens for the LLM response.
+        use_multi_agent: Whether to use the Critic -> Refiner loop.
 
     Returns:
         Parsed dict with standard keys (type, title, content, variations, sections)
@@ -135,7 +137,8 @@ def generate_creative_content(
             "and LLM_MODEL in your .env file."
         )
 
-    raw = client.generate(
+    logger.info(f"Generating initial draft for {resolved_category}...")
+    initial_raw = client.generate(
         system_prompt=system_prompt,
         user_prompt=user_input,
         temperature=temperature,
@@ -143,9 +146,51 @@ def generate_creative_content(
         response_format='json',
     )
 
-    if not raw:
+    if not initial_raw:
         raise CreativeServiceError(
-            "LLM returned empty response. Check your API key and network."
+            "LLM returned empty response during initial generation. Check your API key and network."
         )
 
-    return _parse_response(raw)
+    if not use_multi_agent:
+        return _parse_response(initial_raw)
+
+    # Agent 2: Critic
+    logger.info(f"Generating critique for {resolved_category}...")
+    critic_system_prompt = build_critic_prompt(resolved_category, company_context)
+    critic_user_prompt = f"USER BRIEF:\n{user_input}\n\nINITIAL DRAFT:\n{initial_raw}"
+    
+    critique = client.generate(
+        system_prompt=critic_system_prompt,
+        user_prompt=critic_user_prompt,
+        temperature=0.7,
+        max_tokens=1024,
+    )
+
+    if not critique:
+        logger.warning("Critic failed to return a response, falling back to initial draft.")
+        return _parse_response(initial_raw)
+
+    # Agent 3: Refiner
+    logger.info(f"Refining draft for {resolved_category} based on critique...")
+    refiner_system_prompt = build_refiner_prompt(resolved_category, company_context)
+    refiner_user_prompt = (
+        f"USER BRIEF:\n{user_input}\n\n"
+        f"INITIAL DRAFT:\n{initial_raw}\n\n"
+        f"CMO CRITIQUE:\n{critique}\n\n"
+        f"Please completely rewrite the draft, fixing all issues raised in the critique, "
+        f"and outputting the final JSON."
+    )
+
+    final_raw = client.generate(
+        system_prompt=refiner_system_prompt,
+        user_prompt=refiner_user_prompt,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        response_format='json',
+    )
+
+    if not final_raw:
+        logger.warning("Refiner failed to return a response, falling back to initial draft.")
+        return _parse_response(initial_raw)
+
+    return _parse_response(final_raw)

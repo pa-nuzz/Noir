@@ -1,8 +1,10 @@
 from django.db import models
 from django.conf import settings
 
+from core.models import AuditMixin
 
-class SocialAccount(models.Model):
+
+class SocialAccount(AuditMixin):
     PLATFORM_CHOICES = [
         ('facebook', 'Facebook'),
         ('instagram', 'Instagram'),
@@ -33,7 +35,7 @@ class SocialAccount(models.Model):
         return f"{self.get_platform_display()} — {self.account_name}"
 
 
-class SocialPost(models.Model):
+class SocialPost(AuditMixin):
     STATUS_CHOICES = [
         ('draft', 'Draft'),
         ('scheduled', 'Scheduled'),
@@ -68,7 +70,7 @@ class SocialPost(models.Model):
         return f"[{self.get_platform_display()}] {preview}"
 
 
-class SocialMediaAnalytics(models.Model):
+class SocialMediaAnalytics(AuditMixin):
     post = models.ForeignKey(SocialPost, on_delete=models.CASCADE, related_name='analytics')
     fetched_at = models.DateTimeField(auto_now_add=True)
 

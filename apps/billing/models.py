@@ -1,8 +1,10 @@
 from django.conf import settings
 from django.db import models
 
+from core.models import AuditMixin
 
-class StoragePlan(models.Model):
+
+class StoragePlan(AuditMixin):
     name = models.CharField(max_length=100)
     slug = models.SlugField(unique=True)
     description = models.TextField(blank=True)
@@ -18,7 +20,7 @@ class StoragePlan(models.Model):
         return f"{self.name} — Rs {self.price_per_gb_monthly}/GB/month"
 
 
-class WorkspaceBilling(models.Model):
+class WorkspaceBilling(AuditMixin):
     workspace = models.OneToOneField(
         'workspaces.Workspace',
         on_delete=models.CASCADE,
@@ -54,7 +56,7 @@ class WorkspaceBilling(models.Model):
         return self.monthly_cost_estimate
 
 
-class Plan(models.Model):
+class Plan(AuditMixin):
     PLAN_CHOICES = [
         ('free', 'Free'),
         ('pro', 'Pro'),
@@ -91,7 +93,7 @@ class Plan(models.Model):
         return self.stripe_price_id_monthly if interval == 'month' else self.stripe_price_id_yearly
 
 
-class Subscription(models.Model):
+class Subscription(AuditMixin):
     STATUS_CHOICES = [
         ('active', 'Active'),
         ('past_due', 'Past Due'),
