@@ -3,6 +3,7 @@ import json
 from django.db import models
 from django.db.models import Q
 from django.conf import settings
+from django.utils import timezone
 
 from core.models import AuditMixin
 from core.tenant import TenantManager
@@ -31,8 +32,9 @@ class ContactTag(AuditMixin):
     objects = TenantManager()
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='contact_tags')
     workspace = models.ForeignKey('workspaces.Workspace', on_delete=models.CASCADE, null=True, blank=True, related_name='contact_tags')
-    name = models.CharField(max_length=80)
+    name = models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
+    
 
     class Meta:
         constraints = [
