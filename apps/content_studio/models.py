@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 
+from core.models import AuditMixin
 from core.tenant import TenantManager
 
 
@@ -17,7 +18,7 @@ CONTENT_TYPE_PLATFORMS = {
 }
 
 
-class ContentItem(models.Model):
+class ContentItem(AuditMixin):
     objects = TenantManager()
     STATUS_CHOICES = [
         ('draft', 'Draft'),
@@ -74,7 +75,7 @@ class ContentItem(models.Model):
         return f"[{self.get_content_type_display()}] {self.title[:50]}"
 
 
-class ContentVersion(models.Model):
+class ContentVersion(AuditMixin):
     content_item = models.ForeignKey(ContentItem, on_delete=models.CASCADE, related_name='versions')
     version_number = models.PositiveIntegerField()
     body = models.TextField()
@@ -90,7 +91,7 @@ class ContentVersion(models.Model):
         return f"{self.content_item.title} v{self.version_number}"
 
 
-class ContentApproval(models.Model):
+class ContentApproval(AuditMixin):
     content_item = models.ForeignKey(ContentItem, on_delete=models.CASCADE, related_name='approvals')
     reviewer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='content_reviews')
     decision = models.CharField(max_length=20, choices=[('approved', 'Approved'), ('changes_requested', 'Changes Requested'), ('rejected', 'Rejected')])
@@ -104,7 +105,7 @@ class ContentApproval(models.Model):
         return f"{self.content_item.title} — {self.get_decision_display()} by {self.reviewer.email}"
 
 
-class ExcelSheetImport(models.Model):
+class ExcelSheetImport(AuditMixin):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -123,7 +124,7 @@ class ExcelSheetImport(models.Model):
         return f"{self.title} ({self.spreadsheet_id} - {self.sheet_name})"
 
 
-class ExcelSheetRowLog(models.Model):
+class ExcelSheetRowLog(AuditMixin):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('processing', 'Processing'),
@@ -164,7 +165,7 @@ class ExcelSheetRowLog(models.Model):
         return f"Row {self.row_number} - {self.get_status_display()}"
 
 
-class UserGoogleSheetsToken(models.Model):
+class UserGoogleSheetsToken(AuditMixin):
     """Stores OAuth credentials for a user to access their Google Sheets."""
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -183,7 +184,7 @@ class UserGoogleSheetsToken(models.Model):
         return f"Google Sheets Token for {self.user.email}"
 
 
-class UserGoogleSheet(models.Model):
+class UserGoogleSheet(AuditMixin):
     """Tracks which Google Sheet a user has selected as their active sheet."""
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -204,7 +205,7 @@ class UserGoogleSheet(models.Model):
         return f"{self.title} ({self.spreadsheet_id})"
 
 
-class DeletedDriveSheet(models.Model):
+class DeletedDriveSheet(AuditMixin):
     """Tracks spreadsheet IDs that should be hidden from the Drive list
     because the user deleted them from the app and Drive delete failed."""
     user = models.ForeignKey(

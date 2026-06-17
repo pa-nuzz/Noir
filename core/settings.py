@@ -484,6 +484,16 @@ DIA_S3_PATH_PREFIX = config('DIA_S3_PATH_PREFIX', default='')
 DIA_S3_PUBLIC_BASE_URL = config('DIA_S3_PUBLIC_BASE_URL', default='')
 DIA_S3_USE_PATH_STYLE = config('DIA_S3_USE_PATH_STYLE', default='True')
 
+# MinIO Configuration
+MINIO_ENDPOINT_URL = config('MINIO_ENDPOINT_URL', default='')
+MINIO_REGION = config('MINIO_REGION', default='us-east-1')
+MINIO_BUCKET = config('MINIO_BUCKET', default='')
+MINIO_ACCESS_KEY = config('MINIO_ACCESS_KEY', default='')
+MINIO_SECRET_KEY = config('MINIO_SECRET_KEY', default='')
+MINIO_PATH_PREFIX = config('MINIO_PATH_PREFIX', default='')
+MINIO_PUBLIC_BASE_URL = config('MINIO_PUBLIC_BASE_URL', default='')
+MINIO_USE_PATH_STYLE = config('MINIO_USE_PATH_STYLE', default='True')
+
 # DRF
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [

@@ -8,8 +8,10 @@ def asset_upload_path(instance, filename):
     folder = instance.folder.name_slug if instance.folder else 'root'
     return os.path.join('media_assets', str(instance.user.id), folder, filename)
 
+from core.models import AuditMixin
 
-class MediaFolder(models.Model):
+
+class MediaFolder(AuditMixin):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='media_folders')
     parent = models.ForeignKey('self', on_delete=models.CASCADE, blank=True, null=True, related_name='children')
     name = models.CharField(max_length=255)
@@ -28,7 +30,7 @@ class MediaFolder(models.Model):
         return self.name
 
 
-class MediaAsset(models.Model):
+class MediaAsset(AuditMixin):
     FILE_TYPE_CHOICES = [
         ('image', 'Image'),
         ('video', 'Video'),

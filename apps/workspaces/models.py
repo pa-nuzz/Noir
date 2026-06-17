@@ -7,8 +7,10 @@ from django.utils import timezone
 
 from .encryption import decrypt_secret, encrypt_secret
 
+from core.models import AuditMixin
 
-class Workspace(models.Model):
+
+class Workspace(AuditMixin):
     PLAN_CHOICES = [
         ('free', 'Free'),
         ('pro', 'Pro'),
@@ -52,7 +54,7 @@ class Workspace(models.Model):
         return WorkspaceQuota.objects.get_or_create(workspace=self)[0]
 
 
-class WorkspaceMembership(models.Model):
+class WorkspaceMembership(AuditMixin):
     ROLE_CHOICES = [
         ('owner', 'Owner'),
         ('admin', 'Admin'),
@@ -77,7 +79,7 @@ class WorkspaceMembership(models.Model):
         return f"{self.user.email} — {self.workspace.name} ({self.get_role_display()})"
 
 
-class TeamInvitation(models.Model):
+class TeamInvitation(AuditMixin):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('accepted', 'Accepted'),
@@ -112,7 +114,7 @@ class TeamInvitation(models.Model):
         return timezone.now() >= self.expires_at
 
 
-class AuditLog(models.Model):
+class AuditLog(AuditMixin):
     workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='audit_logs')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='workspace_audit_logs')
     action = models.CharField(max_length=255)
@@ -129,7 +131,7 @@ class AuditLog(models.Model):
         return f"[{self.workspace.name}] {self.action} @ {self.created_at.date()}"
 
 
-class WorkspaceSocialAccount(models.Model):
+class WorkspaceSocialAccount(AuditMixin):
     workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='shared_accounts')
     account = models.ForeignKey('social_accounts.SocialAccount', on_delete=models.CASCADE, related_name='workspace_links')
     added_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='added_workspace_accounts')
@@ -144,7 +146,7 @@ class WorkspaceSocialAccount(models.Model):
         return f"{self.account} → {self.workspace.name}"
 
 
-class WorkspacePermission(models.Model):
+class WorkspacePermission(AuditMixin):
     MODULE_CHOICES = [
         ('campaigns', 'Campaigns'),
         ('contacts', 'Contacts'),
@@ -264,17 +266,15 @@ def seed_default_permissions(workspace):
                 module=module,
                 defaults=defaults,
             )
-class WorkspaceStorageConfig(models.Model):
+class WorkspaceStorageConfig(AuditMixin):
     BACKEND_LOCAL = 'local'
     BACKEND_DIA_S3 = 'dia_s3'
     BACKEND_GOOGLE_DRIVE = 'google_drive'
     BACKEND_S3 = 's3_compatible'
+    BACKEND_MINIO = 'minio'
 
     BACKEND_CHOICES = [
-        (BACKEND_LOCAL, 'Local Disk'),
-        (BACKEND_DIA_S3, 'DIA Managed S3'),
-        (BACKEND_GOOGLE_DRIVE, 'Google Drive'),
-        (BACKEND_S3, 'S3-Compatible (AWS S3 / R2 / MinIO / Wasabi / etc.)'),
+        (BACKEND_MINIO, 'MinIO'),
     ]
 
     workspace = models.OneToOneField(
@@ -282,7 +282,7 @@ class WorkspaceStorageConfig(models.Model):
         on_delete=models.CASCADE,
         related_name='storage_config',
     )
-    backend = models.CharField(max_length=20, choices=BACKEND_CHOICES, default=BACKEND_LOCAL)
+    backend = models.CharField(max_length=20, choices=BACKEND_CHOICES, default=BACKEND_MINIO)
 
     google_drive_client_id_encrypted = models.TextField(blank=True)
     google_drive_client_secret_encrypted = models.TextField(blank=True)
@@ -406,13 +406,19 @@ class WorkspaceStorageConfig(models.Model):
             and bool(self.get_s3_secret_key())
         )
 
+    def is_minio_configured(self):
+        return bool(
+            self.get_s3_access_key()
+            and self.get_s3_secret_key()
+        )
+
     def mask_secret(self, ciphertext):
         if not ciphertext:
             return ''
         return '••••••••' + (ciphertext[-4:] if len(ciphertext) >= 4 else '')
 
 
-class WorkspaceQuota(models.Model):
+class WorkspaceQuota(AuditMixin):
     workspace = models.OneToOneField(Workspace, on_delete=models.CASCADE, related_name='_quota')
     emails_sent_this_month = models.PositiveIntegerField(default=0)
     ai_credits_used = models.PositiveIntegerField(default=0)

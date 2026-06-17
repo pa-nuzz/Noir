@@ -8,6 +8,8 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+from core.models import AuditMixin
+
 
 WEBHOOK_EVENTS = [
     ('campaign.sent', 'Campaign Sent'),
@@ -25,7 +27,7 @@ WEBHOOK_EVENTS = [
 ]
 
 
-class WebhookEndpoint(models.Model):
+class WebhookEndpoint(AuditMixin):
     workspace = models.ForeignKey('workspaces.Workspace', on_delete=models.CASCADE, related_name='webhook_endpoints')
     name = models.CharField(max_length=255, help_text='Label to identify this endpoint')
     url = models.URLField(help_text='HTTPS endpoint that will receive POST requests')
@@ -60,7 +62,7 @@ class WebhookEndpoint(models.Model):
         deliver_webhook.delay(self.id, event_type, payload, workspace_id=self.workspace_id)
 
 
-class WebhookDelivery(models.Model):
+class WebhookDelivery(AuditMixin):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('delivered', 'Delivered'),

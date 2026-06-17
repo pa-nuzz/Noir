@@ -323,6 +323,12 @@
               <button type="button" class="preview-tab px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:bg-slate-100" data-platform="facebook" onclick="switchPreview('facebook')">
                 <span class="flex items-center gap-1.5"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> Facebook</span>
               </button>
+              <button type="button" class="preview-tab px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:bg-slate-100" data-platform="tiktok" onclick="switchPreview('tiktok')">
+                <span class="flex items-center gap-1.5">TikTok</span>
+              </button>
+              <button type="button" class="preview-tab px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:bg-slate-100" data-platform="youtube" onclick="switchPreview('youtube')">
+                <span class="flex items-center gap-1.5">YouTube</span>
+              </button>
             </div>
             <div id="previewPane" class="rounded-xl border border-slate-200 bg-white overflow-hidden transition-all">
               <div class="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
@@ -561,6 +567,7 @@
   function updateCounts() {
     const checked = document.querySelectorAll('.account-check:checked').length;
     selectedCount.textContent = checked + ' selected';
+    const selectedPlatforms = Array.from(new Set(Array.from(document.querySelectorAll('.account-check:checked')).map(cb => cb.dataset.platform).filter(Boolean)));
 
     document.querySelectorAll('.platform-group').forEach(group => {
       const checks = group.querySelectorAll('.account-check:checked');
@@ -578,6 +585,10 @@
       }
     });
 
+    if (selectedPlatforms.length === 1 && currentPreviewPlatform === 'generic') {
+      switchPreview(selectedPlatforms[0]);
+      return;
+    }
     updateCharCount();
     updatePreview();
   }
@@ -704,21 +715,126 @@
       .replace(/\n/g, '<br>');
   }
 
-  function updatePreview() {
-    previewContent.innerHTML = contentEl.value ? renderMarkdown(contentEl.value) : 'Your post content will appear here...';
+  function escapeAttr(text) {
+    return escapeHtml(text || '').replace(/"/g, '&quot;');
+  }
 
+  function getPreviewState() {
+    const checked = document.querySelectorAll('.account-check:checked');
+    const accountNames = Array.from(checked).map(cb => {
+      const label = cb.closest('.account-check-label');
+      return label ? label.querySelector('span')?.textContent?.trim() : '';
+    }).filter(Boolean);
+    const media = Array.from(document.querySelectorAll('.media-input'))
+      .map(i => ({ url: i.value.trim(), fileType: i.dataset.fileType || '' }))
+      .filter(item => item.url);
+    return {
+      content: contentEl.value || '',
+      contentHtml: contentEl.value ? renderMarkdown(contentEl.value) : '<span class="text-slate-400">Your post content will appear here...</span>',
+      hashtags: (document.getElementById('hashtags')?.value || '').split(',').map(t => t.trim().replace(/^#/, '')).filter(Boolean),
+      link: (document.getElementById('link_url')?.value || '').trim(),
+      media,
+      accountNames,
+      accountName: accountNames[0] || 'Your Account',
+      accountCount: checked.length,
+      platforms: Array.from(new Set(Array.from(checked).map(cb => cb.dataset.platform).filter(Boolean))),
+      hasVideo: media.some(item => isVideoMedia(item.url, item.fileType)),
+      hasImage: media.some(item => item.fileType === 'image' || IMAGE_EXTS.includes(mediaFileExt(item.url))),
+    };
+  }
+
+  function hashtagsHtml(state, className) {
+    if (!state.hashtags.length) return '';
+    return '<div class="' + (className || 'flex flex-wrap gap-1.5 mt-3') + '">' + state.hashtags.map(t => `<span>#${escapeHtml(t)}</span>`).join(' ') + '</div>';
+  }
+
+  function warningHtml(text) {
+    if (!text) return '';
+    return `<div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">${escapeHtml(text)}</div>`;
+  }
+
+  function actionRowHtml(items) {
+    return `<div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">${items.map(i => `<span>${i}</span>`).join('')}</div>`;
+  }
+
+  function imageTile(url, className) {
+    const safeUrl = escapeAttr(url);
+    return `<div class="${className || 'aspect-video rounded-lg bg-slate-100 overflow-hidden border border-slate-200'}"><img src="${safeUrl}" alt="" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\\'flex items-center justify-center h-full text-slate-400 text-xs font-semibold\\'>Media</div>'"></div>`;
+  }
+
+  function videoTile(className) {
+    return `<div class="${className || 'aspect-video rounded-lg bg-slate-950 overflow-hidden border border-slate-200 flex items-center justify-center text-white'}"><div class="w-12 h-12 rounded-full bg-white/20 backdrop-blur flex items-center justify-center"><svg class="w-6 h-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>`;
+  }
+
+  function mediaGridHtml(state, platform) {
+    if (!state.media.length) return '';
+    const media = state.media.slice(0, 4);
+    if (state.hasVideo) return videoTile(platform === 'tiktok' ? 'h-[480px] rounded-[2rem] bg-slate-950 overflow-hidden border border-slate-800 flex items-center justify-center text-white relative' : undefined);
+    if (platform === 'instagram') return imageTile(media[0].url, 'aspect-square bg-slate-100 overflow-hidden');
+    if (platform === 'twitter' && media.length > 1) {
+      return `<div class="mt-3 grid grid-cols-2 gap-1 overflow-hidden rounded-2xl border border-slate-200">${media.map(item => imageTile(item.url, 'aspect-video bg-slate-100 overflow-hidden')).join('')}</div>`;
+    }
+    return '<div class="mt-3">' + imageTile(media[0].url) + '</div>';
+  }
+
+  function linkCardHtml(state) {
+    if (!state.link) return '';
+    return `<div class="mt-3 rounded-xl border border-slate-200 overflow-hidden bg-slate-50"><div class="h-20 bg-slate-100 flex items-center justify-center text-slate-400 text-xs font-semibold">Link Preview</div><div class="p-3"><p class="text-xs font-semibold text-slate-700 truncate">${escapeHtml(state.link)}</p><p class="text-[11px] text-slate-400 mt-0.5">External link</p></div></div>`;
+  }
+
+  function renderGenericPreview(state) {
+    return `<div class="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">${state.contentHtml}</div>${hashtagsHtml(state, 'flex flex-wrap gap-1.5 mt-3 text-primary text-xs font-semibold')}${linkCardHtml(state)}${mediaGridHtml(state, 'generic')}`;
+  }
+
+  function renderFacebookPreview(state) {
+    return `<div class="rounded-xl border border-slate-200 bg-white overflow-hidden"><div class="p-4 flex items-center gap-3"><div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold">${escapeHtml(state.accountName.slice(0, 1))}</div><div><p class="text-sm font-bold text-slate-900">${escapeHtml(state.accountName)}</p><p class="text-xs text-slate-400">Just now - Public</p></div></div><div class="px-4 pb-3 text-[15px] leading-relaxed text-slate-800">${state.contentHtml}</div>${hashtagsHtml(state, 'px-4 pb-3 text-sm text-blue-600 font-semibold')}${state.media.length ? mediaGridHtml(state, 'facebook') : linkCardHtml(state)}${actionRowHtml(['Like', 'Comment', 'Share'])}</div>`;
+  }
+
+  function renderInstagramPreview(state) {
+    const warning = !state.media.length ? warningHtml('Instagram posts usually need image or video media.') : '';
+    return `<div class="max-w-[380px] mx-auto rounded-xl border border-slate-200 bg-white overflow-hidden"><div class="h-10 px-3 flex items-center justify-between border-b border-slate-100"><div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600"></div><p class="text-sm font-bold text-slate-900">${escapeHtml(state.accountName)}</p></div><span class="text-slate-400 font-bold">...</span></div>${state.media.length ? mediaGridHtml(state, 'instagram') : '<div class="aspect-square bg-slate-100 flex items-center justify-center text-slate-400 text-xs font-semibold">Media preview</div>'}<div class="p-3"><div class="flex items-center gap-4 text-xl text-slate-900"><span>♡</span><span>○</span><span>↗</span></div><p class="mt-2 text-sm text-slate-800"><strong>${escapeHtml(state.accountName)}</strong> ${state.contentHtml}</p>${hashtagsHtml(state, 'mt-1 text-sm text-blue-600')}<p class="mt-2 text-[11px] uppercase text-slate-400">Just now</p></div></div>${warning}`;
+  }
+
+  function renderTwitterPreview(state) {
+    const handle = state.accountName.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 14) || 'account';
+    return `<div class="rounded-2xl border border-slate-200 bg-white p-4"><div class="flex gap-3"><div class="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center text-sm font-bold">${escapeHtml(state.accountName.slice(0, 1))}</div><div class="flex-1 min-w-0"><p class="text-sm font-bold text-slate-900">${escapeHtml(state.accountName)} <span class="font-normal text-slate-400">@${escapeHtml(handle)} · now</span></p><div class="mt-1 text-[15px] leading-relaxed text-slate-900">${state.contentHtml}</div>${hashtagsHtml(state, 'mt-2 text-sm text-sky-600')}${mediaGridHtml(state, 'twitter')}${linkCardHtml(state)}${actionRowHtml(['Reply', 'Repost', 'Like', 'Share'])}</div></div></div>`;
+  }
+
+  function renderLinkedInPreview(state) {
+    return `<div class="rounded-xl border border-slate-200 bg-white overflow-hidden"><div class="p-4 flex gap-3"><div class="w-11 h-11 rounded bg-blue-700 text-white flex items-center justify-center text-sm font-bold">${escapeHtml(state.accountName.slice(0, 1))}</div><div><p class="text-sm font-bold text-slate-900">${escapeHtml(state.accountName)}</p><p class="text-xs text-slate-400">Company page - Now</p></div></div><div class="px-4 pb-3 text-sm leading-relaxed text-slate-800">${state.contentHtml}</div>${hashtagsHtml(state, 'px-4 pb-3 text-sm text-blue-700 font-semibold')}${state.media.length ? mediaGridHtml(state, 'linkedin') : linkCardHtml(state)}${actionRowHtml(['Like', 'Comment', 'Repost', 'Send'])}</div>`;
+  }
+
+  function renderTikTokPreview(state) {
+    const warning = !state.hasVideo ? warningHtml('TikTok preview is video-first. Attach a video for the closest match.') : '';
+    const handle = state.accountName.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 18) || 'account';
+    return `<div class="max-w-[280px] mx-auto rounded-[2rem] bg-slate-950 p-2 shadow-xl"><div class="relative h-[500px] rounded-[1.5rem] overflow-hidden bg-slate-900 text-white">${state.hasVideo ? videoTile('absolute inset-0 bg-slate-950 flex items-center justify-center text-white') : '<div class="absolute inset-0 bg-slate-900 flex items-center justify-center text-slate-400 text-xs font-semibold">Video preview</div>'}<div class="absolute right-3 bottom-20 space-y-5 text-center text-xl"><div>♡</div><div>○</div><div>↗</div></div><div class="absolute left-3 right-14 bottom-4"><p class="text-sm font-bold">@${escapeHtml(handle)}</p><div class="mt-1 text-xs leading-relaxed">${state.contentHtml}</div>${hashtagsHtml(state, 'mt-1 text-xs font-semibold')}</div></div></div>${warning}`;
+  }
+
+  function renderYouTubePreview(state) {
+    const warning = state.media.length && !state.hasVideo ? warningHtml('YouTube video uploads need video media. Image/text appears closer to a community post.') : '';
+    if (state.hasVideo) {
+      return `<div class="rounded-xl border border-slate-200 bg-white overflow-hidden">${videoTile('aspect-video bg-slate-950 flex items-center justify-center text-white')}<div class="p-4"><p class="text-base font-bold text-slate-900">${state.content ? escapeHtml(state.content.split('\n')[0]).slice(0, 90) : 'Video title preview'}</p><p class="text-sm text-slate-500 mt-1">${escapeHtml(state.accountName)} - Ready to publish</p></div></div>${warning}`;
+    }
+    return `<div class="rounded-xl border border-slate-200 bg-white p-4"><div class="flex gap-3"><div class="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center text-sm font-bold">${escapeHtml(state.accountName.slice(0, 1))}</div><div class="flex-1"><p class="text-sm font-bold text-slate-900">${escapeHtml(state.accountName)}</p><div class="mt-2 text-sm text-slate-800">${state.contentHtml}</div>${hashtagsHtml(state, 'mt-2 text-sm text-blue-600')}${mediaGridHtml(state, 'youtube')}${linkCardHtml(state)}</div></div></div>${warning}`;
+  }
+
+  const PLATFORM_RENDERERS = {
+    generic: renderGenericPreview,
+    facebook: renderFacebookPreview,
+    instagram: renderInstagramPreview,
+    twitter: renderTwitterPreview,
+    linkedin: renderLinkedInPreview,
+    tiktok: renderTikTokPreview,
+    youtube: renderYouTubePreview,
+  };
+
+  function updatePreview() {
+    const state = getPreviewState();
     const checked = document.querySelectorAll('.account-check:checked');
     if (checked.length) {
-      const names = Array.from(checked).map(cb => {
-        const label = cb.closest('.account-check-label');
-        return label ? label.querySelector('span')?.textContent?.trim() : '';
-      }).filter(Boolean);
-      previewAccount.textContent = names.length > 1 ? names + ' +' + (names.length - 1) + ' more' : names || 'Selected accounts';
-      previewPlatform.textContent = names.length + ' account(s) selected';
-
-      const platforms = new Set();
-      checked.forEach(cb => platforms.add(cb.dataset.platform));
-      const badgesHtml = Array.from(platforms).map(p => {
+      previewAccount.textContent = state.accountNames.length > 1 ? state.accountNames[0] + ' +' + (state.accountNames.length - 1) + ' more' : state.accountNames[0] || 'Selected accounts';
+      previewPlatform.textContent = state.accountNames.length + ' account(s) selected';
+      const badgesHtml = state.platforms.map(p => {
         const color = PLATFORM_COLORS[p] || 'text-slate-500';
         const bg = PLATFORM_BG[p] || 'bg-slate-100';
         return `<span class="${bg} ${color} px-2 py-0.5 rounded text-[10px] font-semibold">${PLATFORM_LABELS[p] || p}</span>`;
@@ -729,35 +845,8 @@
       previewPlatform.textContent = 'Select platforms below';
       previewPlatformBadges.innerHTML = '<span class="text-[10px] text-slate-400 font-semibold">Posting to:</span> <span class="text-[10px] text-slate-400 italic">none selected</span>';
     }
-
-    const hashtags = document.getElementById('hashtags').value.split(',').map(t => t.trim()).filter(Boolean);
-    previewHashtags.innerHTML = hashtags.map(t => `<span class="px-2 py-0.5 rounded-full bg-primary-light text-primary text-[10px] font-semibold">#${t}</span>`).join('');
-
-    const link = document.getElementById('link_url').value.trim();
-    if (link) {
-      previewLink.classList.remove('hidden');
-      previewLinkUrl.textContent = link;
-    } else {
-      previewLink.classList.add('hidden');
-    }
-
-    const mediaInputs = document.querySelectorAll('.media-input');
-    const media = Array.from(mediaInputs)
-      .map(i => ({ url: i.value.trim(), fileType: i.dataset.fileType || '' }))
-      .filter(item => item.url);
-    if (media.length) {
-      previewMedia.classList.remove('hidden');
-      previewMedia.innerHTML = media.map(item => {
-        const u = item.url;
-        const isVid = isVideoMedia(u, item.fileType);
-        if (isVid) {
-          return `<div class="aspect-video rounded-lg bg-slate-100 overflow-hidden border border-slate-200 flex items-center justify-center text-slate-400"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>`;
-        }
-        return `<div class="aspect-video rounded-lg bg-slate-100 overflow-hidden border border-slate-200"><img src="${u}" alt="" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\\'flex items-center justify-center h-full text-slate-400\\'><svg class=\\'w-5 h-5\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'2\\' d=\\'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z\\'/></svg></div>'"></div>`;
-      }).join('');
-    } else {
-      previewMedia.classList.add('hidden');
-    }
+    const renderer = PLATFORM_RENDERERS[currentPreviewPlatform] || renderGenericPreview;
+    previewBody.innerHTML = renderer(state);
     updatePlatformCharLimit();
   }
 
@@ -1021,7 +1110,61 @@
     });
   })();
 
-  toggleSaveMode('draft');
+  function initializeSelectedAssets() {
+    try {
+      var initialAssets = JSON.parse('{{ initial_selected_assets_json|escapejs }}' || '[]');
+      var formData = JSON.parse('{{ form_data_json|escapejs }}' || '{}');
+      if (Array.isArray(initialAssets) && initialAssets.length) {
+        initialAssets.forEach(function(asset) {
+          if (asset && asset.url) {
+            window.addSelectedMedia(asset.url, asset.title || asset.url, asset.id, asset.thumbnail_url, asset.file_type);
+          }
+        });
+      }
+      if (formData.media_urls && Array.isArray(formData.media_urls) && formData.media_urls.length) {
+        var rows = document.querySelectorAll('.media-row');
+        var firstRow = rows[0];
+        if (firstRow) {
+          firstRow.querySelector('input').value = formData.media_urls[0];
+          var removeBtn = firstRow.querySelector('.remove-url');
+          if (removeBtn) removeBtn.style.visibility = formData.media_urls.length > 1 ? 'visible' : 'hidden';
+        }
+        for (var i = 1; i < formData.media_urls.length; i++) {
+          document.getElementById('addMediaUrl').click();
+          var newRows = document.querySelectorAll('.media-row');
+          var row = newRows[newRows.length - 1];
+          if (row) {
+            row.querySelector('input').value = formData.media_urls[i];
+          }
+        }
+      }
+      if (formData.account_ids && Array.isArray(formData.account_ids)) {
+        formData.account_ids.forEach(function(accountId) {
+          var checkbox = document.querySelector('.account-check[value="' + accountId + '"]');
+          if (checkbox && !checkbox.disabled) {
+            checkbox.checked = true;
+          }
+        });
+      } else if (formData.selected_platform) {
+        document.querySelectorAll('.account-check[data-platform="' + formData.selected_platform + '"]').forEach(function(cb) {
+          if (!cb.disabled) cb.checked = true;
+        });
+      }
+      if (formData.scheduled_at) {
+        var sched = document.getElementById('scheduled_at');
+        if (sched) sched.value = formData.scheduled_at;
+        if (formData.publish_now) {
+          toggleSaveMode('publish');
+        } else {
+          toggleSaveMode('schedule');
+        }
+      }
+    } catch (err) {
+      console.warn('Media form initialization failed', err);
+    }
+  }
+
+  initializeSelectedAssets();
   updatePlatformCompatibility();
   updateCounts();
   updatePreview();

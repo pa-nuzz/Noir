@@ -38,6 +38,7 @@ urlpatterns = [
     path('storage/google-drive/callback/', storage_views.storage_google_drive_callback, name='storage_google_drive_callback'),
     path('storage/google-drive/disconnect/', storage_views.storage_google_drive_disconnect, name='storage_google_drive_disconnect'),
     path('storage/dia-s3/test/', storage_views.storage_dia_s3_test, name='storage_dia_s3_test'),
+    path('storage/minio/test/', storage_views.storage_minio_test, name='storage_minio_test'),
     path('storage/s3/save/', storage_views.storage_s3_save, name='storage_s3_save'),
     path('storage/s3/test/', storage_views.storage_s3_test, name='storage_s3_test'),
     path('storage/s3/disconnect/', storage_views.storage_s3_disconnect, name='storage_s3_disconnect'),

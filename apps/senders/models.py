@@ -5,12 +5,13 @@ import base64
 import hashlib
 import logging
 
+from core.models import AuditMixin
 from core.tenant import TenantManager
 
 logger = logging.getLogger(__name__)
 
 
-class Sender(models.Model):
+class Sender(AuditMixin):
     objects = TenantManager()
     PROVIDER_CHOICES = [
         ('gmail', 'Gmail / Google Workspace'),

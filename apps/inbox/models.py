@@ -6,12 +6,13 @@ from cryptography.fernet import Fernet
 from django.conf import settings
 from django.db import models
 
+from core.models import AuditMixin
 from core.tenant import TenantManager
 
 logger = logging.getLogger(__name__)
 
 
-class EmailInbox(models.Model):
+class EmailInbox(AuditMixin):
     objects = TenantManager()
     PROVIDER_CHOICES = [
         ('gmail', 'Gmail'),
@@ -143,11 +144,9 @@ class EmailInbox(models.Model):
         return f"{self.email_address} ({self.get_provider_display()})"
 
 
-class EmailThread(models.Model):
-    inbox = models.ForeignKey(
-        EmailInbox, on_delete=models.CASCADE, related_name='threads')
-    thread_id = models.CharField(
-        max_length=255, help_text='Provider thread/conversation ID')
+class EmailThread(AuditMixin):
+    inbox = models.ForeignKey(EmailInbox, on_delete=models.CASCADE, related_name='threads')
+    thread_id = models.CharField(max_length=255, help_text='Provider thread/conversation ID')
     subject = models.CharField(max_length=998, blank=True)
     snippet = models.TextField(blank=True, help_text='Latest message preview')
 
@@ -176,11 +175,9 @@ class EmailThread(models.Model):
         return self.subject or self.thread_id
 
 
-class EmailMessage(models.Model):
-    thread = models.ForeignKey(
-        EmailThread, on_delete=models.CASCADE, related_name='messages')
-    message_id = models.CharField(
-        max_length=255, help_text='Provider message ID')
+class EmailMessage(AuditMixin):
+    thread = models.ForeignKey(EmailThread, on_delete=models.CASCADE, related_name='messages')
+    message_id = models.CharField(max_length=255, help_text='Provider message ID')
 
     from_email = models.EmailField()
     from_name = models.CharField(max_length=255, blank=True)
@@ -218,7 +215,7 @@ class EmailMessage(models.Model):
         return f"[{self.received_at.date()}] {self.from_email}: {self.subject[:60]}"
 
 
-class EmailDraft(models.Model):
+class EmailDraft(AuditMixin):
     STATUS_CHOICES = [
         ('pending_review', 'Pending Review'),
         ('edited', 'Edited'),
