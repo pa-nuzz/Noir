@@ -69,22 +69,6 @@
         Configure
       </a>
     </div>
-
-    <div class="{{ step_classes_base }} {% if storage_config %}border-emerald-300 bg-emerald-50/30{% else %}border-slate-200 bg-white hover:border-primary/30{% endif %}">
-      <span class="{% if storage_config %}{{ complete_badge }}{% else %}{{ pending_badge }}{% endif %}">
-        {% if storage_config %}
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-        {% else %}4{% endif %}
-      </span>
-      <div class="flex-1 min-w-0">
-        <h3 class="font-bold text-slate-900 text-base">Set Up Storage</h3>
-        <p class="text-sm text-slate-500 mt-1">Choose where your media assets are stored — Local Disk, Google Drive, or S3-compatible storage.</p>
-      </div>
-      <a href="{% url 'workspaces:storage_settings' %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold {% if storage_config %}bg-slate-100 text-slate-600{% else %}bg-primary text-white shadow-lg shadow-primary/20{% endif %} hover:opacity-90 transition-all whitespace-nowrap">
-        {% if storage_config %}Change{% else %}Configure{% endif %}
-      </a>
-    </div>
-
     {% endwith %}
     {% endwith %}
     {% endwith %}

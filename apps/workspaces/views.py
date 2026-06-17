@@ -14,7 +14,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.models import User
-from .models import AuditLog, TeamInvitation, Workspace, WorkspaceMembership, WorkspacePermission, WorkspaceSocialAccount, WorkspaceStorageConfig, seed_default_permissions
+from .models import AuditLog, TeamInvitation, Workspace, WorkspaceMembership, WorkspacePermission, WorkspaceSocialAccount, seed_default_permissions
 from .onboarding import get_or_create_onboarding
 from apps.dashboard.models import Notification
 
@@ -508,7 +508,7 @@ def audit_log_view(request, workspace_id):
     module_groups = {
         'pencil-alt': ('Content & Creation', ['campaigns', 'contacts', 'social', 'media', 'workflows', 'content_studio']),
         'mail': ('Communication & Automation', ['inbox']),
-        'cog': ('Workspace Management', ['workspace', 'billing', 'members', 'storage', 'export']),
+        'cog': ('Workspace Management', ['workspace', 'billing', 'members', 'export']),
         'clipboard-list': ('System & Compliance', ['audit_log']),
     }
 
@@ -614,10 +614,6 @@ def workspace_overview(request, workspace_id):
     workflow_count = Workflow.objects.filter(workspace=workspace).count() if Workflow else 0
     content_count = ContentItem.objects.filter(workspace=workspace).count() if ContentItem else 0
 
-    storage_config = WorkspaceStorageConfig.objects.filter(workspace=workspace).first()
-    storage_used_mb = storage_config.storage_used_mb if storage_config else 0
-    storage_backend = storage_config.get_backend_display() if storage_config and storage_config.backend else 'Local'
-
     recent_posts = []
     if SocialPost:
         recent_posts = list(SocialPost.objects.filter(workspace=workspace).order_by('-created_at')[:10])
@@ -640,8 +636,6 @@ def workspace_overview(request, workspace_id):
         'inbox_count': inbox_count,
         'workflow_count': workflow_count,
         'content_count': content_count,
-        'storage_used_mb': storage_used_mb,
-        'storage_backend': storage_backend,
     })
 
 
@@ -729,7 +723,7 @@ def workspace_permissions(request, workspace_id):
     module_groups = {
         'pencil-alt': ('Content & Creation', ['campaigns', 'contacts', 'social', 'media', 'workflows', 'content_studio']),
         'mail': ('Communication & Automation', ['inbox']),
-        'cog': ('Workspace Management', ['workspace', 'billing', 'members', 'storage', 'export']),
+        'cog': ('Workspace Management', ['workspace', 'billing', 'members', 'export']),
         'clipboard-list': ('System & Compliance', ['audit_log']),
     }
 
@@ -762,15 +756,12 @@ def workspace_onboarding(request, workspace_id):
     shared_accounts = WorkspaceSocialAccount.objects.filter(workspace=workspace).select_related('account', 'added_by')
     member_count = WorkspaceMembership.objects.filter(workspace=workspace).count()
     pending_invites = TeamInvitation.objects.filter(workspace=workspace, status='pending').count()
-    storage_config = WorkspaceStorageConfig.objects.filter(workspace=workspace).first()
-
     return render(request, 'workspaces/workspace_onboarding.html', {
         'workspace': workspace,
         'membership': membership,
         'shared_accounts': shared_accounts,
         'member_count': member_count,
         'pending_invites': pending_invites,
-        'storage_config': storage_config,
     })
 
 
