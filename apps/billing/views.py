@@ -53,7 +53,7 @@ def _get_storage_used_mb(workspace):
             return config.storage_used_mb if config else 0
         return round(total_bytes / (1024 * 1024), 2)
 
-    if config.backend == WorkspaceStorageConfig.BACKEND_IDA_S3:
+    if config.backend == WorkspaceStorageConfig.BACKEND_MINIO:
         return config.storage_used_mb or 0
 
     return 0

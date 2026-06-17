@@ -1,10 +1,11 @@
 from django.conf import settings
 from django.db import models
 
+from core.models import AuditMixin
 from core.tenant import TenantManager
 
 
-class SocialAccount(models.Model):
+class SocialAccount(AuditMixin):
     PLATFORM_CHOICES = [
         ('facebook', 'Facebook'),
         ('instagram', 'Instagram'),
@@ -40,7 +41,7 @@ class SocialAccount(models.Model):
         return f"{self.get_platform_display()} — {self.account_name}"
 
 
-class SocialPost(models.Model):
+class SocialPost(AuditMixin):
     objects = TenantManager()
     STATUS_CHOICES = [
         ('draft', 'Draft'),
@@ -96,7 +97,7 @@ class SocialPost(models.Model):
         return f"[{self.get_platform_display()}] {preview}"
 
 
-class SocialAnalytics(models.Model):
+class SocialAnalytics(AuditMixin):
     post = models.ForeignKey(SocialPost, on_delete=models.CASCADE, related_name='analytics')
     fetched_at = models.DateTimeField(auto_now_add=True)
 

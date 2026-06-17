@@ -2,10 +2,11 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 
+from core.models import AuditMixin
 from core.tenant import TenantManager
 
 
-class Workflow(models.Model):
+class Workflow(AuditMixin):
     objects = TenantManager()
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='workflows')
     workspace = models.ForeignKey('workspaces.Workspace', on_delete=models.CASCADE, null=True, blank=True, related_name='workflows')
@@ -21,7 +22,7 @@ class Workflow(models.Model):
         return self.name
 
 
-class WorkflowNode(models.Model):
+class WorkflowNode(AuditMixin):
     NODE_TYPES = [
         ('trigger', 'Trigger'),
         ('delay', 'Delay'),
@@ -45,7 +46,7 @@ class WorkflowNode(models.Model):
         return f"{self.workflow.name} - {self.node_id} ({self.type})"
 
 
-class WorkflowEdge(models.Model):
+class WorkflowEdge(AuditMixin):
     workflow = models.ForeignKey(Workflow, on_delete=models.CASCADE, related_name='edges')
     from_node_id = models.CharField(max_length=64)
     to_node_id = models.CharField(max_length=64)
@@ -64,7 +65,7 @@ class WorkflowEdge(models.Model):
         return f"{self.workflow.name}: {self.from_node_id} -> {self.to_node_id}"
 
 
-class WorkflowEnrollment(models.Model):
+class WorkflowEnrollment(AuditMixin):
     STATUS_CHOICES = [
         ('active', 'Active'),
         ('completed', 'Completed'),

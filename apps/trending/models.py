@@ -2,10 +2,11 @@ from django.conf import settings
 from django.db import models
 from django.utils.text import slugify
 
+from core.models import AuditMixin
 from core.tenant import TenantManager
 
 
-class Topic(models.Model):
+class Topic(AuditMixin):
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=120, unique=True, blank=True)
     description = models.TextField(blank=True)
@@ -28,7 +29,7 @@ class Topic(models.Model):
         super().save(*args, **kwargs)
 
 
-class ContentSource(models.Model):
+class ContentSource(AuditMixin):
     SOURCE_TYPES = [
         ('rss', 'RSS Feed'),
         ('api', 'API'),
@@ -51,7 +52,7 @@ class ContentSource(models.Model):
         return f"[{self.get_source_type_display()}] {self.name}"
 
 
-class FeedItem(models.Model):
+class FeedItem(AuditMixin):
     topic = models.ForeignKey(Topic, on_delete=models.SET_NULL, null=True, blank=True, related_name='feed_items')
     source = models.ForeignKey(ContentSource, on_delete=models.CASCADE, related_name='feed_items')
     title = models.CharField(max_length=500)
@@ -80,7 +81,7 @@ class FeedItem(models.Model):
         return self.title[:80]
 
 
-class UserActivityProfile(models.Model):
+class UserActivityProfile(AuditMixin):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='trending_profile')
     inferred_keywords = models.JSONField(default=list, blank=True)
     inferred_topic_ids = models.JSONField(default=list, blank=True)
@@ -95,7 +96,7 @@ class UserActivityProfile(models.Model):
         return f"Profile for {self.user.email}"
 
 
-class UserTopicPreference(models.Model):
+class UserTopicPreference(AuditMixin):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='trending_topic_prefs')
     topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='user_preferences')
     is_auto_detected = models.BooleanField(default=False)
@@ -109,7 +110,7 @@ class UserTopicPreference(models.Model):
         return f"{self.user.email} → {self.topic.name}"
 
 
-class UserFeedInteraction(models.Model):
+class UserFeedInteraction(AuditMixin):
     INTERACTION_TYPES = [
         ('saved', 'Saved as Draft'),
         ('bookmarked', 'Bookmarked'),
@@ -176,3 +177,20 @@ class CurrentItem(models.Model):
 
     def __str__(self):
         return f"{self.user.email} → {self.feed_item.title[:60]}"
+
+
+class CurrentsSnapshot(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='currents_snapshots')
+    feed_item = models.ForeignKey(FeedItem, on_delete=models.CASCADE, related_name='currents_snapshots')
+    topic = models.ForeignKey(Topic, on_delete=models.SET_NULL, null=True, blank=True)
+    platforms_data = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    batch_id = models.CharField(max_length=32, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.email} → {self.feed_item.title[:60]}"
+
+

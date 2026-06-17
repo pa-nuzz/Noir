@@ -61,4 +61,9 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/5'),
         'options': {'queue': 'low'},
     },
+    'generate-currents-snapshots': {
+        'task': 'apps.trending.tasks.generate_currents_snapshots',
+        'schedule': crontab(minute='*/5'),
+        'options': {'queue': 'low'},
+    },
 }

@@ -223,7 +223,7 @@
 {% if strategy.status == 'pending_review' %}
 {% url 'creative:strategy_studio' as studio_url %}
 <!-- Approve Modal -->
-{% include "components/modal.html" with id="approveModal" title="Approve Strategy" form_action=studio_url content='<input type="hidden" name="action" value="update_status"><input type="hidden" name="strategy_id" id="approve-strategy-id" value="{{ strategy.id }}"><input type="hidden" name="status" value="approved"><p class="text-sm text-slate-600">Approve "<span id="approve-strategy-name" class="font-semibold">{{ strategy.title }}</span>"? This strategy will be ready for publishing.</p><div class="flex justify-end gap-3 pt-2"><button type="button" onclick="closeModal(&#x27;approveModal&#x27;)" class="!bg-slate-100 !text-slate-700 hover:!bg-slate-200 !bg-none btn-action btn-action-secondary" style="background:none!important;color:#475569!important">Cancel</button><button type="submit" style="background:linear-gradient(135deg,#059669,#10B981)" class="btn-action">Approve</button></div>' %}
+{% include "components/modal.html" with id="approveModal" title="Approve Strategy" form_action=studio_url content='<input type="hidden" name="action" value="update_status"><input type="hidden" name="strategy_id" id="approve-strategy-id" value="{{ strategy.id }}"><input type="hidden" name="status" value="approved"><p class="text-sm text-slate-700">Approve "<span id="approve-strategy-name" class="font-semibold">{{ strategy.title }}</span>"? This strategy will be ready for publishing.</p><div class="flex justify-end gap-3 pt-2"><button type="button" onclick="closeModal(&#x27;approveModal&#x27;)" class="!bg-slate-100 !text-slate-700 hover:!bg-slate-200 !bg-none btn-action btn-action-secondary" style="background:none!important;color:#475569!important">Cancel</button><button type="submit" style="background:linear-gradient(135deg,#059669,#10B981)" class="btn-action">Approve</button></div>' %}
 
 <!-- Reject Modal -->
 {% include "components/modal.html" with id="rejectModal" title="Reject Strategy" form_action=studio_url content='<input type="hidden" name="action" value="update_status"><input type="hidden" name="strategy_id" id="reject-strategy-id" value="{{ strategy.id }}"><input type="hidden" name="status" value="rejected"><p class="text-sm font-semibold text-slate-700">Reject "<span id="reject-strategy-name">{{ strategy.title }}</span>"</p><div><label class="block text-sm font-semibold text-slate-700 mb-1.5">Reason for Rejection</label><textarea name="rejection_reason" rows="3" class="input-field w-full" placeholder="Provide feedback so the creator can improve this strategy..." required></textarea></div><div class="flex justify-end gap-3 pt-2"><button type="button" onclick="closeModal(&#x27;rejectModal&#x27;)" class="!bg-slate-100 !text-slate-700 hover:!bg-slate-200 !bg-none btn-action btn-action-secondary" style="background:none!important;color:#475569!important">Cancel</button><button type="submit" style="background:linear-gradient(135deg,#DC2626,#EF4444)" class="btn-action">Reject</button></div>' %}
@@ -271,7 +271,9 @@ function openRejectModal(id, name) {
 
   // Try to parse the output as JSON
   var parsed;
-  try { parsed = JSON.parse(strategy.output); } catch(e) { return; }
+  try { 
+    parsed = typeof strategy.output === 'string' ? JSON.parse(strategy.output) : strategy.output;
+  } catch(e) { return; }
 
   var rawEl = document.getElementById('strategy-raw-content');
   var structEl = document.getElementById('strategy-structured-content');

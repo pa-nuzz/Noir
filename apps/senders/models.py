@@ -5,12 +5,13 @@ import base64
 import hashlib
 import logging
 
+from core.models import AuditMixin
 from core.tenant import TenantManager
 
 logger = logging.getLogger(__name__)
 
 
-class Sender(models.Model):
+class Sender(AuditMixin):
     objects = TenantManager()
     PROVIDER_CHOICES = [
         ('gmail', 'Gmail / Google Workspace'),
@@ -37,48 +38,16 @@ class Sender(models.Model):
     last_verified_at = models.DateTimeField(null=True, blank=True, help_text='When the SMTP connection was last successfully tested')
     created_at = models.DateTimeField(auto_now_add=True)
 
-    @staticmethod
-    def _normalize_key(raw_key):
-        if not raw_key:
-            return None
-        key = str(raw_key).strip().encode()
-        missing_padding = len(key) % 4
-        if missing_padding:
-            key += b'=' * (4 - missing_padding)
-        try:
-            base64.urlsafe_b64decode(key)
-        except Exception:
-            return None
-        return key
-
-    @staticmethod
-    def _dev_fallback_key():
-        secret = getattr(settings, 'SECRET_KEY', '')
-        if not secret:
-            return None
-        return base64.urlsafe_b64encode(hashlib.sha256(secret.encode('utf-8')).digest())
-
-    def _candidate_fernets(self):
-        raw_keys = [
-            getattr(settings, 'FERNET_KEY', ''),
-        ]
-
-        for raw_key in raw_keys:
-            key = self._normalize_key(raw_key)
-            if key:
-                yield Fernet(key)
-
-        if getattr(settings, 'DEBUG', False):
-            dev_key = self._dev_fallback_key()
-            if dev_key:
-                yield Fernet(dev_key)
-
     def get_fernet(self):
-        """Primary Fernet instance (current FERNET_KEY)."""
-        key = self._normalize_key(getattr(settings, 'FERNET_KEY', ''))
+        from apps.common.crypto import normalize_key
+        key = normalize_key(getattr(settings, 'FERNET_KEY', ''))
         if not key:
             raise ValueError("FERNET_KEY is not set or invalid in settings")
         return Fernet(key)
+
+    def _candidate_fernets(self):
+        from apps.common.crypto import candidate_fernets as _cf
+        return _cf(include_expired=False)
 
     def set_password(self, raw_password):
         """Encrypt and set the SMTP password"""

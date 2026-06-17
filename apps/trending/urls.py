@@ -16,6 +16,7 @@ urlpatterns = [
     path('api/feed/<int:item_id>/dequeue/', views.dequeue_currents, name='dequeue_currents'),
     path('api/feed/<int:item_id>/publish-draft/', views.publish_currents, name='publish_currents'),
     path('api/currents/', views.currents_data, name='currents_data'),
+    path('api/currents/batch-action/', views.currents_batch_action, name='currents_batch_action'),
     path('api/automation/rules/save/', views.save_automation_rules, name='save_automation_rules'),
     path('api/automation/rules/', views.automation_rules_data, name='automation_rules_data'),
     path('api/automation/generate/', views.generate_automation_content, name='generate_automation_content'),

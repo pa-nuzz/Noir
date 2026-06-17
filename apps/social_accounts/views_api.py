@@ -1,3 +1,4 @@
+import json
 import logging
 
 from django.contrib.auth.decorators import login_required
@@ -395,6 +396,59 @@ def post_create(request):
             active_workspace = m.workspace
 
     form_data = {}
+    initial_selected_assets = []
+
+    if request.method == 'GET':
+        media_asset_ids = [asset_id for asset_id in request.GET.getlist('media_asset_ids') if asset_id and asset_id.isdigit()]
+        selected_platform = request.GET.get('platform', '').strip().lower()
+        if selected_platform not in ('facebook', 'instagram', 'twitter', 'linkedin', 'tiktok', 'youtube'):
+            selected_platform = ''
+        account_ids = [account_id for account_id in request.GET.getlist('account_ids') if account_id and account_id.isdigit()]
+
+        if selected_platform:
+            form_data['selected_platform'] = selected_platform
+            if not account_ids:
+                form_data['account_ids'] = [str(a.id) for a in accounts if a.platform == selected_platform]
+
+        if account_ids:
+            form_data['account_ids'] = account_ids
+
+        if media_asset_ids:
+            from apps.media_assets.models import MediaAsset
+            from apps.media_assets.services import MediaService
+            from django.db.models import Q
+
+            media_service = MediaService(request.user)
+            selected_assets = MediaAsset.objects.filter(
+                id__in=media_asset_ids,
+                user=request.user,
+            )
+            if active_workspace:
+                selected_assets = selected_assets.filter(
+                    Q(workspace=active_workspace) | Q(workspace__isnull=True)
+                )
+
+            selected_by_id = {str(asset.id): asset for asset in selected_assets}
+            media_urls = []
+            for asset_id in media_asset_ids:
+                asset = selected_by_id.get(asset_id)
+                if not asset:
+                    continue
+                asset_url = MediaService(request.user).get_asset_url(asset)
+                if asset_url:
+                    media_urls.append(asset_url)
+                initial_selected_assets.append({
+                    'id': asset.id,
+                    'url': asset_url,
+                    'thumbnail_url': MediaService(request.user).get_thumbnail_url(asset) or asset_url,
+                    'title': asset.title or asset.original_filename,
+                    'file_type': asset.file_type,
+                })
+            form_data['media_asset_ids'] = media_asset_ids
+            form_data['media_urls'] = list(dict.fromkeys(media_urls))
+            form_data['scheduled_at'] = request.GET.get('scheduled_at', '')
+            if request.GET.get('publish_now'):
+                form_data['publish_now'] = '1'
 
     if request.method == 'POST':
         account_ids = request.POST.getlist('account_ids')
@@ -433,6 +487,13 @@ def post_create(request):
                 asset_url = media_service.get_asset_url(asset)
                 if asset_url:
                     media_urls.append(asset_url)
+                initial_selected_assets.append({
+                    'id': asset.id,
+                    'url': asset_url,
+                    'thumbnail_url': media_service.get_thumbnail_url(asset) or asset_url,
+                    'title': asset.title or asset.original_filename,
+                    'file_type': asset.file_type,
+                })
 
         # Upload files submitted directly via the form (fallback for AJAX).
         # These are social post attachments only; they are not saved to the IDA media library.
@@ -481,10 +542,15 @@ def post_create(request):
             'media_asset_ids': media_asset_ids,
         }
 
+    form_data_json = json.dumps(form_data)
+    initial_selected_assets_json = json.dumps(initial_selected_assets)
+
     return render(request, 'social_accounts/post_form.html', {
         'accounts': accounts,
         'grouped_accounts': grouped_accounts,
         'form_data': form_data,
+        'form_data_json': form_data_json,
+        'initial_selected_assets_json': initial_selected_assets_json,
     })
 
 

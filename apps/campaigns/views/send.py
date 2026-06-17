@@ -143,8 +143,8 @@ def set_ab_winner(request):
         data = json.loads(request.body)
         campaign_id = int(data.get('campaign_id', 0))
         variant_id = int(data.get('variant_id', 0))
-        campaign = Campaign.objects.get(pk=campaign_id, user=request.user)
-        variant = CampaignVariant.objects.get(pk=variant_id, campaign=campaign)
+        campaign = get_object_or_404(filter_by_context(request, Campaign.objects.all()), id=campaign_id)
+        variant = get_object_or_404(CampaignVariant.objects.all(), pk=variant_id, campaign=campaign)
         campaign.winner_variant = variant
         campaign.ab_test_status = 'completed'
         campaign.save(update_fields=['winner_variant', 'ab_test_status', 'updated_at'])

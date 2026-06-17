@@ -2,8 +2,10 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 
+from core.models import AuditMixin
 
-class Notification(models.Model):
+
+class Notification(AuditMixin):
     """User notifications for various system events."""
 
     TYPE_CHOICES = [

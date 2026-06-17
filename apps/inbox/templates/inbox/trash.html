@@ -3,20 +3,20 @@
 {% block page_title %}Trash{% endblock %}
 {% block content %}
 <div class="page-shell max-w-none space-y-6">
-  <div class="flex items-center justify-between gap-4">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div>
       <p class="eyebrow">AI Email Agent</p>
       <h1 class="page-title mt-2">Trash</h1>
       <p class="page-lead">Deleted messages are stored here for recovery</p>
     </div>
-    <div class="flex items-center gap-3">
-      <select onchange="if(this.value) window.location.href='?inbox_id='+this.value" class="appearance-none bg-white border border-slate-200 rounded-xl px-4 py-2 pr-8 text-sm font-semibold text-slate-700">
+    <div class="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
+      <select onchange="if(this.value) window.location.href='?inbox_id='+this.value" class="appearance-none bg-white border border-slate-200 rounded-xl px-4 py-2 pr-8 text-sm font-semibold text-slate-700 w-full sm:w-auto">
         {% for ib in inboxes %}
         <option value="{{ ib.id }}" {% if selected_inbox and selected_inbox.id == ib.id %}selected{% endif %}>{{ ib.email_address }}</option>
         {% endfor %}
       </select>
       {% url 'inbox:dashboard' as inbox_dashboard_url %}
-      {% include "components/button.html" with label="Back to Inbox" variant="secondary" size="sm" href=inbox_dashboard_url %}
+      {% include "components/button.html" with label="Back to Inbox" variant="secondary" size="sm" href=inbox_dashboard_url class="w-full sm:w-auto justify-center" %}
     </div>
   </div>
 
@@ -24,21 +24,21 @@
     {% if deleted_messages %}
     <div class="divide-y divide-slate-100">
       {% for msg in deleted_messages %}
-      <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50/60 transition-colors">
+      <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3.5 hover:bg-slate-50/60 transition-colors">
         <div class="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-xs font-bold text-red-600 shrink-0">
           {{ msg.from_name|default:msg.from_email|first|upper }}
         </div>
-        <div class="flex-1 min-w-0">
-          <div class="flex items-baseline gap-3">
+        <div class="flex-1 min-w-0 w-full">
+          <div class="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
             <span class="text-sm font-semibold text-slate-900 truncate">{{ msg.from_name|default:msg.from_email }}</span>
             <span class="text-sm text-slate-700 truncate flex-1">{{ msg.subject|default:'(No subject)' }}</span>
           </div>
           <p class="text-xs text-slate-400 truncate mt-0.5">{{ msg.body_text|default:''|truncatechars:100 }}</p>
         </div>
-        <div class="flex items-center gap-2 shrink-0">
-          <form method="post" action="{% url 'inbox:message_restore' msg.id %}" class="inline">
+        <div class="flex items-center justify-end gap-2 shrink-0 w-full sm:w-auto">
+          <form method="post" action="{% url 'inbox:message_restore' msg.id %}" class="inline" onsubmit="return confirm('Restore this message to the inbox?')">
             {% csrf_token %}
-            {% include 'campaigns/_button.html' with type='secondary' text='Restore' button_type='submit' data_loading='Restoring...' extra_class='text-xs font-semibold text-emerald-600 hover:text-emerald-800 transition-colors cursor-pointer' %}
+            <button type="submit" class="btn-action btn-action-secondary btn-sm text-xs font-semibold text-emerald-600 hover:text-emerald-800 transition-colors cursor-pointer">Restore</button>
           </form>
           <a href="{% url 'inbox:message_detail' msg.id %}" class="text-xs font-semibold text-primary hover:text-primary-hover transition-colors">View</a>
         </div>
@@ -52,7 +52,7 @@
   </div>
 
   {% if page_obj and page_obj.paginator.num_pages > 1 %}
-  <div class="flex items-center justify-between pt-4">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4">
     <span class="text-xs text-slate-400">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
     <div class="flex gap-2">
       {% if page_obj.has_previous %}

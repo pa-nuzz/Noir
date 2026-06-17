@@ -625,13 +625,14 @@ tbody tr {
 }
 
 .btn-action-primary {
-  background: var(--primary);
+  background: linear-gradient(135deg, #6D28D9, #06B6D4);
   color: #fff;
+  border: none;
   box-shadow: 0 4px 12px var(--primary-glow);
 }
 
 .btn-action-primary:hover {
-  background: var(--primary-hover);
+  background: linear-gradient(135deg, #5B21B6, #0891B2);
   transform: translateY(-1px);
   box-shadow: 0 8px 16px var(--primary-glow);
 }
@@ -719,3 +720,11 @@ tbody tr {
     transition: none !important;
   }
 }
+
+/* Dynamic Primary Utilities */
+.bg-primary { background-color: var(--primary) !important; }
+.text-primary { color: var(--primary) !important; }
+.hover\:bg-primary-hover:hover { background-color: var(--primary-hover) !important; }
+.border-primary { border-color: var(--primary) !important; }
+.ring-primary\/20 { --tw-ring-color: rgba(109, 40, 217, 0.2); }
+.focus\:ring-primary\/30:focus { --tw-ring-color: rgba(109, 40, 217, 0.3); }

@@ -92,7 +92,7 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_NAME = config('SESSION_COOKIE_NAME', default='dia_session_v2')
 SESSION_EXPIRE_AT_BROWSER_CLOSE = config('SESSION_EXPIRE_AT_BROWSER_CLOSE', default=True, cast=bool)
 SESSION_COOKIE_AGE = config('SESSION_COOKIE_AGE', default=60 * 60 * 8, cast=int)
-SESSION_SAVE_EVERY_REQUEST = config('SESSION_SAVE_EVERY_REQUEST', default=True, cast=bool)
+SESSION_SAVE_EVERY_REQUEST = config('SESSION_SAVE_EVERY_REQUEST', default=False, cast=bool)
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = 'Lax'
 X_FRAME_OPTIONS = 'DENY'
@@ -344,6 +344,9 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Logging
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -351,7 +354,7 @@ LOGGING = {
         'console': {'class': 'logging.StreamHandler'},
         'file': {
             'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs' / 'django.log',
+            'filename': str(LOG_DIR / 'django.log'),
             'level': 'WARNING',
         },
     },
@@ -388,10 +391,17 @@ FERNET_KEY = FERNET_KEY.strip()
 ML_MODEL_PATH = Path(config('ML_MODEL_PATH', default=str(BASE_DIR / 'models_ml' / 'spam_model.pkl')))
 ML_VECTORIZER_PATH = Path(config('ML_VECTORIZER_PATH', default=str(BASE_DIR / 'models_ml' / 'tfidf_vectorizer.pkl')))
 
-# LLM (OpenAI-compatible)
-LLM_API_KEY = config('LLM_API_KEY', default='')
+# Email/intelligence LLM provider.
+# Set LLM_BASE_URL/LLM_MODEL to Gemini values in local env while the app uses Gemini.
+LLM_API_KEY = config('LLM_API_KEY', default=config('GEMINI_API_KEY', default=''))
 LLM_BASE_URL = config('LLM_BASE_URL', default='https://api.openai.com/v1')
 LLM_MODEL = config('LLM_MODEL', default='gpt-4o')
+
+# Backward compatibility for older code paths.
+GEMINI_API_KEY = config('GEMINI_API_KEY', default=LLM_API_KEY)
+
+# DeepSeek AI
+DEEPSEEK_API_KEY = config('DEEPSEEK_API_KEY', default='')
 
 # Silencing django-ratelimit strict cache checks for development
 SILENCED_SYSTEM_CHECKS = ['django_ratelimit.E003']
@@ -476,6 +486,16 @@ DIA_S3_SECRET_KEY = config('DIA_S3_SECRET_KEY', default='')
 DIA_S3_PATH_PREFIX = config('DIA_S3_PATH_PREFIX', default='')
 DIA_S3_PUBLIC_BASE_URL = config('DIA_S3_PUBLIC_BASE_URL', default='')
 DIA_S3_USE_PATH_STYLE = config('DIA_S3_USE_PATH_STYLE', default='True')
+
+# MinIO Configuration
+MINIO_ENDPOINT_URL = config('MINIO_ENDPOINT_URL', default='')
+MINIO_REGION = config('MINIO_REGION', default='us-east-1')
+MINIO_BUCKET = config('MINIO_BUCKET', default='')
+MINIO_ACCESS_KEY = config('MINIO_ACCESS_KEY', default='')
+MINIO_SECRET_KEY = config('MINIO_SECRET_KEY', default='')
+MINIO_PATH_PREFIX = config('MINIO_PATH_PREFIX', default='')
+MINIO_PUBLIC_BASE_URL = config('MINIO_PUBLIC_BASE_URL', default='')
+MINIO_USE_PATH_STYLE = config('MINIO_USE_PATH_STYLE', default='True')
 
 # DRF
 REST_FRAMEWORK = {

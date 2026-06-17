@@ -28,7 +28,8 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "message_id",
-                    models.CharField(help_text="Provider message ID", max_length=255),
+                    models.CharField(
+                        help_text="Provider message ID", max_length=255),
                 ),
                 ("from_email", models.EmailField(max_length=254)),
                 ("from_name", models.CharField(blank=True, max_length=255)),
@@ -47,7 +48,8 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "is_deleted",
-                    models.BooleanField(default=False, help_text="Soft delete flag"),
+                    models.BooleanField(
+                        default=False, help_text="Soft delete flag"),
                 ),
                 ("deleted_at", models.DateTimeField(blank=True, null=True)),
                 (
@@ -84,7 +86,8 @@ class Migration(migrations.Migration):
                 ("subject", models.CharField(blank=True, max_length=998)),
                 (
                     "snippet",
-                    models.TextField(blank=True, help_text="Latest message preview"),
+                    models.TextField(
+                        blank=True, help_text="Latest message preview"),
                 ),
                 (
                     "participants",
@@ -149,7 +152,8 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "edited_body",
-                    models.TextField(blank=True, help_text="Human-edited version"),
+                    models.TextField(
+                        blank=True, help_text="Human-edited version"),
                 ),
                 (
                     "final_body",

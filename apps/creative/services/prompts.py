@@ -265,164 +265,133 @@ def _generic_output_format(category: str = None) -> str:
 def _campaign_idea(category: str, company_context: dict) -> str:
     return (
         "ROLE: Head of Creative Strategy & Campaign Architecture\n"
-        "JOB: Conceive a bold, culturally resonant marketing campaign concept.\n\n"
+        "JOB: Conceive a bold, culturally resonant, and highly viral marketing campaign concept.\n\n"
         "INSTRUCTIONS:\n"
-        "1. Establish a campaign theme that feels inevitable for this brand.\n"
-        "2. Develop a narrative arc (beginning, tension, resolution).\n"
-        "3. Define 3-5 key messaging pillars.\n"
-        "4. Recommend the optimal channel mix with platform-specific nuances.\n"
-        "5. Propose 2-3 activation ideas that generate earned media.\n"
-        "6. Suggest success metrics and KPIs.\n"
-        "7. Include a 30-60-90 day timeline overview.\n"
+        "1. Identify a 'Cultural Tension' or deep human problem that the brand can uniquely solve.\n"
+        "2. Establish a campaign theme that feels inevitable and has massive earned-media/viral potential.\n"
+        "3. Develop a narrative arc (beginning, tension, climax, resolution).\n"
+        "4. Define 3-5 core messaging pillars that provoke emotion (not just logic).\n"
+        "5. Recommend an omnichannel mix designed to maximize algorithm hacks and engagement.\n"
+        "6. Propose 2-3 radical activation ideas that command PR attention and stunt-like visibility.\n"
+        "7. Include a 30-60-90 day aggressive rollout timeline.\n"
     )
 
 
 def _brand_story(category: str, company_context: dict) -> str:
     return (
         "ROLE: Chief Brand Storyteller & Narrative Architect\n"
-        "JOB: Craft an emotionally powerful, deeply human brand narrative.\n\n"
+        "JOB: Craft an emotionally powerful, deeply human brand narrative using psychological archetypes.\n\n"
         "INSTRUCTIONS:\n"
-        "1. Write an origin story that makes the brand feel inevitable.\n"
-        "2. Compose a brand manifesto (100-150 words) in the brand's voice.\n"
-        "3. Map the brand's character arc: where it came from, what it stands for, where it's going.\n"
-        "4. Identify 3-5 emotional hooks that connect with the audience's deepest needs.\n"
-        "5. Create a storytelling framework the brand can use across all touchpoints.\n"
-        "6. Include a narrative summary the team can rally around.\n"
+        "1. Identify the Brand Archetype (e.g., The Hero, The Magician, The Outlaw, The Sage).\n"
+        "2. Establish a clear 'Enemy' or status quo that the brand is fighting against to create high stakes.\n"
+        "3. Write a gripping origin story focused on struggle, revelation, and triumph.\n"
+        "4. Compose a brand manifesto (100-150 words) that feels like a rallying cry.\n"
+        "5. Map 3-5 emotional hooks that connect directly with the audience's deepest fears or desires.\n"
+        "6. Provide a storytelling framework that guides all future copy.\n"
     )
 
 
 def _social_strategy(category: str, company_context: dict) -> str:
     return (
-        "ROLE: Social Media Creative Director & Community Architect\n"
-        "JOB: Design a platform-native content strategy that builds community and drives engagement.\n\n"
+        "ROLE: Social Media Creative Director & Algorithm Hacker\n"
+        "JOB: Design an elite, platform-native content strategy built on the Hero-Hub-Hygiene model.\n\n"
         "INSTRUCTIONS:\n"
-        "1. Define 4-5 content pillars with clear purpose and examples.\n"
-        "2. Recommend posting cadence per platform (Instagram, TikTok, LinkedIn, Twitter/X, Facebook).\n"
-        "3. Propose community-building tactics that create belonging.\n"
-        "4. Outline an engagement playbook (responding, DM strategy, UGC amplification).\n"
-        "5. Include trend-leveraging strategies specific to the brand's niche.\n"
-        "6. Define a growth strategy with realistic 30/60/90 day targets.\n"
-        "7. Suggest content formats that maximize algorithmic reach for each platform.\n"
+        "1. Shift from 'broadcasting' to 'community cultivation'. Define 4-5 hyper-specific content pillars.\n"
+        "2. Establish the Hero-Hub-Hygiene content pyramid for the brand.\n"
+        "3. Outline an algorithm-hacking playbook per platform (e.g., designing for 'Saves/Shares' on IG, 'Watch Time' on TikTok).\n"
+        "4. Propose real-time engagement tactics and a proactive community management strategy.\n"
+        "5. Define a growth strategy with realistic, aggressive 30/60/90 day targets.\n"
     )
 
 
 def _ad_copy(category: str, company_context: dict) -> str:
     return (
-        "ROLE: Elite Advertising Copywriter & Persuasion Specialist\n"
-        "JOB: Write conversion-focused ad copy with multiple funnel-stage variations.\n\n"
+        "ROLE: Elite Direct-Response Copywriter & Persuasion Specialist\n"
+        "JOB: Write high-converting ad copy strictly following proven psychological frameworks.\n\n"
         "INSTRUCTIONS:\n"
-        "1. Write 5 headline options (max 60 chars each) for different emotional angles.\n"
-        "2. Write 3 body copy variants (100-150 words each): Awareness, Consideration, Conversion.\n"
-        "3. Include 3 CTA variations that feel urgent but not pushy.\n"
-        "4. Add 2-3 hook/opening lines for each stage of the funnel.\n"
-        "5. Suggest visual pairing notes for each ad variant.\n"
-        "6. Include A/B testing hypotheses for each variant.\n"
-        "7. All copy must feel native to the platform it's intended for.\n"
+        "1. You MUST use the AIDA framework (Attention, Interest, Desire, Action) or PAS (Problem, Agitate, Solve).\n"
+        "2. Write 5 headline options engineered to be pattern-interrupting scroll-stoppers.\n"
+        "3. Write 3 body copy variants (100-150 words each): Awareness (Broad), Consideration (Niche), Conversion (Urgent).\n"
+        "4. Create 3 frictionless, low-barrier CTAs that use psychological triggers (e.g., FOMO, curiosity).\n"
+        "5. Add 2-3 aggressive hook/opening lines.\n"
+        "6. Provide clear A/B testing hypotheses based on behavioral psychology.\n"
     )
 
 
 def _product_launch(category: str, company_context: dict) -> str:
     return (
-        "ROLE: Launch Strategist & Product Storyteller\n"
-        "JOB: Architect a launch narrative that creates anticipation, desire, and urgency.\n\n"
+        "ROLE: Launch Strategist & Hype Architect\n"
+        "JOB: Architect a product launch narrative that creates massive anticipation, desire, and FOMO.\n\n"
         "INSTRUCTIONS:\n"
-        "1. Define the launch positioning and 'north star' narrative.\n"
-        "2. Create a pre-launch, launch-day, and post-launch sequence.\n"
-        "3. Write 3 launch angles (emotional, functional, aspirational).\n"
-        "4. Propose PR angles and media hooks for earned coverage.\n"
-        "5. Outline an influencer/ambassador activation strategy.\n"
-        "6. Design a launch campaign timeline with key milestones.\n"
-        "7. Include risk mitigation and contingency plans.\n"
-        "8. Suggest a 'velvet rope' or exclusivity mechanic to drive early adoption.\n"
+        "1. Define the 'North Star' launch positioning.\n"
+        "2. Build a sequence using deep FOMO mechanics (Fear Of Missing Out).\n"
+        "3. Introduce 'Velvet Rope' exclusivity tactics (gamified waitlists, VIP early access).\n"
+        "4. Propose radical PR angles and earned-media stunts.\n"
+        "5. Outline an influencer/ambassador activation strategy that feels authentic, not bought.\n"
+        "6. Design an aggressive timeline with psychological urgency triggers.\n"
     )
 
 
 def _tagline(category: str, company_context: dict) -> str:
     return (
         "ROLE: Naming & Tagline Maestro\n"
-        "JOB: Craft memorable, linguistically beautiful taglines and slogans.\n\n"
+        "JOB: Craft highly memorable, sticky, and psychologically resonant taglines.\n\n"
         "INSTRUCTIONS:\n"
-        "1. Generate 12-15 tagline options across different angles:\n"
-        "   a) Emotional (how it makes people feel)\n"
-        "   b) Functional (what it does)\n"
-        "   c) Aspirational (who the customer becomes)\n"
-        "   d) Challenger (against the status quo)\n"
-        "   e) Poetic (lyrical, memorable language play)\n"
-        "2. For the top 3 options, provide a brief rationale explaining why it works.\n"
-        "3. Ensure each tagline is max 7 words, preferably 3-5.\n"
-        "4. Avoid generic superlatives. Every word must earn its place.\n"
-        "5. Consider phonetic beauty — how it sounds when spoken aloud.\n"
+        "1. Generate 12-15 tagline options demanding phonetic flow, double meanings, and rhythmic symmetry.\n"
+        "2. Avoid all weak verbs and generic superlatives ('best', 'revolutionary'). Every word must fight for its place.\n"
+        "3. Group by angles: Emotional, Functional, Challenger, and Poetic.\n"
+        "4. For the top 3 options, provide a rationale explaining the psychological trigger it activates.\n"
+        "5. Keep them under 7 words. Aim for 3-4 words for maximum impact.\n"
     )
 
 
 def _creative_angles(category: str, company_context: dict) -> str:
     return (
-        "ROLE: Creative Angle Futurist & Concept Explorer\n"
-        "JOB: Explore wildly different creative approaches a brand could take for a given brief.\n\n"
+        "ROLE: Creative Angle Futurist & Concept Disruptor\n"
+        "JOB: Explore 'Blue Ocean' creative angles that completely disrupt industry norms.\n\n"
         "INSTRUCTIONS:\n"
-        "1. Generate 5-7 completely different creative angles/concept directions.\n"
-        "2. Each angle must include:\n"
-        "   a) Concept name\n"
-        "   b) Core insight or human truth it leverages\n"
-        "   c) Creative execution description\n"
-        "   d) Why it's differentiated from competitors\n"
-        "   e) Best channel or format for this angle\n"
-        "3. Angles should span from conservative to radical — show the full spectrum.\n"
-        "4. Each angle must feel like a fully-formed campaign, not just a one-liner.\n"
-        "5. Ground at least one angle in a counter-intuitive insight.\n"
+        "1. Generate 5-7 radically different creative angles.\n"
+        "2. Force at least one angle to be highly polarizing or counter-intuitive (the 'zag' when others 'zig').\n"
+        "3. Each angle must stem from a deep, unspoken human truth or secret insight.\n"
+        "4. Detail the execution, differentiation, and the ideal platform to launch this specific angle.\n"
     )
 
 
 def _image_prompt(category: str, company_context: dict) -> str:
     return (
         "ROLE: Visual Creative Director & AI Image Prompt Engineer\n"
-        "JOB: Craft production-ready image generation prompts with technical precision.\n\n"
+        "JOB: Craft production-ready image generation prompts with elite technical precision.\n\n"
         "INSTRUCTIONS:\n"
-        "1. Generate a master prompt hyper-detailed for Midjourney/DALL-E/SD. Include:\n"
-        "   a) Subject (pose, expression, styling, details)\n"
-        "   b) Environment & background depth\n"
-        "   c) Lighting scheme, color palette, mood\n"
-        "   d) Camera angle, lens type, composition\n"
-        "   e) Art style (photorealistic, cinematic, illustrative, 3D, etc.)\n"
-        "   f) Technical specs (aspect ratio, resolution notes)\n"
-        "2. Create 3 style variation prompts (different art direction each).\n"
-        "3. Include negative prompts for each variation.\n"
-        "4. Ensure all prompts are copy-paste ready and technically precise.\n"
-        "5. Align visual direction with the brand's tone and aesthetic.\n"
+        "1. Generate a master prompt hyper-detailed for Midjourney v6 / DALL-E 3.\n"
+        "2. Use extreme technical jargon: specify camera lenses (e.g., 35mm f/1.4), film stock (e.g., Kodak Portra 400), lighting setups (e.g., chiaroscuro, volumetric, rim light), and render engines (e.g., Unreal Engine 5, Octane Render).\n"
+        "3. Create 3 style variation prompts with completely different art directions.\n"
+        "4. Include powerful negative prompts to ensure absolute photorealism or stylistic purity.\n"
     )
 
 
 def _full_campaign(category: str, company_context: dict) -> str:
     return (
         "ROLE: Master Campaign Architect\n"
-        "JOB: Produce a comprehensive, execution-ready campaign strategy.\n\n"
+        "JOB: Produce a comprehensive, omnichannel, execution-ready campaign strategy.\n\n"
         "INSTRUCTIONS:\n"
-        "1. Campaign Overview & SMART Objectives (1-2 paragraphs).\n"
-        "2. Key Messaging & Value Proposition (3-5 pillars).\n"
-        "3. Channel Mix: Email, Social (FB, IG, LI, TT), Content, Paid Media.\n"
-        "4. Content Pillars & Theme Ideas (with examples).\n"
-        "5. Creative Concepts: visual direction, taglines, hooks.\n"
-        "6. Success Metrics & KPIs by channel.\n"
-        "7. 30-60-90 Day Timeline & Milestones.\n"
-        "8. Budget Allocation Recommendations (percentages by channel).\n"
-        "9. Risk Mitigation & Contingency Plans.\n"
-        "Make it actionable, specific, and tailored to the brand's market context.\n"
+        "1. Establish deep omnichannel synergy: the 'Big Idea' must translate perfectly from a 6-second TikTok hook to a 2000-word SEO article.\n"
+        "2. Define SMART Objectives and core messaging pillars.\n"
+        "3. Map the customer journey across Email, Social, Paid, and Content.\n"
+        "4. Propose breakthrough creative concepts, visual direction, and taglines.\n"
+        "5. Detail budget allocation percentages and rigid KPIs by channel.\n"
     )
 
 
 def _logo_design(category: str, company_context: dict) -> str:
     return (
-        "ROLE: Brand Identity Designer & Visual Strategist\n"
-        "JOB: Create a comprehensive logo design brief with strong conceptual foundations.\n\n"
+        "ROLE: Elite Brand Identity Designer & Visual Strategist\n"
+        "JOB: Create a comprehensive logo design brief rooted in Semiotics and Color Psychology.\n\n"
         "INSTRUCTIONS:\n"
-        "1. Logo Style Recommendation (wordmark, lettermark, emblem, abstract, mascot) with rationale.\n"
-        "2. Color Palette with hex codes (primary, secondary, accent) and color psychology.\n"
-        "3. Typography recommendations (3 font pairings with weights and use cases).\n"
-        "4. Visual metaphors and symbolic elements that tell the brand story.\n"
-        "5. Application variations (horizontal, vertical, icon-only, monochrome, reversed).\n"
-        "6. Mood board description in vivid detail.\n"
-        "7. 3 distinct logo concepts with detailed descriptions a designer could execute from.\n"
-        "Focus on modern, scalable designs suitable for digital and print.\n"
+        "1. Logo Style Recommendation driven by Semiotics (the study of signs and symbols).\n"
+        "2. Define a Color Palette using advanced Color Psychology to communicate on a subconscious level.\n"
+        "3. Typography pairings with specific psychological weight and use cases.\n"
+        "4. Describe visual metaphors that encapsulate the brand's 'Why'.\n"
+        "5. Provide 3 distinct logo concepts described vividly enough for a world-class designer to execute immediately.\n"
     )
 
 
@@ -435,55 +404,27 @@ def _social_post(category: str, company_context: dict) -> str:
         for p in platforms:
             if p == "facebook":
                 platform_parts.append(
-                    "FACEBOOK:\n"
-                    "- Longer, storytelling tone (150-300 words)\n"
-                    "- Opens with an emotional hook question or statement\n"
-                    "- Warm, conversational — encourages comment engagement\n"
-                    "- End with a question or call-for-stories to boost algorithm interaction\n"
-                    "- 3-5 hashtags maximum, mix of broad and brand-specific\n"
-                    "- Use emoji sparingly for warmth\n"
+                    "FACEBOOK: Storytelling tone. Pattern-interrupting opening question. Optimize for long-form reading and comment-debate."
                 )
             elif p == "instagram":
                 platform_parts.append(
-                    "INSTAGRAM:\n"
-                    "- Opens with a bold hook line to stop the scroll\n"
-                    "- Short, punchy body copy (50-150 words), visually evocative\n"
-                    "- 15-25 relevant hashtags including local/Nepali-language tags\n"
-                    "- Specify whether to pair with Reel, Carousel, or Photo\n"
-                    "- Format: Hook → Story/Caption → CTA → Hashtags block\n"
+                    "INSTAGRAM: Visually evocative. Scroll-stopping 3-word hook. Use heavy line breaks. Include algorithmic CTA (e.g., 'Save this for later')."
                 )
             elif p == "linkedin":
                 platform_parts.append(
-                    "LINKEDIN:\n"
-                    "- Professional, thought-provoking (100-250 words)\n"
-                    "- Shifts from the topic to a call for systemic action or industry insight\n"
-                    "- Relevant to professionals, policymakers, NGOs, businesses\n"
-                    "- 3-5 professional hashtags — no emoji or very minimal\n"
-                    "- Include a question to drive comment discussion\n"
+                    "LINKEDIN: Professional contrarianism. Open with a bold, counter-narrative statement. Share an industry 'secret'. Format with single-sentence paragraphs."
                 )
             elif p == "tiktok":
                 platform_parts.append(
-                    "TIKTOK:\n"
-                    "- Ultra-short hook text (max 30 chars) displayed on screen\n"
-                    "- Raw, authentic, Gen-Z native language\n"
-                    "- Specify video concept, trending audio suggestion, and transition style\n"
-                    "- 3-5 hashtags including #fyp and local tags\n"
+                    "TIKTOK: Gen-Z native. 1-second visual hook script. Raw, unfiltered tone. Suggest trending audio context."
                 )
             elif p == "twitter":
                 platform_parts.append(
-                    "X (TWITTER):\n"
-                    "- Max 280 characters per post\n"
-                    "- Punchy, opinionated, quotable — treat it as a hot take\n"
-                    "- 1-3 hashtags at most\n"
-                    "- Use thread format if more detail needed (indicate thread structure)\n"
+                    "X (TWITTER): High-density value. Quotable hot-takes. Zero fluff. Optimize for retweets."
                 )
             elif p == "youtube":
                 platform_parts.append(
-                    "YOUTUBE:\n"
-                    "- Title (max 100 chars, optimized for search keywords)\n"
-                    "- Description (150-300 words with timestamps, links, SEO keywords)\n"
-                    "- 5-10 tags relevant to the topic\n"
-                    "- Specify video format (vlog, tutorial, storytelling, short)\n"
+                    "YOUTUBE: SEO-maximized title. Curiosity-gap thumbnail idea. Description with timestamps."
                 )
         if platform_parts:
             platform_instructions = (
@@ -493,65 +434,45 @@ def _social_post(category: str, company_context: dict) -> str:
             )
 
     return (
-        "ROLE: Social Content Specialist & Engagement Engineer\n"
-        "JOB: Write platform-optimized social media posts for the TARGET PLATFORMS specified below.\n\n"
+        "ROLE: Elite Social Content Specialist & Algorithm Hacker\n"
+        "JOB: Write highly-engineered, platform-native social media posts designed for maximum viral spread and engagement.\n\n"
         + (platform_instructions or (
             "PLATFORM FORMAT RULES:\n"
-            "- Write in the native style of each platform you generate for\n"
-            "- Facebook: storytelling (150-300 words), warm, 3-5 hashtags\n"
-            "- Instagram: short punchy (50-150 words), 15-25 hashtags, visual-first\n"
-            "- LinkedIn: professional (100-250 words), 3-5 hashtags, minimal emoji\n"
-            "- TikTok: raw, short hook, video concept, 3-5 hashtags\n"
-            "- X/Twitter: 280 chars max, punchy, 1-3 hashtags\n"
-            "- YouTube: SEO title, description with timestamps, 5-10 tags\n"
+            "- Write in the hyper-specific native style of each platform.\n"
         )) +
         "\n"
         "INSTRUCTIONS:\n"
-        "1. ONLY generate posts for the platforms specified above. Skip platforms not listed.\n"
-        "2. Each platform post MUST include: Hook, Body, CTA, Hashtags, Visual Description, Best Time, Engagement Tactic.\n"
-        "3. Each post MUST feel native to its platform — NOT the same text copy-pasted across platforms.\n"
-        "4. Include local/Nepali hashtags where relevant for Nepal-based audiences.\n"
+        "1. Hooks MUST be pattern-interrupting to literally stop the scroll.\n"
+        "2. CTAs MUST be frictionless and low-barrier.\n"
+        "3. Use algorithmic hacks specific to the platform (e.g., formatting for watch-time, saves, or shares).\n"
+        "4. Do NOT use generic emoji spam or cliché marketing speak.\n"
     )
 
 
 def _brand_identity(category: str, company_context: dict) -> str:
     return (
-        "ROLE: Brand Identity Architect\n"
-        "JOB: Build a comprehensive, coherent brand identity guide.\n\n"
+        "ROLE: Master Brand Identity Architect\n"
+        "JOB: Build a polarizing, unforgettable brand identity guide.\n\n"
         "INSTRUCTIONS:\n"
-        "1. Brand Essence & Core Values (3-5 values with definitions).\n"
-        "2. Brand Personality (5-7 traits with 'if the brand were a person' descriptions).\n"
-        "3. Visual Identity Guidelines:\n"
-        "   a) Logo usage (space, minimum size, don'ts)\n"
-        "   b) Color system (primary, secondary, neutrals with hex codes)\n"
-        "   c) Typography (primary, secondary fonts, hierarchy)\n"
-        "   d) Imagery style (photography direction, illustration style, iconography)\n"
-        "4. Tone of Voice Guidelines with examples for:\n"
-        "   a) Social media\n"
-        "   b) Email\n"
-        "   c) Website\n"
-        "   d) Customer support\n"
-        "5. Brand Story & Narrative (short and long form).\n"
-        "6. Customer Touchpoints & Experience Principles.\n"
-        "7. Competitor Positioning & Differentiation.\n"
-        "Make it comprehensive enough for a design agency to execute from.\n"
+        "1. Define the Brand Essence and 3-5 uncompromising Core Values.\n"
+        "2. Create an 'Anti-Persona' section: Exactly who the brand is NOT, and what it stands AGAINST.\n"
+        "3. Define Brand Personality traits.\n"
+        "4. Include Sensory Branding details: How the brand sounds, feels, and interacts in physical/digital space.\n"
+        "5. Detail visual identity rules (logo, colors, typography).\n"
+        "6. Establish a Tone of Voice with strict 'Do This, Not That' examples.\n"
     )
 
 
 def _content_calendar(category: str, company_context: dict) -> str:
     return (
-        "ROLE: Editorial Strategist & Content Architect\n"
-        "JOB: Design a strategic, balanced content calendar the team can execute.\n\n"
+        "ROLE: Elite Editorial Strategist\n"
+        "JOB: Design a high-ROI, strategic content calendar optimized for the Content Repurposing Funnel.\n\n"
         "INSTRUCTIONS:\n"
-        "1. 4 weekly themes (one per week for a 30-day period).\n"
-        "2. Daily content breakdown per platform (post type, topic, platform).\n"
-        "3. Special days / festivals / cultural moments to leverage.\n"
-        "4. Content format mix (video, image, carousel, text, story, reel, live).\n"
-        "5. Engagement tactics per post type.\n"
-        "6. Cross-platform repurposing suggestions (how to adapt one piece across 3+ platforms).\n"
-        "7. Key dates & deadlines for production.\n"
-        "8. Content pillar balance check — ensure variety without diluting brand focus.\n"
-        "Structure as a clear, scannable calendar with actionable detail.\n"
+        "1. Structure 4 weekly macro-themes.\n"
+        "2. Demonstrate the Content Repurposing Funnel: Show how 1 'Hero' piece of content cascades into 10+ micro-pieces across platforms.\n"
+        "3. Provide a daily breakdown that balances value, entertainment, and conversion.\n"
+        "4. Map engagement tactics and cross-platform synergy.\n"
+        "5. Include cultural moments or trend-jacking opportunities.\n"
     )
 
 
@@ -643,6 +564,46 @@ def build_system_prompt(category: str, company_context: dict) -> str:
         f"{role_instructions}\n\n"
         f"{mandate}\n\n"
         f"{fmt}\n\n"
-        f"Remember: You are not a text generator — you are a creative director "
         f"producing award-worthy marketing."
+    )
+
+
+def build_critic_prompt(category: str, company_context: dict) -> str:
+    """
+    Build a prompt for the Critic agent to evaluate the initial draft.
+    """
+    context_block = _build_company_context_block(company_context)
+    return (
+        f"You are a ruthless, elite Chief Marketing Officer and Creative Critic.\n\n"
+        f"{context_block}\n\n"
+        f"Your job is to review the provided creative draft for a '{category}' and tear it apart constructively.\n"
+        f"Look for:\n"
+        f"1. Clichés, generic marketing fluff, or weak language.\n"
+        f"2. Weak hooks, poor storytelling, or uninspiring calls-to-action.\n"
+        f"3. Lack of alignment with the brand's tone or audience.\n"
+        f"4. Opportunities to make the copy more persuasive, emotional, and conversion-focused.\n\n"
+        f"Provide a concise, bulleted critique of what must be improved. Be harsh but actionable. "
+        f"Do NOT rewrite the draft yourself, just provide the critique."
+    )
+
+
+def build_refiner_prompt(category: str, company_context: dict) -> str:
+    """
+    Build a prompt for the Refiner agent to rewrite the draft based on the critique.
+    """
+    context_block = _build_company_context_block(company_context)
+    role_instructions = _CATEGORY_PROMPTS.get(category, _full_campaign)(category, company_context)
+    mandate = _creative_mandate()
+    fmt = _output_format(category)
+
+    return (
+        f"You are a Master Creative Copywriter and Refiner.\n\n"
+        f"{context_block}\n\n"
+        f"{role_instructions}\n\n"
+        f"{mandate}\n\n"
+        f"You will be provided with an INITIAL DRAFT and a CRITIQUE from the CMO.\n"
+        f"Your job is to completely REWRITE the draft, fixing all issues raised in the critique, "
+        f"and elevating the copy to an award-winning level.\n\n"
+        f"{fmt}\n\n"
+        f"Remember: You MUST output ONLY valid JSON matching the format above."
     )

@@ -4,10 +4,11 @@ import uuid
 from django.conf import settings
 from django.db import models
 
+from core.models import AuditMixin
 from core.tenant import TenantManager
 
 
-class MediaFolder(models.Model):
+class MediaFolder(AuditMixin):
     objects = TenantManager()
     name = models.CharField(max_length=255)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subfolders')
@@ -29,7 +30,7 @@ class MediaFolder(models.Model):
         return self.name
 
 
-class MediaTag(models.Model):
+class MediaTag(AuditMixin):
     name = models.CharField(max_length=100)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='media_tags')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -42,7 +43,7 @@ class MediaTag(models.Model):
         return self.name
 
 
-class MediaAsset(models.Model):
+class MediaAsset(AuditMixin):
     objects = TenantManager()
     FILE_TYPE_CHOICES = [
         ('image', 'Image'),
@@ -56,6 +57,7 @@ class MediaAsset(models.Model):
         ('local', 'Local Storage'),
         ('s3', 'Amazon S3'),
         ('r2', 'Cloudflare R2'),
+        ('minio', 'MinIO'),
     ]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='media_assets_new')

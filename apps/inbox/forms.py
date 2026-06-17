@@ -1,12 +1,12 @@
 from django import forms
 
-from .models import EmailInbox, EmailDraft
+from .models import EmailDraft, EmailInbox
 
 
 class EmailInboxConnectForm(forms.ModelForm):
     imap_password = forms.CharField(
         label='IMAP Password / App Password',
-        required=False,
+        required=True,
         widget=forms.PasswordInput(attrs={
             'class': 'auth-input',
             'placeholder': 'Your Gmail app password or Outlook password',
@@ -33,6 +33,3 @@ class EmailDraftReviewForm(forms.ModelForm):
             'status': forms.Select(attrs={'class': 'input-field'}),
             'feedback': forms.Textarea(attrs={'class': 'input-field', 'rows': 2, 'placeholder': 'Optional feedback on the draft quality...'}),
         }
-
-
-

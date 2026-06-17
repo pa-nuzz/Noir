@@ -67,8 +67,8 @@
         {% endif %}
 
         <p class="text-xs text-slate-400 uppercase tracking-wider mb-1">Preview</p>
-        <div class="text-sm text-slate-600 leading-relaxed bg-white p-3 rounded-lg border border-slate-100 line-clamp-3">
-          {{ template.body_html|striptags|truncatewords:25 }}
+        <div class="text-sm text-slate-600 leading-relaxed bg-white p-3 rounded-lg border border-slate-100 line-clamp-3 cursor-pointer hover:bg-indigo-50/50 transition-colors" onclick="openPreviewModal('{{ template.id }}')">
+          <span class="text-indigo-500 font-semibold text-xs">👁 Click to preview</span>
         </div>
       </div>
 
@@ -85,7 +85,7 @@
           {% include 'campaigns/_button.html' with type='secondary' size='sm' text='Copy' button_type='submit' %}
         </form>
         {% else %}
-        <form method="post" action="{% url 'campaigns:template_delete' template.id %}" onsubmit="return confirm('Delete template \"{{ template.name }}\"?')" class="inline">
+        <form method="post" action="{% url 'campaigns:template_delete' template.id %}" onsubmit="return confirm('Delete template &quot;{{ template.name|escapejs }}&quot;?')" class="inline">
           {% csrf_token %}
           {% include 'campaigns/_button.html' with type='danger' size='sm' text='Delete' button_type='submit' %}
         </form>
@@ -100,4 +100,72 @@
   {% endif %}
 </div>
 
+{# ── Template Preview Modal ── #}
+<div id="template-preview-modal" class="fixed inset-0 z-50 hidden bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closePreviewModal()">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onclick="event.stopPropagation()">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
+      <h3 class="text-lg font-bold text-slate-900" id="preview-modal-title">Template Preview</h3>
+      <button onclick="closePreviewModal()" class="text-slate-400 hover:text-slate-600 p-1">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="flex-1 bg-slate-100 p-4 overflow-y-auto">
+      <iframe id="preview-iframe" class="w-full border-0 bg-white rounded-lg shadow-sm" sandbox="allow-same-origin" title="Template preview" style="display: block; min-height: 400px;"></iframe>
+    </div>
+    <div class="px-6 py-3 border-t border-slate-100 bg-slate-50 flex justify-end shrink-0">
+      <button onclick="closePreviewModal()" class="px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover transition-colors">Close</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  var previewModal = document.getElementById('template-preview-modal');
+  var previewIframe = document.getElementById('preview-iframe');
+
+  function openPreviewModal(templateId) {
+    document.getElementById('preview-modal-title').textContent = 'Loading preview…';
+    previewModal.classList.remove('hidden');
+    previewModal.classList.add('flex');
+    document.body.classList.add('overflow-hidden');
+    previewIframe.style.height = '400px';
+    previewIframe.srcdoc = '<html><body style="display:flex;align-items:center;justify-content:center;min-height:400px;font-family:sans-serif;color:#94a3b8"><p>Loading preview…</p></body></html>';
+    
+    previewIframe.onload = function() {
+      try {
+        var doc = previewIframe.contentDocument || previewIframe.contentWindow.document;
+        if (doc && doc.body) {
+          var h = doc.body.scrollHeight;
+          if (h > 200) previewIframe.style.height = (h + 32) + 'px'; // Add slight padding
+        }
+      } catch(e) {}
+    };
+
+    fetch('/campaign/templates/' + templateId + '/preview/')
+      .then(function(r) { return r.text(); })
+      .then(function(html) {
+        previewIframe.srcdoc = html;
+        document.getElementById('preview-modal-title').textContent = 'Template Preview';
+      })
+      .catch(function() {
+        previewIframe.srcdoc = '<html><body style="display:flex;align-items:center;justify-content:center;min-height:400px;font-family:sans-serif;color:#ef4444"><p>Failed to load preview.</p></body></html>';
+        document.getElementById('preview-modal-title').textContent = 'Preview Error';
+      });
+  }
+
+  function closePreviewModal() {
+    previewModal.classList.add('hidden');
+    previewModal.classList.remove('flex');
+    document.body.classList.remove('overflow-hidden');
+    previewIframe.srcdoc = '';
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && previewModal && !previewModal.classList.contains('hidden')) {
+      closePreviewModal();
+    }
+  });
+</script>
 {% endblock %}

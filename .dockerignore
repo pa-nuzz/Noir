@@ -4,7 +4,6 @@ venv/
 .gitignore
 db.sqlite3
 media/
-staticfiles/
 logs/
 __pycache__/
 *.pyc
