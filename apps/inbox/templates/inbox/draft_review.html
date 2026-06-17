@@ -9,7 +9,7 @@
     Back
   </a>
 
-  <div class="glass-card p-6">
+  <div class="glass-card p-4 sm:p-6">
     <div class="mb-6">
       <p class="text-xs text-slate-500 font-medium">Re: {{ draft.thread.subject|default:'(No subject)' }}</p>
       <p class="text-xs text-slate-400 mt-1">Original AI draft shown below — edit as needed</p>
@@ -29,10 +29,12 @@
       </div>
       {% endfor %}
       <div class="flex items-center gap-3">
-        {% include "components/button.html" with label="Save &amp; Continue" variant="primary" type="submit" %}
-        {% url 'inbox:draft_approve' draft.id as approve_url %}
-        {% include 'campaigns/_button.html' with type='primary' text='Approve' href_url=approve_url extra_class='px-4 py-2 rounded-xl text-sm font-semibold' %}
+        {% include "components/button.html" with label="Save &amp; Continue" variant="primary" type="submit" class="w-full sm:w-auto justify-center" %}
       </div>
+    </form>
+    <form method="post" action="{% url 'inbox:draft_approve' draft.id %}" class="mt-3 block sm:inline">
+      {% csrf_token %}
+      <button type="submit" class="btn-action btn-action-primary w-full sm:w-auto">Approve</button>
     </form>
   </div>
 </div>

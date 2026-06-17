@@ -5,6 +5,7 @@ import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.http import HttpResponse
 
 from django.urls import reverse
 from django.contrib import messages
@@ -227,6 +228,17 @@ def template_delete(request, template_id):
 
 
 
+
+
+@login_required
+@require_workspace_permission('campaigns', 'read')
+@login_required
+@require_workspace_permission('campaigns', 'read')
+def template_preview(request, template_id):
+    """Return rendered HTML for template preview in iframe."""
+    template = get_object_or_404(filter_by_context(request, EmailTemplate.objects.all()), id=template_id)
+    html = template.render_complete_html()
+    return HttpResponse(html, content_type='text/html; charset=utf-8')
 
 
 @login_required

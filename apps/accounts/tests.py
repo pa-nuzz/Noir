@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
+from apps.accounts.forms import RegisterForm
+
 
 class AuthFlowTests(TestCase):
     def setUp(self):
@@ -18,6 +20,13 @@ class AuthFlowTests(TestCase):
         response = self.client.get(reverse("accounts:login"))
         self.assertEqual(response.status_code, 200)
 
+    def test_auth_pages_are_not_cached(self):
+        for url_name in ("accounts:login", "accounts:register"):
+            response = self.client.get(reverse(url_name))
+
+            self.assertEqual(response.status_code, 200)
+            self.assertIn("no-store", response.headers.get("Cache-Control", ""))
+
     def test_login_redirects_to_dashboard(self):
         response = self.client.post(
             reverse("accounts:login"),
@@ -29,3 +38,49 @@ class AuthFlowTests(TestCase):
         response = self.client.get(reverse("dashboard:dashboard"))
         self.assertEqual(response.status_code, 302)
         self.assertIn(reverse("accounts:login"), response.get("Location", ""))
+
+    def test_register_rejects_username_with_spaces(self):
+        form = RegisterForm(data={
+            "username": "test user",
+            "email": "new@example.com",
+            "first_name": "New",
+            "last_name": "User",
+            "password1": "StrongPass123!",
+            "password2": "StrongPass123!",
+        })
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("Username must be one word with no spaces.", form.errors["username"])
+
+    def test_username_availability_rejects_spaces(self):
+        response = self.client.get(
+            reverse("accounts:check_availability"),
+            {"field": "test user", "type": "username"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["available"])
+        self.assertEqual(response.json()["message"], "Username must be one word with no spaces")
+
+    def test_email_availability_rejects_incomplete_email(self):
+        response = self.client.get(
+            reverse("accounts:check_availability"),
+            {"field": "anuj.paudel061@", "type": "email"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["available"])
+        self.assertEqual(response.json()["message"], "Enter a valid email address")
+
+    def test_register_rejects_invalid_email(self):
+        form = RegisterForm(data={
+            "username": "newuser",
+            "email": "anuj.paudel061@",
+            "first_name": "New",
+            "last_name": "User",
+            "password1": "StrongPass123!",
+            "password2": "StrongPass123!",
+        })
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("Enter a valid email address.", form.errors["email"])

@@ -1,5 +1,5 @@
-
-// Features: GSAP Animations, TipTap Integration, AI Agent Interactions
+// mailFlow AI - Premium Email Module JavaScript
+// Features: GSAP Animations, TipTap Integration, AI Agent Interactions, Inbox Workflows
 
 // ========================================
 // GSAP Animations
@@ -74,76 +74,12 @@ function initGSAPAnimations() {
 document.addEventListener('DOMContentLoaded', initGSAPAnimations);
 
 // Reinitialize after HTMX/AJAX loads
-document.addEventListener('htmx:afterSwap', initGSAPAnimations);
-
-// ========================================
-// TipTap Rich Text Editor
-// ========================================
-var tiptapEditor = null;
-
-function initTipTap(elementId, options) {
-  if (typeof Tiptap === 'undefined') return;
-
-  var element = document.getElementById(elementId);
-  if (!element) return;
-
-  var editor = new Tiptap.Editor({
-    element: element,
-    extensions: [
-      Tiptap.StarterKit.configure({
-        bulletList: { keepMarks: true, keepAttributes: false },
-        orderedList: { keepMarks: true, keepAttributes: false },
-      }),
-      Tiptap.Placeholder.configure({
-        placeholder: 'Write your email content here...',
-      }),
-      Tiptap.Link.configure({
-        openOnClick: false,
-        HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' },
-      }),
-      Tiptap.Image.configure({ inline: true, allowBase64: true }),
-      Tiptap.TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      Tiptap.Underline,
-      Tiptap.History.configure({ depth: 100 }),
-    ],
-    editorProps: {
-      attributes: {
-        class: 'prose prose-sm max-w-none focus:outline-none min-h-[200px] p-4',
-      },
-    },
-    onUpdate: function() {
-      var html = editor.getHTML();
-      var text = editor.getText();
-      var hiddenInput = document.getElementById(elementId + '_hidden');
-      if (hiddenInput) {
-        hiddenInput.value = html;
-      }
-      var counter = document.getElementById(elementId + '_counter');
-      if (counter) {
-        counter.textContent = text.length + ' characters';
-      }
-      // Dispatch custom event
-      document.dispatchEvent(new CustomEvent('tiptap:update', {
-        detail: { id: elementId, html: html, text: text }
-      }));
-    },
-  });
-
-  // Set initial content
-  if (options && options.content) {
-    editor.commands.setContent(options.content);
+document.addEventListener('htmx:afterSwap', function() {
+  initGSAPAnimations();
+  if (typeof InboxDashboard !== 'undefined') {
+    InboxDashboard.init();
   }
-
-  tiptapEditor = editor;
-  return editor;
-}
-
-function destroyTipTap() {
-  if (tiptapEditor) {
-    tiptapEditor.destroy();
-    tiptapEditor = null;
-  }
-}
+});
 
 // ========================================
 // AI Agent Interactions
@@ -161,26 +97,29 @@ var AIClient = {
   },
 
   generateDraft: function(messageId, tone, callback) {
-    var btn = document.getElementById('ai-generate-btn');
+    var btn = document.getElementById('ai-reply-btn') || document.getElementById('ai-generate-btn');
     if (btn) {
       btn.disabled = true;
       btn.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-4 w-4 inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Generating...';
     }
 
-    fetch('/inbox/generate-draft/' + messageId + '/', {
+    fetch('/inbox/messages/' + messageId + '/generate-draft/', {
       method: 'POST',
       headers: {
         'X-CSRFToken': this.csrfToken,
         'Content-Type': 'application/x-www-form-urlencoded',
+        'X-Requested-With': 'XMLHttpRequest',
         'X-Tone': tone || 'professional',
       },
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.success) {
+        if (typeof EmailDetail !== 'undefined' && EmailDetail.showGeneratedDraft) {
+          EmailDetail.showGeneratedDraft(data);
+        }
         if (callback) callback(data.draft_body);
-        // Show success toast
-        showToast('success', 'AI draft generated successfully!');
+        showToast('success', 'AI draft generated!');
       } else {
         showToast('error', data.error || 'Failed to generate draft');
       }
@@ -191,26 +130,34 @@ var AIClient = {
     .finally(function() {
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> Generate with AI';
+        btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> AI Reply';
       }
     });
   },
 
   summarizeMessage: function(messageId) {
     var btn = document.getElementById('summarize-btn');
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = 'Summarizing...';
-    }
-    fetch('/inbox/summarize/' + messageId + '/', {
+    var btnText = document.getElementById('summarize-btn-text');
+    if (btn) btn.disabled = true;
+    if (btnText) btnText.textContent = 'Summarizing...';
+
+    fetch('/inbox/messages/' + messageId + '/summarize/', {
       method: 'POST',
-      headers: { 'X-CSRFToken': this.csrfToken },
+      headers: {
+        'X-CSRFToken': this.csrfToken,
+        'X-Requested-With': 'XMLHttpRequest',
+      },
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.success) {
         showToast('success', 'Message summarized');
-        location.reload();
+        var summaryEl = document.getElementById('ai-summary-section');
+        if (summaryEl && data.summary) {
+          summaryEl.classList.remove('hidden');
+          var summaryText = summaryEl.querySelector('.summary-text');
+          if (summaryText) summaryText.textContent = data.summary;
+        }
       } else {
         showToast('error', data.error || 'Failed to summarize');
       }
@@ -219,7 +166,8 @@ var AIClient = {
       showToast('error', 'Error: ' + err.message);
     })
     .finally(function() {
-      if (btn) { btn.disabled = false; btn.innerHTML = 'Summarize'; }
+      if (btn) btn.disabled = false;
+      if (btnText) btnText.textContent = 'Summarize';
     });
   },
 };
@@ -346,7 +294,10 @@ var CampaignWizard = {
 // Inbox Dashboard
 // ========================================
 var InboxDashboard = {
+  _syncPollTimers: {},
+
   init: function() {
+    AIClient.init();
     this.bindSearch();
     this.bindFolderTabs();
     this.initAIAssist();
@@ -355,6 +306,7 @@ var InboxDashboard = {
   bindSearch: function() {
     var searchInput = document.getElementById('inbox-search');
     if (!searchInput) return;
+    if (typeof htmx !== 'undefined') return;  // HTMX handles search natively
 
     var debounceTimer;
     searchInput.addEventListener('input', function() {
@@ -373,6 +325,7 @@ var InboxDashboard = {
   },
 
   bindFolderTabs: function() {
+    if (typeof htmx !== 'undefined') return;  // HTMX handles folder tabs natively
     document.querySelectorAll('.folder-tab').forEach(function(tab) {
       tab.addEventListener('click', function(e) {
         var folder = this.dataset.folder;
@@ -388,6 +341,177 @@ var InboxDashboard = {
 
   initAIAssist: function() {
     AIClient.init();
+  },
+
+  toggleBulkBar: function() {
+    var checked = document.querySelectorAll('.msg-checkbox:checked');
+    var count = checked.length;
+    var countEl = document.getElementById('bulk-count');
+    var replyBtn = document.getElementById('bulk-reply-btn');
+    var deleteBtn = document.getElementById('bulk-delete-btn');
+    if (countEl) {
+      countEl.textContent = count + ' selected';
+      countEl.classList.toggle('hidden', count === 0);
+    }
+    if (replyBtn) replyBtn.classList.toggle('hidden', count === 0);
+    if (deleteBtn) deleteBtn.classList.toggle('hidden', count === 0);
+  },
+
+  _allSelected: false,
+
+  toggleAllCheckboxes: function() {
+    this._allSelected = !this._allSelected;
+    document.querySelectorAll('.msg-checkbox').forEach(function(cb) {
+      cb.checked = InboxDashboard._allSelected;
+    });
+    var label = document.getElementById('select-all-label');
+    if (label) label.textContent = this._allSelected ? 'Deselect' : 'Select All';
+    this.toggleBulkBar();
+  },
+
+  bulkAutoReply: function() {
+    var checked = document.querySelectorAll('.msg-checkbox:checked');
+    if (!checked.length) { showToast('warning', 'Select messages first.'); return; }
+    var ids = Array.from(checked).map(function(cb) { return cb.value; });
+    var btn = document.getElementById('bulk-reply-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Processing...'; }
+
+    fetch('/inbox/bulk-auto-reply/', {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': AIClient.csrfToken,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message_ids: ids }),
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        showToast('success', data.processed + ' draft(s) created. ' + data.skipped + ' skipped.');
+        setTimeout(function() { location.reload(); }, 1500);
+      } else {
+        showToast('error', data.error || 'Auto-reply failed');
+      }
+    })
+    .catch(function() {
+      showToast('error', 'Could not process auto-reply.');
+    })
+    .finally(function() {
+      if (btn) { btn.disabled = false; btn.textContent = 'Auto-Reply Selected'; }
+    });
+  },
+
+  bulkDelete: function() {
+    var checked = document.querySelectorAll('.msg-checkbox:checked');
+    if (!checked.length) { showToast('warning', 'Select messages first.'); return; }
+    if (!confirm('Move ' + checked.length + ' message(s) to trash?')) return;
+    var ids = Array.from(checked).map(function(cb) { return cb.value; });
+
+    fetch('/inbox/bulk-action/', {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': AIClient.csrfToken,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action: 'delete', message_ids: ids }),
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        showToast('success', 'Messages moved to trash');
+        location.reload();
+      } else {
+        showToast('error', data.error || 'Delete failed');
+      }
+    })
+    .catch(function() {
+      showToast('error', 'Could not delete messages.');
+    });
+  },
+
+  triggerSync: function(inboxId) {
+    var btn = document.getElementById('sync-btn-' + inboxId);
+    var icon = btn ? btn.querySelector('.sync-icon') : null;
+    var label = btn ? btn.querySelector('.sync-label') : null;
+    if (btn) btn.disabled = true;
+    if (label) label.textContent = 'Syncing...';
+    if (icon) icon.classList.add('animate-spin');
+
+    fetch('/inbox/' + inboxId + '/sync/', {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': AIClient.csrfToken,
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        showToast('info', 'Syncing inbox...');
+        InboxDashboard._pollSyncStatus(inboxId);
+      } else {
+        showToast('error', data.error || 'Sync failed');
+        InboxDashboard._resetSyncButton(inboxId);
+      }
+    })
+    .catch(function(err) {
+      showToast('error', 'Could not start sync. Please try again.');
+      InboxDashboard._resetSyncButton(inboxId);
+    });
+  },
+
+  _pollSyncStatus: function(inboxId) {
+    if (this._syncPollTimers[inboxId]) {
+      clearTimeout(this._syncPollTimers[inboxId]);
+    }
+    var self = this;
+    var btn = document.getElementById('sync-btn-' + inboxId);
+    var label = btn ? btn.querySelector('.sync-label') : null;
+    var maxPolls = 30;
+    var pollCount = 0;
+
+    function poll() {
+      pollCount++;
+      if (pollCount > maxPolls) {
+        showToast('warning', 'Sync is taking longer than expected. Check back later.');
+        self._resetSyncButton(inboxId);
+        return;
+      }
+      fetch('/inbox/' + inboxId + '/sync-status/', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.status === 'success') {
+          showToast('success', 'Inbox synced successfully!');
+          self._resetSyncButton(inboxId);
+          setTimeout(function() { location.reload(); }, 1000);
+        } else if (data.status === 'error') {
+          showToast('error', 'Sync failed. Check your inbox settings and try again.');
+          self._resetSyncButton(inboxId);
+        } else {
+          self._syncPollTimers[inboxId] = setTimeout(poll, 2000);
+        }
+      })
+      .catch(function() {
+        self._syncPollTimers[inboxId] = setTimeout(poll, 3000);
+      });
+    }
+    self._syncPollTimers[inboxId] = setTimeout(poll, 2000);
+  },
+
+  _resetSyncButton: function(inboxId) {
+    var btn = document.getElementById('sync-btn-' + inboxId);
+    if (!btn) return;
+    var icon = btn.querySelector('.sync-icon');
+    var label = btn.querySelector('.sync-label');
+    if (icon) icon.classList.remove('animate-spin');
+    if (label) label.textContent = 'Sync';
+    btn.disabled = false;
+    if (this._syncPollTimers[inboxId]) {
+      clearTimeout(this._syncPollTimers[inboxId]);
+      delete this._syncPollTimers[inboxId];
+    }
   },
 
   bulkAction: function(action) {
@@ -421,50 +545,7 @@ var InboxDashboard = {
   }
 };
 
-// ========================================
-// Send Confirmation Modal (Email Module)
-// ========================================
-var EmailSendModal = {
-  currentForm: null,
-  
-  open: function(formElement) {
-    this.currentForm = formElement;
-    var modal = document.getElementById('send-confirmation-modal');
-    if (modal) {
-      modal.style.display = 'flex';
-      document.body.classList.add('overflow-hidden');
-    }
-  },
-  
-  close: function() {
-    var modal = document.getElementById('send-confirmation-modal');
-    if (modal) {
-      modal.style.display = 'none';
-      document.body.classList.remove('overflow-hidden');
-    }
-    this.currentForm = null;
-  },
-  
-  confirm: function() {
-    if (this.currentForm) {
-      this.close();
-      this.currentForm.submit();
-    }
-  }
-};
 
-// Global functions for modal
-window.openSendModal = function(formElement) {
-  EmailSendModal.open(formElement);
-};
-
-window.closeSendModal = function() {
-  EmailSendModal.close();
-};
-
-window.confirmAndSend = function() {
-  EmailSendModal.confirm();
-};
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
@@ -472,7 +553,5 @@ document.addEventListener('DOMContentLoaded', function() {
   CampaignWizard.init();
   window.showToast = showToast;
   window.AIClient = AIClient;
-  window.EmailSendModal = EmailSendModal;
+
 });
-
-

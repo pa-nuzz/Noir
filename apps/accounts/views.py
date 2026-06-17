@@ -1,10 +1,16 @@
+import re
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST, require_GET
 from django_ratelimit.decorators import ratelimit
 from django.contrib.auth.tokens import default_token_generator
+from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
+from django.core.validators import validate_email
 from django.urls import reverse, reverse_lazy
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -40,6 +46,8 @@ def _send_verification_email(request, user):
     )
 
 @ratelimit(key='ip', rate='10/m', method='POST', block=True)
+@never_cache
+@ensure_csrf_cookie
 def register_view(request):
     if request.user.is_authenticated:
         return redirect("dashboard:dashboard")
@@ -59,6 +67,8 @@ def register_view(request):
     return render(request, "auth/register.html", {"form": form})
 
 @ratelimit(key='ip', rate='10/m', method='POST', block=True)
+@never_cache
+@ensure_csrf_cookie
 def login_view(request):
     if request.user.is_authenticated:
         return redirect("dashboard:dashboard")
@@ -272,6 +282,7 @@ def password_reset_resend_code(request):
 @require_GET
 def check_availability(request):
     field_value = request.GET.get('field', '').strip().lower()
+    field_type = request.GET.get('type', '').strip().lower()
 
     if not field_value:
         return JsonResponse({
@@ -280,9 +291,17 @@ def check_availability(request):
             'field': 'field'
         })
 
-    is_email = '@' in field_value
+    is_email = field_type == 'email' or ('@' in field_value and field_type != 'username')
 
     if is_email:
+        try:
+            validate_email(field_value)
+        except ValidationError:
+            return JsonResponse({
+                'available': False,
+                'message': 'Enter a valid email address',
+                'field': 'email'
+            })
         exists = User.objects.filter(email__iexact=field_value).exists()
         if exists:
             return JsonResponse({
@@ -295,16 +314,33 @@ def check_availability(request):
             'message': 'Email is available',
             'field': 'email'
         })
-    else:
-        exists = User.objects.filter(username__iexact=field_value).exists()
-        if exists:
-            return JsonResponse({
-                'available': False,
-                'message': 'This username is already taken',
-                'field': 'username'
-            })
+    if len(field_value) < 2:
         return JsonResponse({
-            'available': True,
-            'message': 'Username is available',
+            'available': False,
+            'message': 'Username must be at least 2 characters',
             'field': 'username'
         })
+    if re.search(r'\s', field_value):
+        return JsonResponse({
+            'available': False,
+            'message': 'Username must be one word with no spaces',
+            'field': 'username'
+        })
+    if not re.fullmatch(r'[\w.@+-]+', field_value):
+        return JsonResponse({
+            'available': False,
+            'message': 'Use only letters, numbers, and @/./+/-/_',
+            'field': 'username'
+        })
+    exists = User.objects.filter(username__iexact=field_value).exists()
+    if exists:
+        return JsonResponse({
+            'available': False,
+            'message': 'This username is already taken',
+            'field': 'username'
+        })
+    return JsonResponse({
+        'available': True,
+        'message': 'Username is available',
+        'field': 'username'
+    })

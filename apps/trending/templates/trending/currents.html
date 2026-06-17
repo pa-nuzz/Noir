@@ -14,13 +14,7 @@
   .rd-card-title a { color: inherit; text-decoration: none; }
   .rd-card-title a:hover { color: #06B6D4; }
   .rd-card-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 0.75rem; color: #94A3B8; }
-  .rd-card-actions { display: flex; align-items: center; gap: 8px; margin-top: 2px; flex-wrap: wrap; }
   .rd-card-score { font-size: 0.6875rem; color: #94A3B8; font-weight: 500; margin-left: auto; }
-  .rd-badge {
-    display: inline-flex; align-items: center; gap: 4px;
-    padding: 2px 8px; border-radius: 999px;
-    font-size: 0.6875rem; font-weight: 600;
-  }
   .rd-badge-topic {
     display: inline-flex; align-items: center; gap: 4px;
     padding: 2px 8px; border-radius: 999px;
@@ -31,42 +25,44 @@
     background-origin: padding-box, border-box;
     color: #0A2540;
   }
-  .rd-badge-queued {
-    display: inline-flex; align-items: center; gap: 4px;
-    padding: 2px 8px; border-radius: 999px;
-    font-size: 0.6875rem; font-weight: 600;
-    background: linear-gradient(90deg, #6D28D9, #06B6D4);
-    color: #FFFFFF;
-  }
-  .rd-schedule-modal {
-    position: fixed; inset: 0; z-index: 9999;
-    display: flex; align-items: center; justify-content: center;
-    background: rgba(15,23,42,0.5); backdrop-filter: blur(2px);
-  }
-  .rd-schedule-modal.hidden { display: none !important; }
-  .rd-schedule-modal-inner {
-    background: #FFFFFF; border-radius: 16px;
-    width: 100%; max-width: 420px; padding: 24px; margin: 16px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-  }
-  .rd-schedule-platform-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-  .rd-schedule-platform-label { display: flex; align-items: center; gap: 8px; font-size: 0.8125rem; font-weight: 600; color: #0A2540; cursor: pointer; }
-  .rd-schedule-platform-label input { width: 16px; height: 16px; accent-color: #6D28D9; }
-
   .rd-platform-divider { border: none; border-top: 1px solid #E2E8F0; margin: 8px 0; }
   .rd-platform-header { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #6D28D9; }
   .rd-platform-body { font-size: 0.8125rem; color: #334155; line-height: 1.6; white-space: pre-wrap; }
   .rd-platform-hashtags { display: flex; flex-wrap: wrap; gap: 4px; font-size: 0.6875rem; font-weight: 600; }
   .rd-platform-hashtags span { color: #6D28D9; }
-  .rd-platform-check { display: flex; align-items: center; gap: 6px; font-size: 0.6875rem; color: #64748B; }
-  .rd-platform-check input { width: 14px; height: 14px; accent-color: #6D28D9; cursor: pointer; }
 </style>
 
 <div class="flex items-center justify-between mb-4">
   <div>
     <h3 class="text-base font-bold text-slate-900">Currents</h3>
     <p class="text-sm text-slate-500 mt-0.5">Top 5 trending items from your selected categories, ready to publish.</p>
+    <p id="currents-last-updated" class="text-xs text-slate-400 mt-0.5 hidden">Last updated: <span id="currents-updated-at"></span></p>
   </div>
+</div>
+
+<!-- Global Action Bar -->
+<div class="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white rounded-xl border border-slate-200">
+  <span class="text-xs font-semibold text-slate-600">Action:</span>
+  <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-600 cursor-pointer px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 has-[:checked]:border-slate-500 has-[:checked]:bg-slate-100 has-[:checked]:text-slate-700 transition-colors">
+    <input type="radio" name="currents-action" value="none" checked onchange="updateActionMode()" class="accent-slate-500">
+    None
+  </label>
+  <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 has-[:checked]:border-transparent has-[:checked]:bg-gradient-to-r has-[:checked]:from-primary has-[:checked]:to-violet-600 has-[:checked]:text-white transition-all">
+    <input type="radio" name="currents-action" value="draft" onchange="updateActionMode()" class="accent-purple-600">
+    💾 Save Draft
+  </label>
+  <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 has-[:checked]:border-transparent has-[:checked]:bg-gradient-to-r has-[:checked]:from-cyan has-[:checked]:to-blue-600 has-[:checked]:text-white transition-all">
+    <input type="radio" name="currents-action" value="publish" onchange="updateActionMode()" class="accent-cyan-600">
+    📨 Publish
+  </label>
+  <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 has-[:checked]:border-transparent has-[:checked]:bg-gradient-to-r has-[:checked]:from-primary has-[:checked]:to-cyan has-[:checked]:text-white transition-all">
+    <input type="radio" name="currents-action" value="schedule" onchange="updateActionMode()" class="accent-purple-600">
+    🗓️ Schedule
+  </label>
+  <div id="currents-schedule-dt-wrapper" class="hidden flex items-center gap-2">
+    <input type="datetime-local" id="currents-schedule-dt" class="auth-input text-sm">
+  </div>
+  <span id="currents-auto-status" class="hidden text-xs font-semibold text-slate-500 ml-auto"></span>
 </div>
 
 <div id="rd-list" class="space-y-3">
@@ -79,58 +75,80 @@
   <p class="text-xs text-slate-400 mt-1">Go to the Automation tab to choose your interests.</p>
 </div>
 
-<div id="rd-no-items" class="rd-empty hidden">
-  <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-  <p>No trending items in your selected categories yet.</p>
-  <p class="text-xs text-slate-400 mt-1">Content collection runs every 5 minutes — check back soon.</p>
+<div id="rd-needs-automation" class="rd-empty hidden">
+  <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+  <p>No automation rules configured.</p>
+  <p class="text-xs text-slate-400 mt-1">Go to the Automation tab, enable a category and select platforms to start generating content.</p>
 </div>
 
-<!-- Schedule Modal -->
-<div id="rd-schedule-modal" class="rd-schedule-modal hidden" onclick="closeScheduleModal()">
-  <div class="rd-schedule-modal-inner" onclick="event.stopPropagation()">
-    <h4 class="text-sm font-bold text-slate-900 mb-1">Schedule for Publishing</h4>
-    <p class="text-xs text-slate-500 mb-4">Choose when to publish this item to your social accounts.</p>
-    <input type="datetime-local" id="rd-schedule-datetime" class="auth-input w-full text-sm mb-4" value="">
-    <p class="text-xs font-semibold text-slate-700 mb-2">Platforms to publish:</p>
-    <div class="rd-schedule-platform-list" id="rd-schedule-platforms">
-      <label class="rd-schedule-platform-label"><input type="checkbox" value="linkedin" checked> LinkedIn</label>
-      <label class="rd-schedule-platform-label"><input type="checkbox" value="twitter" checked> Twitter</label>
-      <label class="rd-schedule-platform-label"><input type="checkbox" value="instagram" checked> Instagram</label>
-      <label class="rd-schedule-platform-label"><input type="checkbox" value="facebook" checked> Facebook</label>
-      <label class="rd-schedule-platform-label"><input type="checkbox" value="tiktok" checked> TikTok</label>
-    </div>
-    <div class="flex gap-3 justify-end">
-      <button type="button" onclick="closeScheduleModal()" class="btn-action btn-action-secondary text-sm">Cancel</button>
-      <button type="button" onclick="confirmSchedule()" class="btn-action btn-action-primary text-sm">Schedule</button>
-    </div>
-  </div>
+<div id="rd-no-items" class="rd-empty hidden">
+  <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+  <p>No trending items matching your automation rules.</p>
 </div>
 
 <script>
-var rdScheduledItemId = null;
-var currentsContentMap = {};
+var currentsActionMode = 'none';
+var currentsBatchId = null;
+var currentsPollTimer = null;
 var ALL_PLATFORMS = ['linkedin', 'twitter', 'instagram', 'facebook', 'tiktok'];
 var PLATFORM_LABELS = {linkedin: 'LinkedIn', twitter: 'Twitter', instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok'};
+
+(function restoreActionMode() {
+  var saved = localStorage.getItem('currentsActionMode');
+  if (saved) {
+    currentsActionMode = saved;
+    var radio = document.querySelector('input[name="currents-action"][value="' + saved + '"]');
+    if (radio) {
+      radio.checked = true;
+      updateActionMode();
+    }
+  }
+})();
+
+function startCurrentsPolling() {
+  stopCurrentsPolling();
+  currentsPollTimer = setInterval(function() {
+    fetch('{% url "trending:currents_data" %}')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.batch_id && data.batch_id !== currentsBatchId) {
+          loadCurrents();
+        }
+      })
+      .catch(function() {});
+  }, 15000);
+}
+
+function stopCurrentsPolling() {
+  if (currentsPollTimer) {
+    clearInterval(currentsPollTimer);
+    currentsPollTimer = null;
+  }
+}
 
 function loadCurrents() {
   var list = document.getElementById('rd-list');
   var empty = document.getElementById('rd-empty');
+  var needsAuto = document.getElementById('rd-needs-automation');
   var noItems = document.getElementById('rd-no-items');
   list.classList.remove('hidden');
   empty.classList.add('hidden');
+  needsAuto.classList.add('hidden');
   noItems.classList.add('hidden');
   list.innerHTML = '<div class="tr-loading">Loading currents…</div>';
 
   fetch('{% url "trending:currents_data" %}')
     .then(function(r) { return r.json(); })
     .then(function(data) {
+      if (data.needs_automation) {
+        list.classList.add('hidden');
+        needsAuto.classList.remove('hidden');
+        stopCurrentsPolling();
+        return;
+      }
       if (!data.items || data.items.length === 0) {
         list.classList.add('hidden');
-        if (data.needs_categories) {
-          empty.classList.remove('hidden');
-        } else {
-          noItems.classList.remove('hidden');
-        }
+        noItems.classList.remove('hidden');
         return;
       }
 
@@ -140,13 +158,10 @@ function loadCurrents() {
         if (item.topic) {
           topicHtml = '<span class="rd-badge-topic">' + item.topic.icon + ' ' + item.topic.name + '</span>';
         }
-        var queuedLabel = item.is_queued
-          ? '<span class="rd-badge-queued">Queued</span>'
-          : '';
-
         var platformHtml = '';
         var content = item.generated_content || {};
-        ALL_PLATFORMS.forEach(function(p) {
+        var activePlatforms = item.active_platforms || ALL_PLATFORMS;
+        activePlatforms.forEach(function(p) {
           var pdata = content[p];
           if (!pdata || !pdata.body) return;
           var hashtagsHtml = '';
@@ -162,19 +177,13 @@ function loadCurrents() {
             '<hr class="rd-platform-divider">' +
             '<div class="rd-platform-header">' + escapeHtml(PLATFORM_LABELS[p] || p) + '</div>' +
             '<div class="rd-platform-body">' + escapeHtml(pdata.body) + '</div>' +
-            hashtagsHtml +
-            '<label class="rd-platform-check" style="margin-top:4px;">' +
-              '<input type="checkbox" class="rd-pf-cb-' + item.id + '" value="' + p + '" checked>' +
-              ' Select for save / schedule' +
-            '</label>';
+            hashtagsHtml;
         });
 
         // If no LLM content, fall back to summary
         if (!platformHtml) {
           platformHtml = '<div class="rd-card-summary">' + escapeHtml(item.summary) + '</div>';
         }
-
-        currentsContentMap[item.id] = content;
 
         html += '<div class="rd-card" id="rd-card-' + item.id + '">' +
           '<div class="rd-card-title"><a href="' + item.url + '" target="_blank" rel="noopener">' + escapeHtml(item.title) + '</a></div>' +
@@ -186,23 +195,20 @@ function loadCurrents() {
             (item.published_at ? '<span>' + timeAgo(item.published_at) + '</span>' : '') +
             '<span class="rd-card-score">Score: ' + item.score.toFixed(1) + '</span>' +
           '</div>' +
-          '<div class="rd-card-actions">' +
-            '<button onclick="saveSelectedDrafts(' + item.id + ', this)" class="tr-feed-btn">' +
-              '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>' +
-              ' Save Selected' +
-            '</button>' +
-            '<button onclick="openScheduleModal(' + item.id + ')" class="tr-feed-btn">' +
-              '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
-              ' Schedule Selected' +
-            '</button>' +
-            '<button onclick="removeFromReady(' + item.id + ', this)" class="tr-feed-btn" title="Remove">' +
-              '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>' +
-            '</button>' +
-            queuedLabel +
-          '</div>' +
         '</div>';
       });
       list.innerHTML = html;
+      currentsBatchId = data.batch_id;
+      if (data.generated_at) {
+        var el = document.getElementById('currents-last-updated');
+        var span = document.getElementById('currents-updated-at');
+        if (el && span) {
+          span.textContent = timeAgo(data.generated_at);
+          el.classList.remove('hidden');
+        }
+      }
+      startCurrentsPolling();
+      autoExecute();
     })
     .catch(function(err) {
       list.innerHTML = '<div class="tr-empty"><p>Failed to load. Please try again.</p></div>';
@@ -210,123 +216,67 @@ function loadCurrents() {
     });
 }
 
-function getSelectedPlatforms(itemId) {
-  var checkboxes = document.querySelectorAll('.rd-pf-cb-' + itemId + ':checked');
-  var platforms = [];
-  checkboxes.forEach(function(cb) { platforms.push(cb.value); });
-  return platforms;
+function updateActionMode() {
+  var selected = document.querySelector('input[name="currents-action"]:checked');
+  currentsActionMode = selected ? selected.value : 'none';
+  localStorage.setItem('currentsActionMode', currentsActionMode);
+  var wrapper = document.getElementById('currents-schedule-dt-wrapper');
+  wrapper.classList.toggle('hidden', currentsActionMode !== 'schedule');
+  var statusEl = document.getElementById('currents-auto-status');
+  if (statusEl) statusEl.classList.add('hidden');
+  if (currentsActionMode !== 'none' && currentsBatchId) {
+    autoExecute();
+  }
 }
 
-function saveSelectedDrafts(itemId, btn) {
-  var platforms = getSelectedPlatforms(itemId);
-  if (platforms.length === 0) {
-    showTrendingToast('Select at least one platform', 'error');
-    return;
-  }
+function autoExecute() {
+  if (currentsActionMode === 'none') return;
 
-  var allContent = currentsContentMap[itemId];
-  if (!allContent) {
-    showTrendingToast('No generated content available', 'error');
-    return;
-  }
+  var statusEl = document.getElementById('currents-auto-status');
+  if (!statusEl) return;
 
-  var platformContent = {};
-  platforms.forEach(function(p) {
-    if (allContent[p]) {
-      platformContent[p] = allContent[p];
+  if (currentsActionMode === 'schedule') {
+    var dt = document.getElementById('currents-schedule-dt').value;
+    if (!dt) {
+      showTrendingToast('Set a date/time in the Schedule field first, or switch to Draft/Publish.', 'error');
+      return;
     }
-  });
+  }
 
-  fetch('{% url "trending:save_as_draft" 0 %}'.replace('0', itemId), {
+  statusEl.classList.remove('hidden');
+  statusEl.textContent = 'Processing…';
+
+  var payload = {
+    batch_id: currentsBatchId,
+    action: currentsActionMode,
+  };
+  if (currentsActionMode === 'schedule') {
+    var dt = document.getElementById('currents-schedule-dt').value;
+    payload.scheduled_at = new Date(dt).toISOString();
+  }
+
+  fetch('{% url "trending:currents_batch_action" %}', {
     method: 'POST',
     headers: {'X-CSRFToken': getCSRFToken(), 'Content-Type': 'application/json'},
-    body: JSON.stringify({platforms: platforms, platform_content: platformContent}),
+    body: JSON.stringify(payload),
   })
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      showTrendingToast('Saved ' + data.count + ' draft(s)!', 'success', btn);
+      if (data.success && data.processed > 0) {
+        statusEl.textContent = '✓ ' + data.processed + ' item(s) processed';
+        showTrendingToast(data.processed + ' item(s) saved to Content Items', 'success');
+        setTimeout(function() { location.reload(); }, 1500);
+      } else if (data.success && data.processed === 0) {
+        statusEl.textContent = '✓ Already processed (0 new items)';
+      } else {
+        statusEl.textContent = '✗ Action failed';
+        showTrendingToast(data.error || 'Action failed', 'error');
+      }
     })
-    .catch(function() { showTrendingToast('Failed to save drafts', 'error', btn); });
-}
-
-function openScheduleModal(itemId) {
-  rdScheduledItemId = itemId;
-  var now = new Date();
-  var pad = function(n) { return String(n).padStart(2, '0'); };
-  var localStr = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
-  var input = document.getElementById('rd-schedule-datetime');
-  input.value = localStr;
-  input.min = localStr;
-
-  // Preselect based on card checkboxes
-  var cardCheckboxes = document.querySelectorAll('.rd-pf-cb-' + itemId + ':checked');
-  var selectedPlatforms = {};
-  cardCheckboxes.forEach(function(cb) { selectedPlatforms[cb.value] = true; });
-  document.querySelectorAll('#rd-schedule-platforms input[type=checkbox]').forEach(function(cb) {
-    cb.checked = !!selectedPlatforms[cb.value];
-  });
-
-  document.getElementById('rd-schedule-modal').classList.remove('hidden');
-}
-
-function closeScheduleModal() {
-  document.getElementById('rd-schedule-modal').classList.add('hidden');
-  rdScheduledItemId = null;
-}
-
-function confirmSchedule() {
-  var dt = document.getElementById('rd-schedule-datetime').value;
-  if (!dt) { showTrendingToast('Please select a date and time', 'error'); return; }
-
-  var scheduledAt = new Date(dt).toISOString();
-  var itemId = rdScheduledItemId;
-
-  var platforms = [];
-  document.querySelectorAll('#rd-schedule-platforms input[type=checkbox]:checked').forEach(function(cb) {
-    platforms.push(cb.value);
-  });
-  if (platforms.length === 0) {
-    showTrendingToast('Select at least one platform', 'error');
-    return;
-  }
-
-  var allContent = currentsContentMap[itemId];
-  var platformContent = {};
-  if (allContent) {
-    platforms.forEach(function(p) {
-      if (allContent[p]) platformContent[p] = allContent[p];
+    .catch(function() {
+      statusEl.textContent = '✗ Request failed';
+      showTrendingToast('Failed to execute action', 'error');
     });
-  }
-
-  fetch('{% url "trending:queue_for_publish" 0 %}'.replace('0', itemId), {
-    method: 'POST',
-    headers: {'X-CSRFToken': getCSRFToken(), 'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      scheduled_at: scheduledAt,
-      platforms: platforms,
-      platform_content: platformContent,
-    }),
-  })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      closeScheduleModal();
-      showTrendingToast('Scheduled for ' + new Date(scheduledAt).toLocaleString(), 'success');
-      loadCurrents();
-    })
-    .catch(function() { showTrendingToast('Failed to schedule', 'error'); });
-}
-
-function removeFromReady(itemId, btn) {
-  fetch('{% url "trending:dequeue_currents" 0 %}'.replace('0', itemId), {
-    method: 'POST',
-    headers: {'X-CSRFToken': getCSRFToken()},
-  })
-    .then(function() {
-      var card = document.getElementById('rd-card-' + itemId);
-      if (card) card.remove();
-      showTrendingToast('Removed from currents', 'success', btn);
-    })
-    .catch(function() { showTrendingToast('Failed to remove', 'error', btn); });
 }
 
 function escapeHtml(text) {

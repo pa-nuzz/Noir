@@ -1163,6 +1163,7 @@ def settings_view(request):
                     existing_sender.username = candidate.username
                     existing_sender.use_tls = candidate.use_tls
                     existing_sender.daily_limit = candidate.daily_limit
+                    existing_sender.send_delay_seconds = candidate.send_delay_seconds
                     existing_sender.is_active = True
 
                     raw_password = sender_form.cleaned_data.get('smtp_password')
@@ -1175,6 +1176,8 @@ def settings_view(request):
                     sender = candidate
                     sender.user = request.user
                     sender.from_email = normalized_email
+                    sender.is_active = True
+                    sender.is_verified = True
                     raw_password = sender_form.cleaned_data['smtp_password']
                     sender.set_password(raw_password)
                     sender.save()
@@ -1192,21 +1195,94 @@ def settings_view(request):
 
     from datetime import date, timedelta
     today = date.today()
+
+    # Aggregate real delivery metrics per sender (last 6 months)
+    six_months_ago = today - timedelta(days=180)
+    sender_metrics_qs = (
+        Campaign.objects.filter(sender__in=senders, created_at__gte=six_months_ago)
+        .values('sender_id')
+        .annotate(
+            total_sent=Sum('sent_count'),
+            total_open=Sum('open_count'),
+            total_bounce=Sum('bounce_count'),
+            campaign_count=Count('id'),
+            recent_sent=Sum('sent_count', filter=Q(created_at__gte=today - timedelta(days=7))),
+        )
+    )
+    sender_metrics = {m['sender_id']: m for m in sender_metrics_qs}
+
+    sender_campaign_counts = dict(
+        Campaign.objects.filter(sender__in=senders)
+        .values('sender_id')
+        .annotate(count=Count('id'))
+        .values_list('sender_id', 'count')
+    )
+
     sender_reputations = {}
     for s in senders:
+        m = sender_metrics.get(s.id, {})
+        total_sent = m.get('total_sent', 0) or 0
+        total_open = m.get('total_open', 0) or 0
+        total_bounce = m.get('total_bounce', 0) or 0
+        campaign_count = m.get('campaign_count', 0) or 0
+        recent_sent = m.get('recent_sent', 0) or 0
+
         score = 0
-        if s.is_verified: score += 20
-        if s.use_tls: score += 20
-        if s.daily_limit and s.daily_limit > 0: score += 10
-        if s.daily_limit and s.emails_sent_today < s.daily_limit * 0.9: score += 25
-        has_sent = filter_by_context(request, Campaign.objects.filter(sender=s)).aggregate(s=Sum('sent_count'))['s'] or 0
-        if has_sent > 0: score += 25
+
+        # 1. Verified sender (SMTP test passed) — 10 pts
+        if s.is_verified:
+            score += 10
+
+        # 2. Campaign volume (proven sending experience) — up to 15 pts
+        if campaign_count >= 10:
+            score += 15
+        elif campaign_count >= 5:
+            score += 10
+        elif campaign_count >= 1:
+            score += 5
+
+        # 3. Bounce rate (lower is better) — up to 30 pts
+        if total_sent > 0:
+            bounce_rate = total_bounce / total_sent * 100
+            if bounce_rate < 1:
+                score += 30
+            elif bounce_rate < 3:
+                score += 25
+            elif bounce_rate < 5:
+                score += 15
+            elif bounce_rate < 10:
+                score += 5
+
+        # 4. Open rate (higher is better) — up to 25 pts
+        if total_sent > 0:
+            open_rate = total_open / total_sent * 100
+            if open_rate >= 30:
+                score += 25
+            elif open_rate >= 20:
+                score += 20
+            elif open_rate >= 10:
+                score += 12
+            elif open_rate >= 5:
+                score += 5
+
+        # 5. Recent activity — up to 20 pts
+        if recent_sent > 0:
+            score += 20
+        elif campaign_count > 0:
+            score += 10
+
         sender_reputations[s.id] = {
             'score': min(score, 100),
             'weekly_limit': (s.daily_limit or 500) * 7,
             'weekly_used': (s.emails_sent_today or 0) * 7,
         }
-    context = {'senders': senders, 'sender_form': sender_form, 'sender_reputations': sender_reputations}
+
+    context = {
+        'senders': senders,
+        'sender_form': sender_form,
+        'sender_reputations': sender_reputations,
+        'sender_campaign_counts': sender_campaign_counts,
+    }
     return render(request, 'dashboard/settings.html', context)
 
 
@@ -1288,7 +1364,7 @@ def check_notifications_view(request):
     items = []
     for n in qs.order_by('-created_at')[:5]:
         items.append({
-            'id': n.id,
+            'id': f'db-{n.id}',
             'title': n.title,
             'message': n.message,
             'tone': n.tone,
@@ -1300,17 +1376,13 @@ def check_notifications_view(request):
 @login_required
 @require_workspace_permission('workspace', 'read')
 def templates_view(request):
-    """Render email templates management page.
-
-    Currently a placeholder for future template management functionality.
-
-    Args:
-        request: The HTTP request object containing the authenticated user.
-
-    Returns:
-        HttpResponse: Rendered templates page.
-    """
-    return render(request, 'dashboard/templates_page.html', {'templates': []})
+    """Redirect to the campaigns email template manager."""
+    from django.shortcuts import redirect
+    try:
+        from django.urls import reverse
+        return redirect(reverse('campaigns:template_list'))
+    except Exception:
+        return redirect('dashboard:dashboard')
 
 
 @login_required
@@ -1501,8 +1573,8 @@ def social_content_hub(request):
     # ─── Automation data ──────────────────────────────────────────────
     all_platforms = []
     automation_rules = []
-    automation_rules_json = {}
-    recent_generated_items = []
+    automation_rules_json = []
+    content_items = []
     try:
         from apps.social_accounts.models import SocialAccount
         connected_accounts = _safe_list(
@@ -1536,12 +1608,8 @@ def social_content_hub(request):
             for rule in automation_rules
         }
         from apps.content_studio.models import ContentItem
-        recent_generated_items = _safe_list(
-            ContentItem.objects.filter(
-                user=user, is_auto_generated=True,
-            ).extra(
-                where=["metadata->>'source' = 'trending_automation'"]
-            ).order_by('-created_at')[:10]
+        content_items = _safe_list(
+            ContentItem.objects.filter(user=user).order_by('-created_at')[:20]
         )
     except Exception:
         pass
@@ -1561,9 +1629,7 @@ def social_content_hub(request):
         'all_platforms': all_platforms,
         'automation_rules': automation_rules,
         'automation_rules_json': automation_rules_json,
-        'recent_generated_items': recent_generated_items,
+        'content_items': content_items,
     }
     return render(request, 'dashboard/social_content_hub.html', context)
-
-
 

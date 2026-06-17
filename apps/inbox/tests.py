@@ -26,7 +26,8 @@ def _make_dev_key():
 
 class EmailInboxTokenTest(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='testuser', password='pass1234')
+        self.user = User.objects.create_user(
+            username='testuser', password='pass1234')
         self.inbox = EmailInbox.objects.create(
             user=self.user,
             provider='gmail',
@@ -76,7 +77,8 @@ class EmailInboxTokenTest(TestCase):
 
 class SyncInboxTest(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='syncuser', password='pass1234')
+        self.user = User.objects.create_user(
+            username='syncuser', password='pass1234')
 
     @patch('apps.inbox.services.sync.imaplib.IMAP4_SSL')
     def test_sync_inbox_no_password(self, mock_imap):
@@ -133,7 +135,8 @@ class InboxViewsTest(TestCase):
             username='viewuser', email='viewuser@example.com',
             password='pass1234',
         )
-        logged_in = self.client.login(email='viewuser@example.com', password='pass1234')
+        logged_in = self.client.login(
+            email='viewuser@example.com', password='pass1234')
         self.assertTrue(logged_in, 'Login failed in setUp')
 
     @override_settings(FERNET_KEY=_make_test_key())
@@ -145,7 +148,8 @@ class InboxViewsTest(TestCase):
             'email_address': 'new@example.com',
             'imap_password': 'my-raw-password',
         }
-        resp = self.client.post(reverse('inbox:connect'), form_data, follow=True)
+        resp = self.client.post(
+            reverse('inbox:connect'), form_data, follow=True)
         self.assertEqual(resp.status_code, 200)
         inbox = EmailInbox.objects.get(email_address='new@example.com')
         self.assertNotEqual(inbox.access_token, 'my-raw-password')
@@ -157,15 +161,18 @@ class InboxViewsTest(TestCase):
         self.assertEqual(resp.status_code, 302)
 
     def test_dashboard_shows_stats(self):
-        EmailInbox.objects.create(user=self.user, provider='gmail', email_address='a@b.com')
+        EmailInbox.objects.create(
+            user=self.user, provider='gmail', email_address='a@b.com')
         resp = self.client.get(reverse('inbox:dashboard'))
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'a@b.com')
         self.assertContains(resp, 'Sync')
 
     def test_inbox_disconnect(self):
-        inbox = EmailInbox.objects.create(user=self.user, provider='gmail', email_address='del@me.com')
-        resp = self.client.post(reverse('inbox:disconnect', args=[inbox.id]), follow=True)
+        inbox = EmailInbox.objects.create(
+            user=self.user, provider='gmail', email_address='del@me.com')
+        resp = self.client.post(
+            reverse('inbox:disconnect', args=[inbox.id]), follow=True)
         self.assertEqual(resp.status_code, 200)
         self.assertFalse(EmailInbox.objects.filter(id=inbox.id).exists())
 
