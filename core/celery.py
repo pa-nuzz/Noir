@@ -56,4 +56,9 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour='3,9,15,21', minute='0'),
         'options': {'queue': 'low'},
     },
+    'run-trending-automation': {
+        'task': 'apps.trending.tasks.run_automation',
+        'schedule': crontab(minute='*/5'),
+        'options': {'queue': 'low'},
+    },
 }
