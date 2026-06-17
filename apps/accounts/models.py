@@ -7,8 +7,10 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 
+from core.models import AuditMixin
 
-class User(AbstractUser):
+
+class User(AuditMixin, AbstractUser):
     email = models.EmailField(unique=True)
     company = models.CharField(max_length=255, blank=True)
     bio = models.TextField(blank=True)
@@ -26,7 +28,7 @@ class User(AbstractUser):
         verbose_name = 'User'
 
 
-class PasswordResetCode(models.Model):
+class PasswordResetCode(AuditMixin):
     """Stores verification codes for code-based password reset."""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reset_codes')
     code = models.CharField(max_length=6)

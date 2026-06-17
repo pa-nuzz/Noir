@@ -1,8 +1,10 @@
 from django.conf import settings
 from django.db import models
 
+from core.models import AuditMixin
 
-class Notification(models.Model):
+
+class Notification(AuditMixin):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='dashboard_notifications')
     title = models.CharField(max_length=255)
     message = models.TextField(blank=True)

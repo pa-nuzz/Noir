@@ -180,6 +180,20 @@ def media_library(request):
     if folder_id and folder_id.isdigit():
         assets = assets.filter(folder_id=int(folder_id))
 
+    assets_total_count = assets.count()
+    page_obj = None
+    assets_is_limited = False
+    if not query and not file_type and not folder_id:
+        assets = assets.filter(file_type='image')
+        assets_total_count = assets.count()
+        assets = assets[:20]
+        assets_is_limited = True
+    elif folder_id and folder_id.isdigit():
+        paginator = Paginator(assets, 20)
+        page_number = request.GET.get('page', 1)
+        page_obj = paginator.get_page(page_number)
+        assets = page_obj.object_list
+
     selected_asset = None
     selected_id = request.GET.get('selected', '')
     if selected_id and selected_id.isdigit():
@@ -196,6 +210,9 @@ def media_library(request):
 
     return render(request, 'creative/media_library.html', {
         'assets': assets,
+        'assets_total_count': assets_total_count,
+        'assets_is_limited': assets_is_limited,
+        'page_obj': page_obj,
         'folders': all_folders,
         'folder_tree': folder_tree,
         'selected_asset': selected_asset,
@@ -287,13 +304,9 @@ _PROMPT_TEMPLATES = {
 
 @login_required
 def strategy_detail(request, strategy_id):
-    user = request.user
-    ws_id = request.session.get('active_workspace_id')
-
-    company_context = _get_workspace_context(request)
+    strategy = get_object_or_404(CreativeStrategy, id=strategy_id, user=request.user)
     return render(request, 'creative/strategy_detail.html', {
         'strategy': strategy,
-        
     })
 
 
@@ -596,7 +609,7 @@ def api_chat_generate(request):
 
     try:
         result = generate_creative_content(user_input, company_context, category=strategy_type)
-        generated = result.get('content', '')
+        generated = json.dumps(result)
         full_title = result.get('title', title)
         llm_mode = 'creative_service'
     except CreativeServiceError as e:

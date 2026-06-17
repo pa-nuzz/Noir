@@ -632,6 +632,163 @@ class DiaS3Storage(BaseStorage):
             return False, str(exc)
 
 
+class MinIOStorage(BaseStorage):
+    backend_name = 'minio'
+
+    def __init__(self, user=None, workspace=None, workspace_id=None):
+        import boto3
+        from botocore.client import Config as BotoConfig
+
+        required = [
+            ('MINIO_ENDPOINT_URL', settings.MINIO_ENDPOINT_URL),
+            ('MINIO_BUCKET', settings.MINIO_BUCKET),
+            ('MINIO_ACCESS_KEY', settings.MINIO_ACCESS_KEY),
+            ('MINIO_SECRET_KEY', settings.MINIO_SECRET_KEY),
+        ]
+        missing = [name for name, val in required if not _clean_value(val)]
+        if missing:
+            raise RuntimeError(f"MinIO missing required settings: {', '.join(missing)}. Check your .env file.")
+
+        self.bucket = _clean_value(settings.MINIO_BUCKET)
+        self.public_base = (settings.MINIO_PUBLIC_BASE_URL or '').rstrip('/')
+
+        if user and workspace:
+            self.prefix = _compute_storage_prefix(user, workspace)
+        elif workspace_id:
+            self.prefix = f"workspace_{workspace_id}"
+        else:
+            self.prefix = (_clean_value(settings.MINIO_PATH_PREFIX) or '').rstrip('/')
+
+        endpoint = _clean_value(settings.MINIO_ENDPOINT_URL) or None
+        use_path_style = str(settings.MINIO_USE_PATH_STYLE).lower() in ('true', '1', 'yes')
+        endpoint, use_path_style = _normalize_s3_endpoint(endpoint, self.bucket, use_path_style)
+
+        self._client = boto3.client(
+            's3',
+            endpoint_url=endpoint,
+            region_name=_clean_value(settings.MINIO_REGION) or 'us-east-1',
+            aws_access_key_id=_clean_value(settings.MINIO_ACCESS_KEY),
+            aws_secret_access_key=_clean_value(settings.MINIO_SECRET_KEY),
+            config=BotoConfig(
+                signature_version='s3v4',
+                s3={'addressing_style': 'path' if use_path_style else 'virtual'},
+            ),
+        )
+
+    def _key(self, path):
+        if not path:
+            return self.prefix
+        path = path.lstrip('/')
+        if self.prefix and not path.startswith(self.prefix + '/'):
+            return f"{self.prefix}/{path}"
+        return path
+
+    def _strip_prefix(self, key):
+        if self.prefix and key.startswith(self.prefix + '/'):
+            return key[len(self.prefix) + 1:]
+        return key
+
+    def save(self, path, content, content_type=None):
+        if hasattr(content, 'chunks'):
+            data = b''.join(content.chunks())
+            name = _safe_filename(getattr(content, 'name', os.path.basename(path)))
+        elif hasattr(content, 'read'):
+            data = content.read()
+            if hasattr(content, 'seek'):
+                content.seek(0)
+            name = _safe_filename(getattr(content, 'name', os.path.basename(path)))
+        else:
+            data = content if isinstance(content, (bytes, bytearray)) else content.read()
+            name = _safe_filename(os.path.basename(path))
+
+        full_key = self._key(os.path.join(path, name)) if path and not path.endswith(name) else self._key(path or name)
+
+        base, ext = os.path.splitext(full_key)
+        counter = 1
+        final_key = full_key
+        while self._object_exists(final_key):
+            final_key = f"{base}_{counter}{ext}"
+            counter += 1
+
+        ctype = _guess_content_type(name, content_type)
+        self._client.put_object(
+            Bucket=self.bucket,
+            Key=final_key,
+            Body=data,
+            ContentType=ctype,
+        )
+        return self._strip_prefix(final_key)
+
+    def _object_exists(self, key):
+        try:
+            self._client.head_object(Bucket=self.bucket, Key=key)
+            return True
+        except Exception:
+            return False
+
+    def open(self, path):
+        obj = self._client.get_object(Bucket=self.bucket, Key=self._key(path))
+        return io.BytesIO(obj['Body'].read())
+
+    def delete(self, path):
+        try:
+            self._client.delete_object(Bucket=self.bucket, Key=self._key(path))
+            return True
+        except Exception as exc:
+            logger.warning("MinIO delete failed for %s: %s", path, exc)
+            return False
+
+    def exists(self, path):
+        return self._object_exists(self._key(path))
+
+    def size(self, path):
+        try:
+            return int(self._client.head_object(Bucket=self.bucket, Key=self._key(path)).get('ContentLength', 0))
+        except Exception:
+            return 0
+
+    def url(self, path):
+        key = self._key(path)
+        if self.public_base:
+            return f"{self.public_base}/{key}"
+        return self._client.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': self.bucket, 'Key': key},
+            ExpiresIn=3600,
+        )
+
+    def get_signed_url(self, path, expiration=3600):
+        if self.public_base:
+            return f"{self.public_base}/{self._key(path)}"
+        return self._client.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': self.bucket, 'Key': self._key(path)},
+            ExpiresIn=expiration,
+        )
+
+    def test_connection(self):
+        try:
+            self._client.head_bucket(Bucket=self.bucket)
+        except Exception:
+            try:
+                self._client.create_bucket(Bucket=self.bucket)
+                logger.info("Created MinIO bucket %s", self.bucket)
+            except Exception as create_err:
+                return False, f"Cannot access bucket '{self.bucket}': {create_err}"
+
+        try:
+            probe_key = f"{self.prefix}/_minio_probe_{timezone.now().timestamp()}".lstrip('/')
+            self._client.put_object(Bucket=self.bucket, Key=probe_key, Body=b"ok")
+            obj = self._client.get_object(Bucket=self.bucket, Key=probe_key)
+            data = obj['Body'].read()
+            self._client.delete_object(Bucket=self.bucket, Key=probe_key)
+            if data == b"ok":
+                return True, ""
+            return False, "Probe round-trip failed"
+        except Exception as exc:
+            return False, str(exc)
+
+
 class StorageService:
     def __init__(self, backend: BaseStorage, config=None):
         self.backend = backend
@@ -673,40 +830,18 @@ class StorageService:
 
         config, _ = WorkspaceStorageConfig.objects.get_or_create(
             workspace=workspace,
-            defaults={'backend': WorkspaceStorageConfig.BACKEND_LOCAL},
+            defaults={'backend': WorkspaceStorageConfig.BACKEND_MINIO},
         )
 
-        if config.backend == WorkspaceStorageConfig.BACKEND_GOOGLE_DRIVE and config.is_google_drive_connected():
-            try:
-                return cls(GoogleDriveStorage(config), config=config)
-            except Exception as exc:
-                logger.warning("Falling back to local storage: %s", exc)
-
-        if config.backend == WorkspaceStorageConfig.BACKEND_S3 and config.is_s3_configured():
-            try:
-                return cls(S3CompatibleStorage(config, user=user, workspace=workspace), config=config)
-            except Exception as exc:
-                logger.warning("Falling back to local storage: %s", exc)
-
-        if config.backend == WorkspaceStorageConfig.BACKEND_DIA_S3:
-            if not settings.DIA_S3_BUCKET:
-                logger.warning("DIA S3 selected but DIA_S3_BUCKET is not set in .env, falling back to local")
+        if config.backend == WorkspaceStorageConfig.BACKEND_MINIO:
+            if not settings.MINIO_BUCKET:
+                logger.warning("MinIO selected but MINIO_BUCKET is not set in .env, falling back to local")
                 return cls(LocalStorage(), config=config)
-            storage = DiaS3Storage(user=user, workspace=workspace)
+            storage = MinIOStorage(user=user, workspace=workspace)
             ok, err = storage.test_connection()
             if ok:
                 return cls(storage, config=config)
-            logger.warning("DIA S3 unavailable (%s), falling back to local", err)
+            logger.warning("MinIO unavailable (%s), falling back to local", err)
             return cls(LocalStorage(), config=config)
-
-        if config.backend == WorkspaceStorageConfig.BACKEND_LOCAL and not settings.DEBUG:
-            if not settings.DIA_S3_BUCKET:
-                logger.warning("DEBUG=False but DIA_S3_BUCKET is not set, falling back to local")
-                return cls(LocalStorage(), config=config)
-            storage = DiaS3Storage(user=user, workspace=workspace)
-            ok, err = storage.test_connection()
-            if ok:
-                return cls(storage, config=config)
-            logger.warning("DIA S3 unavailable in production (%s), falling back to local", err)
 
         return cls(LocalStorage(), config=config)

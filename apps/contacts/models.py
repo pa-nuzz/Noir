@@ -4,10 +4,11 @@ from django.db import models
 from django.db.models import Q
 from django.conf import settings
 
+from core.models import AuditMixin
 from core.tenant import TenantManager
 
 
-class ContactList(models.Model):
+class ContactList(AuditMixin):
     objects = TenantManager()
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='contact_lists')
     workspace = models.ForeignKey('workspaces.Workspace', on_delete=models.CASCADE, null=True, blank=True, related_name='contact_lists')
@@ -26,7 +27,7 @@ class ContactList(models.Model):
         return list(self.contacts.filter(is_active=True, unsubscribed=False).values_list('email', flat=True))
 
 
-class ContactTag(models.Model):
+class ContactTag(AuditMixin):
     objects = TenantManager()
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='contact_tags')
     workspace = models.ForeignKey('workspaces.Workspace', on_delete=models.CASCADE, null=True, blank=True, related_name='contact_tags')
@@ -44,7 +45,7 @@ class ContactTag(models.Model):
         return self.name
 
 
-class ContactCustomField(models.Model):
+class ContactCustomField(AuditMixin):
     objects = TenantManager()
     FIELD_TYPE_CHOICES = [
         ('text', 'Text'),
@@ -73,7 +74,7 @@ class ContactCustomField(models.Model):
         return self.name
 
 
-class ContactSegment(models.Model):
+class ContactSegment(AuditMixin):
     objects = TenantManager()
     MATCH_CHOICES = [
         ('all', 'Match ALL conditions'),
@@ -180,7 +181,7 @@ class ContactSegment(models.Model):
         return qs.filter(combined).distinct()
 
 
-class Contact(models.Model):
+class Contact(AuditMixin):
     objects = TenantManager(related_filter='contact_list__workspace')
     contact_list = models.ForeignKey(ContactList, on_delete=models.CASCADE, related_name='contacts')
     email = models.EmailField()
@@ -255,7 +256,7 @@ class Contact(models.Model):
         return cleaned
 
 
-class ContactCustomFieldValue(models.Model):
+class ContactCustomFieldValue(AuditMixin):
     objects = TenantManager(related_filter='contact__contact_list__workspace')
     contact = models.ForeignKey(Contact, on_delete=models.CASCADE, related_name='custom_field_values')
     field = models.ForeignKey(ContactCustomField, on_delete=models.CASCADE)

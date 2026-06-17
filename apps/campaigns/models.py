@@ -7,13 +7,14 @@ import html
 import re
 
 from apps.campaigns import constants as C
+from core.models import AuditMixin
 from core.tenant import TenantManager
 
 
 def template_image_upload_to(instance, filename):
     return f'template_images/{instance.template.id}/{instance.cid_name}'
 
-class Campaign(models.Model):
+class Campaign(AuditMixin):
     objects = TenantManager()
     STATUS_CHOICES = [
         ('draft', 'Draft'),
@@ -214,7 +215,7 @@ class Campaign(models.Model):
         return html_preview
 
 
-class CampaignAttachment(models.Model):
+class CampaignAttachment(AuditMixin):
     campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name='attachments')
     file = models.FileField(upload_to='campaign_attachments/%Y/%m/')
     original_filename = models.CharField(max_length=255, blank=True)
@@ -229,7 +230,7 @@ class CampaignAttachment(models.Model):
         return self.original_filename or self.file.name
 
 
-class CampaignVariant(models.Model):
+class CampaignVariant(AuditMixin):
     campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name='variants')
     label = models.CharField(max_length=1)  # 'A', 'B'
     subject = models.CharField(max_length=998)
@@ -263,7 +264,7 @@ class CampaignVariant(models.Model):
         return round((self.bounce_count / self.sent_count) * 100, 1)
 
 
-class EmailEngagement(models.Model):
+class EmailEngagement(AuditMixin):
     campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name='engagements')
     campaign_variant = models.ForeignKey(CampaignVariant, null=True, blank=True, on_delete=models.SET_NULL, related_name='engagements')
     recipient_email = models.EmailField()
@@ -290,7 +291,7 @@ class EmailEngagement(models.Model):
         return f"{self.recipient_email} - {self.campaign.name}"
 
 
-class EmailClickEvent(models.Model):
+class EmailClickEvent(AuditMixin):
     campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name='click_events')
     engagement = models.ForeignKey(EmailEngagement, on_delete=models.CASCADE, related_name='click_events')
     clicked_url = models.URLField(max_length=2048)
@@ -306,7 +307,7 @@ class EmailClickEvent(models.Model):
         return f"{self.campaign.name} -> {self.clicked_url}"
 
 
-class EmailUnsubscribe(models.Model):
+class EmailUnsubscribe(AuditMixin):
     email = models.EmailField(db_index=True)
     campaign = models.ForeignKey(Campaign, on_delete=models.SET_NULL, null=True, blank=True, related_name='unsubscribes')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -318,7 +319,7 @@ class EmailUnsubscribe(models.Model):
         return self.email
 
 
-class EmailTemplate(models.Model):
+class EmailTemplate(AuditMixin):
     """Reusable email templates like Gmail templates."""
     objects = TenantManager()
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='email_templates')
@@ -396,7 +397,7 @@ class EmailTemplate(models.Model):
         return html_out
 
 
-class TemplateImage(models.Model):
+class TemplateImage(AuditMixin):
     """Embedded image referenced via cid: in template HTML (signature pics, icons, etc.)."""
     template = models.ForeignKey(EmailTemplate, on_delete=models.CASCADE, related_name='images')
     cid_name = models.CharField(max_length=255, help_text="Content-ID name (e.g. profile.jpg, logo.png)")

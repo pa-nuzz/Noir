@@ -31,7 +31,7 @@
            class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors {% if not current_folder %}bg-primary-light text-primary font-semibold{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
           <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
           <span class="flex-1 truncate">All Assets</span>
-          <span class="text-xs text-slate-400">{{ assets|length }}</span>
+          <span class="text-xs text-slate-400">{{ assets_total_count }}</span>
         </a>
 
         {% for folder in folder_tree %}
@@ -66,7 +66,7 @@
       </div>
 
       <!-- Type filters -->
-      <div class="px-5 py-2 border-b border-slate-50 flex items-center gap-2 text-xs overflow-x-auto">
+      <div class="px-5 py-2 border-b border-slate-50 flex flex-wrap items-center gap-2 text-xs overflow-x-auto">
         <a href="{% if current_folder %}?folder={{ current_folder }}{% else %}{% url 'creative:media_library' %}{% endif %}" class="px-3 py-1.5 rounded-lg font-semibold whitespace-nowrap transition-colors {% if not current_type %}bg-primary/10 text-primary{% else %}text-slate-500 hover:bg-slate-100{% endif %}">All</a>
         <a href="{% if current_folder %}?folder={{ current_folder }}&type=image{% else %}?type=image{% endif %}" class="px-3 py-1.5 rounded-lg font-semibold whitespace-nowrap transition-colors {% if current_type == 'image' %}bg-primary/10 text-primary{% else %}text-slate-500 hover:bg-slate-100{% endif %}">Images</a>
         <a href="{% if current_folder %}?folder={{ current_folder }}&type=video{% else %}?type=video{% endif %}" class="px-3 py-1.5 rounded-lg font-semibold whitespace-nowrap transition-colors {% if current_type == 'video' %}bg-primary/10 text-primary{% else %}text-slate-500 hover:bg-slate-100{% endif %}">Videos</a>
@@ -74,6 +74,9 @@
         <span class="text-slate-300 mx-1">|</span>
         <span class="text-slate-400 font-medium">{{ assets|length }} asset{{ assets|pluralize }}</span>
       </div>
+      {% if assets_is_limited %}
+      <div class="px-5 py-3 text-sm text-slate-500 border-b border-slate-100">Showing the latest 20 image assets. Use search or select a folder to view more files.</div>
+      {% endif %}
 
       <!-- Grid -->
       <div class="flex-1 overflow-y-auto p-4" id="asset-grid-container">
@@ -83,8 +86,16 @@
           <div class="group premium-surface rounded-xl overflow-hidden hover:shadow-md transition-all relative
             {% if selected_asset and selected_asset.id == asset.id %}ring-2 ring-primary ring-offset-2{% endif %}"
             data-asset-id="{{ asset.id }}">
-            <a href="{% url 'creative:media_library' %}?selected={{ asset.id }}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_folder %}&folder={{ current_folder }}{% endif %}{% if query %}&q={{ query }}{% endif %}"
-               class="block aspect-square bg-slate-100 relative overflow-hidden">
+            <button type="button" onclick="openAssetPreview(this)"
+               data-asset-id="{{ asset.id }}"
+               data-asset-title="{{ asset.title|default:asset.original_filename|escapejs }}"
+               data-asset-url="{{ asset.display_url|default:''|escapejs }}"
+               data-asset-thumb="{{ asset.display_thumbnail_url|default:asset.display_url|escapejs }}"
+               data-asset-file-type="{{ asset.file_type }}"
+               data-asset-size="{{ asset.file_size }}"
+               data-asset-folder="{{ asset.folder.name|default:''|escapejs }}"
+               data-asset-created="{{ asset.created_at|date:'c' }}"
+               class="block aspect-square bg-slate-100 relative overflow-hidden w-full text-left">
               {% if asset.file_type == 'image' and asset.display_thumbnail_url %}
               <img src="{{ asset.display_thumbnail_url }}" alt="{{ asset.title|default:asset.original_filename }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy">
               {% elif asset.file_type == 'image' and asset.display_url %}
@@ -98,7 +109,7 @@
                 <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
               </div>
               {% endif %}
-            </a>
+            </button>
             <div class="p-2.5">
               <p class="text-xs font-semibold text-slate-800 truncate">{{ asset.title|default:asset.original_filename }}</p>
               <p class="text-[11px] text-gray-400 mt-0.5">{{ asset.get_file_type_display }} · {{ asset.file_size|filesizeformat }}</p>
@@ -115,6 +126,20 @@
           </div>
           {% endfor %}
         </div>
+        {% if page_obj %}
+        <div class="px-5 py-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-slate-500">
+          <span>Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ assets_total_count }} assets</span>
+          <div class="flex items-center gap-2 justify-center sm:justify-end">
+            {% if page_obj.has_previous %}
+            <a href="?{% if current_folder %}folder={{ current_folder }}&{% endif %}{% if current_type %}type={{ current_type }}&{% endif %}{% if query %}q={{ query }}&{% endif %}page={{ page_obj.previous_page_number }}" class="px-3 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition">Previous</a>
+            {% endif %}
+            <span class="px-3 py-2 text-slate-500">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+            <a href="?{% if current_folder %}folder={{ current_folder }}&{% endif %}{% if current_type %}type={{ current_type }}&{% endif %}{% if query %}q={{ query }}&{% endif %}page={{ page_obj.next_page_number }}" class="px-3 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition">Next</a>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
         {% else %}
         <div class="flex flex-col items-center justify-center h-full text-center py-12">
           <div class="w-14 h-14 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
@@ -128,125 +153,6 @@
       </div>
     </div>
 
-    <!-- Right: Preview & Schedule Pane -->
-    <div class="lg:w-80 xl:w-96 shrink-0 flex flex-col premium-surface rounded-2xl overflow-hidden">
-      {% if selected_asset %}
-      <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-        <h3 class="text-sm font-bold text-slate-800 truncate flex-1">{{ selected_asset.title|default:selected_asset.original_filename }}</h3>
-        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ml-2
-          {% if selected_asset.file_type == 'image' %}bg-blue-50 text-blue-600
-          {% elif selected_asset.file_type == 'video' %}bg-purple-50 text-purple-600
-          {% elif selected_asset.file_type == 'document' %}bg-emerald-50 text-emerald-600
-          {% else %}bg-slate-100 text-slate-600{% endif %}">
-          {{ selected_asset.get_file_type_display }}
-        </span>
-      </div>
-
-      <div class="flex-1 overflow-y-auto">
-        <!-- Preview -->
-        <div class="bg-slate-50/50 flex items-center justify-center min-h-[180px] border-b border-slate-100 p-3">
-          {% if selected_asset.file_type == 'image' and selected_asset.display_url %}
-          <img src="{{ selected_asset.display_url }}" alt="{{ selected_asset.title|default:selected_asset.original_filename }}" class="max-h-52 max-w-full rounded-xl object-contain shadow-sm">
-          {% elif selected_asset.file_type == 'document' %}
-          <div class="text-center py-6">
-            <svg class="w-12 h-12 mx-auto text-emerald-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-            <p class="text-sm font-semibold text-slate-600">{{ selected_asset.original_filename }}</p>
-          </div>
-          {% else %}
-          <div class="text-center py-6">
-            <svg class="w-12 h-12 mx-auto text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-            <p class="text-sm font-semibold text-slate-600">{{ selected_asset.original_filename }}</p>
-          </div>
-          {% endif %}
-        </div>
-
-        <!-- Schedule Form -->
-        <form method="post" class="p-4 space-y-3 border-b border-slate-100">
-          {% csrf_token %}
-          <input type="hidden" name="action" value="schedule_asset">
-          <input type="hidden" name="asset_id" value="{{ selected_asset.id }}">
-          <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Schedule for Publishing</h4>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Platform</label>
-            <select name="platform" class="input-field w-full text-sm">
-              <option value="">Select platform...</option>
-              <option value="facebook">Facebook</option>
-              <option value="instagram">Instagram</option>
-              <option value="linkedin">LinkedIn</option>
-              <option value="twitter">X (Twitter)</option>
-              <option value="tiktok">TikTok</option>
-              <option value="youtube">YouTube</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Schedule Date</label>
-            <input type="datetime-local" name="scheduled_at" class="input-field w-full text-sm">
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Link to Strategy</label>
-            <div class="flex gap-1 mb-1.5">
-              <a href="?{% if current_type %}type={{ current_type }}&{% endif %}{% if current_folder %}folder={{ current_folder }}&{% endif %}{% if selected_asset %}selected={{ selected_asset.id }}&{% endif %}strategy_status=" class="px-2 py-0.5 rounded text-[10px] font-semibold {% if not strategy_status %}bg-primary/10 text-primary{% else %}bg-slate-100 text-slate-500 hover:bg-slate-200{% endif %}">All</a>
-              <a href="?{% if current_type %}type={{ current_type }}&{% endif %}{% if current_folder %}folder={{ current_folder }}&{% endif %}{% if selected_asset %}selected={{ selected_asset.id }}&{% endif %}strategy_status=draft" class="px-2 py-0.5 rounded text-[10px] font-semibold {% if strategy_status == 'draft' %}bg-amber-50 text-amber-600{% else %}bg-slate-100 text-slate-500 hover:bg-slate-200{% endif %}">Draft</a>
-              <a href="?{% if current_type %}type={{ current_type }}&{% endif %}{% if current_folder %}folder={{ current_folder }}&{% endif %}{% if selected_asset %}selected={{ selected_asset.id }}&{% endif %}strategy_status=approved" class="px-2 py-0.5 rounded text-[10px] font-semibold {% if strategy_status == 'approved' %}bg-emerald-50 text-emerald-600{% else %}bg-slate-100 text-slate-500 hover:bg-slate-200{% endif %}">Approved</a>
-            </div>
-            <select name="strategy_id" class="input-field w-full text-sm">
-              <option value="">No strategy</option>
-              {% for s in strategies %}
-              <option value="{{ s.id }}" {% if strategy_status %}data-status="{{ s.status }}"{% endif %}>{{ s.title|truncatechars:35 }} {% if s.status == 'draft' %}[Draft]{% elif s.status == 'approved' %}[Approved]{% endif %}</option>
-              {% endfor %}
-            </select>
-          </div>
-          {% include "components/button.html" with label="Schedule" type="submit" icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" class="w-full !text-sm" %}
-        </form>
-
-        <!-- Context Notes -->
-        <form method="post" class="p-4 space-y-3">
-          {% csrf_token %}
-          <input type="hidden" name="action" value="save_context_notes">
-          <input type="hidden" name="asset_id" value="{{ selected_asset.id }}">
-          <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Context Notes</h4>
-          <textarea name="context_notes" rows="3" class="input-field w-full text-sm" placeholder="Describe how this asset fits into your campaign...">{{ selected_asset.description }}</textarea>
-          {% include "components/button.html" with label="Save Notes" type="submit" icon="M5 13l4 4L19 7" class="w-full !text-sm" %}
-        </form>
-
-        <!-- Metadata -->
-        <div class="p-4 grid grid-cols-2 gap-2 text-xs border-t border-slate-100">
-          <div class="bg-slate-50 rounded-lg p-2.5">
-            <p class="text-slate-400 font-medium">Size</p>
-            <p class="font-semibold text-slate-700 mt-0.5">{{ selected_asset.file_size|filesizeformat }}</p>
-          </div>
-          {% if selected_asset.width %}
-          <div class="bg-slate-50 rounded-lg p-2.5">
-            <p class="text-slate-400 font-medium">Dimensions</p>
-            <p class="font-semibold text-slate-700 mt-0.5">{{ selected_asset.width }}x{{ selected_asset.height }}</p>
-          </div>
-          {% endif %}
-          {% if selected_asset.folder %}
-          <div class="bg-slate-50 rounded-lg p-2.5">
-            <p class="text-slate-400 font-medium">Folder</p>
-            <p class="font-semibold text-slate-700 mt-0.5">{{ selected_asset.folder.name }}</p>
-          </div>
-          {% endif %}
-          <div class="bg-slate-50 rounded-lg p-2.5">
-            <p class="text-slate-400 font-medium">Created</p>
-            <p class="font-semibold text-slate-700 mt-0.5">{{ selected_asset.created_at|date:'M d, Y' }}</p>
-          </div>
-        </div>
-
-        <!-- Actions -->
-        <div class="p-4 border-t border-slate-100 flex gap-2">
-          <form method="post" class="flex-1">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="delete_asset">
-            <input type="hidden" name="asset_id" value="{{ selected_asset.id }}">
-            {% include "components/button.html" with label="Delete" type="submit" onclick="return confirm('Delete this asset?')" icon="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" primary_start="#DC2626" primary_end="#EF4444" class="!text-xs" %}
-          </form>
-        </div>
-      </div>
-      {% else %}
-      {% include "components/empty_state.html" with title="Select an Asset" description="Click any asset from the center grid to preview, add context, or schedule it." class="border-0 h-full justify-center" %}
-      {% endif %}
-    </div>
   </div>
 </div>
 
@@ -319,6 +225,83 @@
         {% include "components/button.html" with label="Upload" type="submit" icon="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" %}
       </div>
     </form>
+  </div>
+</div>
+
+<!-- Asset Preview Modal -->
+<div id="assetPreviewModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+  <div class="fixed inset-0 bg-black/40" onclick="closeModal('assetPreviewModal')"></div>
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+        <div>
+          <h3 id="assetPreviewTitle" class="text-lg font-bold text-slate-900">Asset preview</h3>
+          <p id="assetPreviewType" class="text-sm text-slate-500 mt-1"></p>
+        </div>
+        <button type="button" onclick="closeModal('assetPreviewModal')" class="w-10 h-10 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="overflow-y-auto max-h-[78vh]">
+        <div class="p-6 space-y-5">
+          <div id="assetPreviewMedia" class="bg-slate-50 rounded-3xl overflow-hidden flex items-center justify-center min-h-[280px]"></div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-slate-600">
+            <div class="rounded-2xl bg-slate-50 p-4">
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Name</p>
+              <p id="assetPreviewFilename" class="mt-2 font-semibold text-slate-800"></p>
+            </div>
+            <div class="rounded-2xl bg-slate-50 p-4">
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Folder</p>
+              <p id="assetPreviewFolder" class="mt-2 font-semibold text-slate-800"></p>
+            </div>
+            <div class="rounded-2xl bg-slate-50 p-4">
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Size</p>
+              <p id="assetPreviewSize" class="mt-2 font-semibold text-slate-800"></p>
+            </div>
+            <div class="rounded-2xl bg-slate-50 p-4">
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Created</p>
+              <p id="assetPreviewCreated" class="mt-2 font-semibold text-slate-800"></p>
+            </div>
+          </div>
+          <form id="assetPreviewScheduleForm" method="post" class="space-y-4" action="">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="schedule_asset">
+            <input type="hidden" name="asset_id" id="assetPreviewAssetId" value="">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Platform</label>
+                <select name="platform" id="assetPreviewPlatform" class="input-field w-full text-sm" required>
+                  <option value="">Select platform...</option>
+                  <option value="facebook">Facebook</option>
+                  <option value="instagram">Instagram</option>
+                  <option value="linkedin">LinkedIn</option>
+                  <option value="twitter">X (Twitter)</option>
+                  <option value="tiktok">TikTok</option>
+                  <option value="youtube">YouTube</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Schedule Date &amp; Time</label>
+                <input type="datetime-local" name="scheduled_at" id="assetPreviewScheduledAt" class="input-field w-full text-sm" required>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Link to Strategy</label>
+              <select name="strategy_id" id="assetPreviewStrategyId" class="input-field w-full text-sm">
+                <option value="">No strategy</option>
+                {% for s in strategies %}
+                <option value="{{ s.id }}">{{ s.title|truncatechars:45 }} {% if s.status == 'draft' %}[Draft]{% elif s.status == 'approved' %}[Approved]{% endif %}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3">
+              <button type="submit" class="btn-action btn-action-primary flex-1">Schedule asset</button>
+              <a id="assetPreviewPostLink" href="#" class="btn-action btn-action-secondary flex-1 text-center">Use in Social Post</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -396,6 +379,62 @@ function deleteAsset(id) {
   document.getElementById('delete-asset-id').value = id;
   openModal('deleteModal');
 }
+
+function updateAssetPreviewPostLink() {
+  var link = document.getElementById('assetPreviewPostLink');
+  var id = document.getElementById('assetPreviewAssetId').value;
+  var platform = document.getElementById('assetPreviewPlatform')?.value || '';
+  var scheduled = document.getElementById('assetPreviewScheduledAt')?.value || '';
+  if (!link || !id) return;
+
+  var params = new URLSearchParams();
+  params.set('media_asset_ids', id);
+  if (platform) params.set('platform', platform);
+  if (scheduled) params.set('scheduled_at', scheduled);
+  link.href = '{% url "social_accounts:post_create" %}?' + params.toString();
+}
+
+function openAssetPreview(button) {
+  var id = button.dataset.assetId;
+  var title = button.dataset.assetTitle;
+  var fileType = button.dataset.assetFileType;
+  var url = button.dataset.assetUrl;
+  var thumb = button.dataset.assetThumb || url;
+  var size = button.dataset.assetSize;
+  var folder = button.dataset.assetFolder || 'Library';
+  var created = button.dataset.assetCreated ? new Date(button.dataset.assetCreated).toLocaleDateString() : 'Unknown';
+
+  document.getElementById('assetPreviewTitle').textContent = title || 'Untitled asset';
+  document.getElementById('assetPreviewType').textContent = fileType ? fileType.charAt(0).toUpperCase() + fileType.slice(1) : 'Media';
+  document.getElementById('assetPreviewFilename').textContent = title || 'Untitled asset';
+  document.getElementById('assetPreviewFolder').textContent = folder || 'Library';
+  document.getElementById('assetPreviewSize').textContent = size ? Intl.NumberFormat('en', { style: 'unit', unit: 'byte' }).format(size) : 'Unknown';
+  document.getElementById('assetPreviewCreated').textContent = created;
+  document.getElementById('assetPreviewAssetId').value = id;
+  updateAssetPreviewPostLink();
+
+  var mediaContainer = document.getElementById('assetPreviewMedia');
+  mediaContainer.innerHTML = '';
+  if (fileType === 'image' && url) {
+    var img = document.createElement('img');
+    img.src = url;
+    img.alt = title || 'Asset preview';
+    img.className = 'w-full h-full object-contain';
+    mediaContainer.appendChild(img);
+  } else if (fileType === 'video' && url) {
+    var video = document.createElement('video');
+    video.src = url;
+    video.controls = true;
+    video.className = 'w-full h-full';
+    mediaContainer.appendChild(video);
+  } else {
+    mediaContainer.innerHTML = '<div class="text-center text-slate-400">Preview unavailable</div>';
+  }
+  openModal('assetPreviewModal');
+}
+
+document.getElementById('assetPreviewPlatform')?.addEventListener('change', updateAssetPreviewPostLink);
+document.getElementById('assetPreviewScheduledAt')?.addEventListener('change', updateAssetPreviewPostLink);
 
 function toggleFolder(id) {
   var el = document.getElementById('folder-children-' + id);

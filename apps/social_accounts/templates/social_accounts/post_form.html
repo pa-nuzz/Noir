@@ -1110,7 +1110,61 @@
     });
   })();
 
-  toggleSaveMode('draft');
+  function initializeSelectedAssets() {
+    try {
+      var initialAssets = JSON.parse('{{ initial_selected_assets_json|escapejs }}' || '[]');
+      var formData = JSON.parse('{{ form_data_json|escapejs }}' || '{}');
+      if (Array.isArray(initialAssets) && initialAssets.length) {
+        initialAssets.forEach(function(asset) {
+          if (asset && asset.url) {
+            window.addSelectedMedia(asset.url, asset.title || asset.url, asset.id, asset.thumbnail_url, asset.file_type);
+          }
+        });
+      }
+      if (formData.media_urls && Array.isArray(formData.media_urls) && formData.media_urls.length) {
+        var rows = document.querySelectorAll('.media-row');
+        var firstRow = rows[0];
+        if (firstRow) {
+          firstRow.querySelector('input').value = formData.media_urls[0];
+          var removeBtn = firstRow.querySelector('.remove-url');
+          if (removeBtn) removeBtn.style.visibility = formData.media_urls.length > 1 ? 'visible' : 'hidden';
+        }
+        for (var i = 1; i < formData.media_urls.length; i++) {
+          document.getElementById('addMediaUrl').click();
+          var newRows = document.querySelectorAll('.media-row');
+          var row = newRows[newRows.length - 1];
+          if (row) {
+            row.querySelector('input').value = formData.media_urls[i];
+          }
+        }
+      }
+      if (formData.account_ids && Array.isArray(formData.account_ids)) {
+        formData.account_ids.forEach(function(accountId) {
+          var checkbox = document.querySelector('.account-check[value="' + accountId + '"]');
+          if (checkbox && !checkbox.disabled) {
+            checkbox.checked = true;
+          }
+        });
+      } else if (formData.selected_platform) {
+        document.querySelectorAll('.account-check[data-platform="' + formData.selected_platform + '"]').forEach(function(cb) {
+          if (!cb.disabled) cb.checked = true;
+        });
+      }
+      if (formData.scheduled_at) {
+        var sched = document.getElementById('scheduled_at');
+        if (sched) sched.value = formData.scheduled_at;
+        if (formData.publish_now) {
+          toggleSaveMode('publish');
+        } else {
+          toggleSaveMode('schedule');
+        }
+      }
+    } catch (err) {
+      console.warn('Media form initialization failed', err);
+    }
+  }
+
+  initializeSelectedAssets();
   updatePlatformCompatibility();
   updateCounts();
   updatePreview();

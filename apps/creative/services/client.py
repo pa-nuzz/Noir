@@ -22,7 +22,7 @@ class LLMClient:
             config('LLM_MODEL', default=None)
             or getattr(settings, 'LLM_MODEL', 'gpt-4o')
         )
-        self.timeout = 60.0
+        self.timeout = 180.0
 
     def is_configured(self) -> bool:
         return bool(self.api_key)
@@ -54,33 +54,39 @@ class LLMClient:
         if response_format == 'json':
             payload["response_format"] = {"type": "json_object"}
 
-        try:
-            url = f"{self.base_url}/chat/completions"
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            }
-            response = httpx.post(url, json=payload, headers=headers, timeout=self.timeout)
-            response.raise_for_status()
+        url = f"{self.base_url}/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
 
-            result = response.json()
-            choices = result.get("choices", [])
-            if not choices:
-                logger.warning("No choices in LLM response")
+        for attempt in range(2):
+            try:
+                # Using a Client context manager and HTTP/1.1 to avoid some HTTP/2 chunking issues
+                timeout_config = httpx.Timeout(self.timeout, connect=10.0)
+                with httpx.Client(timeout=timeout_config, http2=False) as client:
+                    response = client.post(url, json=payload, headers=headers)
+                    response.raise_for_status()
+
+                result = response.json()
+                choices = result.get("choices", [])
+                if not choices:
+                    logger.warning("No choices in LLM response")
+                    return ""
+
+                return choices[0].get("message", {}).get("content", "").strip()
+
+            except httpx.HTTPStatusError as e:
+                error_text = e.response.text
+                logger.error(f"LLM API error ({e.response.status_code}): {error_text}")
                 return ""
-
-            return choices[0].get("message", {}).get("content", "").strip()
-
-        except httpx.HTTPStatusError as e:
-            error_text = e.response.text
-            logger.error(f"LLM API error ({e.response.status_code}): {error_text}")
-            return ""
-        except httpx.RequestError as e:
-            logger.error(f"LLM request failed: {e}")
-            return ""
-        except Exception as e:
-            logger.exception(f"Unexpected error calling LLM: {e}")
-            return ""
+            except httpx.RequestError as e:
+                logger.error(f"LLM request failed on attempt {attempt + 1}: {e}")
+                if attempt == 1:
+                    return ""
+            except Exception as e:
+                logger.exception(f"Unexpected error calling LLM: {e}")
+                return ""
 
 
 _llm_client = None

@@ -4,8 +4,10 @@ from django.utils import timezone
 
 from .models import Workspace
 
+from core.models import AuditMixin
 
-class WorkspaceOnboarding(models.Model):
+
+class WorkspaceOnboarding(AuditMixin):
     STEPS = [
         ('connect_sender', 'Connect a Sender'),
         ('import_contacts', 'Import Contacts'),

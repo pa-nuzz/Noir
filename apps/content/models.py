@@ -1,8 +1,10 @@
 from django.db import models
 from django.conf import settings
 
+from core.models import AuditMixin
 
-class ContentGeneration(models.Model):
+
+class ContentGeneration(AuditMixin):
     GENERATION_TYPES = [
         ('caption', 'Caption'),
         ('hashtags', 'Hashtags'),
@@ -50,7 +52,7 @@ class ContentGeneration(models.Model):
         return f"{self.get_generation_type_display()} — {self.input_context[:50]}"
 
 
-class ContentVersion(models.Model):
+class ContentVersion(AuditMixin):
     generation = models.ForeignKey(ContentGeneration, on_delete=models.CASCADE, related_name='versions')
     content = models.TextField()
     notes = models.TextField(blank=True)
