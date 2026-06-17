@@ -4,13 +4,14 @@
 {% block page_title %}SMTP Senders{% endblock %}
 {% block content %}
 
-<div class="page-shell max-w-none">
+<div class="page-shell max-w-none space-y-6">
   {% load widget_tweaks dashboard_tags %}
 
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div>
-      <h1 class="page-title">SMTP Senders</h1>
-      <p class="page-subtitle">Manage sender identities, security, and sending limits.</p>
+      <p class="eyebrow">Settings</p>
+      <h1 class="page-title mt-2">SMTP Senders</h1>
+      <p class="page-lead">Manage sender identities, security, and sending limits.</p>
     </div>
     {% include "components/badge.html" with label="Stable" variant="green" dot=True class="hidden md:flex uppercase tracking-wider text-xs" %}
   </div>
@@ -218,11 +219,11 @@
             <div class="dns-audit-result hidden mt-3 space-y-2" data-sender-id="{{ s.id }}"></div>
             
             <!-- DNS Education Modal (hidden by default) -->
-            <div id="dns-education-modal-{{ s.id }}" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50" onclick="if(event.target===this) this.classList.add('hidden')">
+            <div id="dns-education-modal-{{ s.id }}" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50" onclick="if(event.target===this) { this.classList.add('hidden'); this.classList.remove('flex'); }">
               <div class="bg-white rounded-2xl max-w-3xl w-[calc(100vw-2rem)] sm:w-full mx-4 max-h-[90vh] overflow-y-auto shadow-2xl">
                 <div class="p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white rounded-t-2xl">
                   <h3 class="text-lg font-bold text-slate-900">📚 Understanding DNS & Email Deliverability</h3>
-                  <button onclick="this.closest('.fixed').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 p-2">
+                  <button type="button" onclick="this.closest('.fixed').classList.add('hidden'); this.closest('.fixed').classList.remove('flex')" class="text-slate-400 hover:text-slate-600 p-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                   </button>
                 </div>
@@ -450,342 +451,384 @@
 </div>
 
 <script>
-  var deleteSenderModal = document.getElementById('delete-sender-modal');
-  var testPasswordModal = document.getElementById('test-password-modal');
+  // Global modal state helpers
+  function getDeleteSenderModal() { return document.getElementById('delete-sender-modal'); }
+  function getTestPasswordModal() { return document.getElementById('test-password-modal'); }
 
   function openDeleteSenderModal(senderId, senderName, senderEmail, campaignCount) {
+    const modal = getDeleteSenderModal();
+    if (!modal) return;
     document.getElementById('delete-modal-sender').textContent = senderName + ' (' + senderEmail + ')';
     document.getElementById('delete-modal-warning').textContent = campaignCount > 0 ? '⚠ ' + campaignCount + ' campaign(s) use this sender.' : '';
     document.getElementById('delete-sender-id').value = senderId;
-    deleteSenderModal.classList.remove('hidden');
-    deleteSenderModal.style.display = 'flex';
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
     document.body.classList.add('overflow-hidden');
   }
 
   function closeDeleteSenderModal() {
-    deleteSenderModal.classList.add('hidden');
-    deleteSenderModal.style.display = 'none';
+    const modal = getDeleteSenderModal();
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
     document.body.classList.remove('overflow-hidden');
   }
 
   function openTestPasswordModal(senderInfo) {
+    const modal = getTestPasswordModal();
+    if (!modal) return;
     document.getElementById('test-password-sender').textContent = senderInfo;
     document.getElementById('test-password-input').value = '';
-    testPasswordModal.classList.remove('hidden');
-    testPasswordModal.style.display = 'flex';
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
     document.body.classList.add('overflow-hidden');
-    setTimeout(function() { document.getElementById('test-password-input').focus(); }, 100);
+    setTimeout(function() { 
+      const input = document.getElementById('test-password-input');
+      if (input) input.focus(); 
+    }, 100);
   }
 
   function closeTestPasswordModal() {
-    testPasswordModal.classList.add('hidden');
-    testPasswordModal.style.display = 'none';
+    const modal = getTestPasswordModal();
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
     document.body.classList.remove('overflow-hidden');
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
-    const testButtons = document.querySelectorAll('.sender-test-btn');
-    const dnsButtons = document.querySelectorAll('.sender-dns-btn');
-    const deleteButtons = document.querySelectorAll('.delete-sender-btn');
+  // Use a global variable to keep track of the test button currently pending password input
+  window.pendingTestButton = null;
 
-    // ── Delete Sender Modal ──────────────────────────────────────
-    deleteButtons.forEach(function (button) {
-      button.addEventListener('click', function () {
-        openDeleteSenderModal(
-          button.dataset.senderId,
-          button.dataset.senderName || 'Unknown',
-          button.dataset.senderEmail || '',
-          parseInt(button.dataset.campaignCount || '0')
-        );
+  // Global event delegation for clicks
+  document.addEventListener('click', function (e) {
+    // 1. Delete sender button click
+    const deleteBtn = e.target.closest('.delete-sender-btn');
+    if (deleteBtn) {
+      e.preventDefault();
+      openDeleteSenderModal(
+        deleteBtn.dataset.senderId,
+        deleteBtn.dataset.senderName || 'Unknown',
+        deleteBtn.dataset.senderEmail || '',
+        parseInt(deleteBtn.dataset.campaignCount || '0')
+      );
+      return;
+    }
+
+    // 2. Test Connection button click
+    const testBtn = e.target.closest('.sender-test-btn');
+    if (testBtn) {
+      e.preventDefault();
+      window.pendingTestButton = testBtn;
+      var info = testBtn.dataset.fromEmail + ' via ' + testBtn.dataset.host + ':' + testBtn.dataset.port;
+      openTestPasswordModal(info);
+      return;
+    }
+
+    // 3. DNS Audit button click
+    const dnsBtn = e.target.closest('.sender-dns-btn');
+    if (dnsBtn) {
+      e.preventDefault();
+      runDnsAudit(dnsBtn);
+      return;
+    }
+
+    // 4. Learn More button click
+    const learnMoreBtn = e.target.closest('.dns-education-trigger');
+    if (learnMoreBtn) {
+      e.preventDefault();
+      var card = learnMoreBtn.closest('.rounded-2xl.border');
+      if (card) {
+        var modal = card.querySelector('[id^="dns-education-modal-"]');
+        if (modal) {
+          modal.classList.remove('hidden');
+          modal.classList.add('flex');
+        }
+      }
+      return;
+    }
+
+    // 5. Test Connection Confirm click
+    const confirmBtn = e.target.closest('#test-password-confirm');
+    if (confirmBtn) {
+      e.preventDefault();
+      runTestPasswordConfirm(confirmBtn);
+      return;
+    }
+  });
+
+  // Global event delegation for keydown
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      const deleteModal = getDeleteSenderModal();
+      const testModal = getTestPasswordModal();
+      if (deleteModal && !deleteModal.classList.contains('hidden')) closeDeleteSenderModal();
+      if (testModal && !testModal.classList.contains('hidden')) closeTestPasswordModal();
+    }
+  });
+
+  // DNS Audit execution helper
+  async function runDnsAudit(button) {
+    const domain = button.dataset.domain;
+    const smtpHost = button.dataset.smtpHost || '';
+    const card = button.closest('.rounded-2xl.border');
+    const resultContainer = card ? card.querySelector('.dns-audit-result') : null;
+    if (!domain || !resultContainer) return;
+
+    const svgIcon = button.querySelector('svg');
+    button.disabled = true;
+    button.classList.add('opacity-60', 'cursor-not-allowed');
+    
+    // Save original button content so we can restore it easily
+    const originalButtonContent = button.innerHTML;
+    button.innerHTML = '<svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9" stroke-opacity="0.25"></circle><path d="M21 12a9 9 0 00-9-9"/></svg> Auditing...';
+
+    try {
+      const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]')?.value || '';
+      const resp = await fetch("{% url 'senders:audit_dns' %}", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+        body: JSON.stringify({domain: domain, smtp_host: smtpHost || null})
       });
-    });
+      const data = await resp.json();
 
-    // ── DNS Audit ──────────────────────────────────────────────
-    dnsButtons.forEach(function (button) {
-      button.addEventListener('click', async function () {
-        const domain = button.dataset.domain;
-        const smtpHost = button.dataset.smtpHost || '';
-        const card = button.closest('.rounded-2xl.border');
-        const resultContainer = card ? card.querySelector('.dns-audit-result') : null;
-        if (!domain || !resultContainer) return;
+      resultContainer.classList.remove('hidden');
+      resultContainer.innerHTML = '';
 
-        const label = button.querySelector('svg');
-        button.disabled = true;
-        button.classList.add('opacity-60', 'cursor-not-allowed');
-        label.innerHTML = '<svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M21 12a9 9 0 00-9-9"/></svg>';
+      // Add a dismiss button at the top
+      resultContainer.innerHTML =
+        '<div class="flex justify-end mb-1">' +
+          '<button type="button" onclick="this.closest(\'.dns-audit-result\').classList.add(\'hidden\'); this.closest(\'.dns-audit-result\').innerHTML=\'\'" class="text-xs text-slate-400 hover:text-red-500 transition-colors p-1">' +
+            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
+          '</button>' +
+        '</div>';
 
-        try {
-          const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]')?.value || '';
-          const resp = await fetch("{% url 'senders:audit_dns' %}", {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
-            body: JSON.stringify({domain: domain, smtp_host: smtpHost || null})
-          });
-          const data = await resp.json();
-
-          resultContainer.classList.remove('hidden');
-          resultContainer.innerHTML = '';
-
-          // Add a dismiss button at the top
-          resultContainer.innerHTML =
-            '<div class="flex justify-end mb-1">' +
-              '<button type="button" onclick="this.closest(\'.dns-audit-result\').classList.add(\'hidden\'); this.closest(\'.dns-audit-result\').innerHTML=\'\'" class="text-xs text-slate-400 hover:text-red-500 transition-colors p-1">' +
-                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
-              '</button>' +
-            '</div>';
-
-          if (data.success && data.checks) {
-            // Build score display with gauge
-            const scoreColor = data.score >= 80 ? 'text-emerald-600' : data.score >= 50 ? 'text-amber-600' : 'text-red-600';
-            const scoreBg = data.score >= 80 ? 'bg-emerald-500' : data.score >= 50 ? 'bg-amber-500' : 'bg-red-500';
-            const statusLabel = data.score >= 80 ? 'Excellent' : data.score >= 50 ? 'Needs Improvement' : 'Critical Issues';
-            const statusColor = data.score >= 80 ? 'text-emerald-700' : data.score >= 50 ? 'text-amber-700' : 'text-red-700';
-            
-            let html = 
-              '<div class="mb-4 p-4 bg-gradient-to-r from-slate-50 to-white rounded-xl border border-slate-200">' +
-                '<div class="flex items-center justify-between">' +
-                  '<div>' +
-                    '<p class="text-xs font-semibold text-slate-600 uppercase tracking-wider">DNS Health Score</p>' +
-                    '<p class="text-3xl font-black ' + scoreColor + ' mt-1">' + data.score + '<span class="text-lg text-slate-400">/100</span></p>' +
-                    '<p class="text-sm font-bold ' + statusColor + ' mt-1">' + statusLabel + '</p>' +
-                  '</div>' +
-                  '<div class="relative w-20 h-20">' +
-                    '<svg class="w-20 h-20 transform -rotate-90">' +
-                      '<circle cx="40" cy="40" r="36" stroke="#e2e8f0" stroke-width="8" fill="none"/>' +
-                      '<circle cx="40" cy="40" r="36" stroke="' + (data.score >= 80 ? '#10b981' : data.score >= 50 ? '#f59e0b' : '#ef4444') + '" stroke-width="8" fill="none" ' +
-                        'stroke-dasharray="' + (2 * Math.PI * 36) + ' ' + (2 * Math.PI * 36) + '" ' +
-                        'stroke-dashoffset="' + (2 * Math.PI * 36 * (1 - data.score / 100)) + '" ' +
-                        'stroke-linecap="round"/>' +
-                    '</svg>' +
-                    '<div class="absolute inset-0 flex items-center justify-center">' +
-                      '<span class="text-xs font-bold text-slate-600">' + data.score + '</span>' +
-                    '</div>' +
+      if (data.success && data.checks) {
+        // Build score display with gauge
+        const scoreColor = data.score >= 80 ? 'text-emerald-600' : data.score >= 50 ? 'text-amber-600' : 'text-red-600';
+        const statusLabel = data.score >= 80 ? 'Excellent' : data.score >= 50 ? 'Needs Improvement' : 'Critical Issues';
+        const statusColor = data.score >= 80 ? 'text-emerald-700' : data.score >= 50 ? 'text-amber-700' : 'text-red-700';
+        
+        let html = 
+          '<div class="mb-4 p-4 bg-gradient-to-r from-slate-50 to-white rounded-xl border border-slate-200">' +
+            '<div class="flex items-center justify-between">' +
+              '<div>' +
+                '<p class="text-xs font-semibold text-slate-600 uppercase tracking-wider">DNS Health Score</p>' +
+                '<p class="text-3xl font-black ' + scoreColor + ' mt-1">' + data.score + '<span class="text-lg text-slate-400">/100</span></p>' +
+                '<p class="text-sm font-bold ' + statusColor + ' mt-1">' + statusLabel + '</p>' +
+              '</div>' +
+              '<div class="relative w-20 h-20">' +
+                '<svg class="w-20 h-20 transform -rotate-90">' +
+                  '<circle cx="40" cy="40" r="36" stroke="#e2e8f0" stroke-width="8" fill="none"/>' +
+                  '<circle cx="40" cy="40" r="36" stroke="' + (data.score >= 80 ? '#10b981' : data.score >= 50 ? '#f59e0b' : '#ef4444') + '" stroke-width="8" fill="none" ' +
+                    'stroke-dasharray="' + (2 * Math.PI * 36) + ' ' + (2 * Math.PI * 36) + '" ' +
+                    'stroke-dashoffset="' + (2 * Math.PI * 36 * (1 - data.score / 100)) + '" ' +
+                    'stroke-linecap="round"/>' +
+                '</svg>' +
+                '<div class="absolute inset-0 flex items-center justify-center">' +
+                  '<span class="text-xs font-bold text-slate-600">' + data.score + '</span>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        
+        // Group checks by status
+        const failedChecks = data.checks.filter(c => c.status === 'fail');
+        const warningChecks = data.checks.filter(c => c.status === 'warning');
+        const passedChecks = data.checks.filter(c => c.status === 'pass');
+        
+        // Show failed checks first (most critical)
+        if (failedChecks.length > 0) {
+          html += '<div class="mb-3"><p class="text-xs font-bold text-red-700 mb-2 flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg> Critical Issues (fix immediately):</p>';
+          failedChecks.forEach(function (check) {
+            html +=
+              '<div class="audit-item p-3 rounded-xl border bg-red-50 border-red-200 text-red-700 mb-2">' +
+                '<div class="flex items-start gap-3 w-full">' +
+                  '<span class="text-sm font-bold text-red-500">✗</span>' +
+                  '<div class="flex-1 min-w-0">' +
+                    '<p class="text-xs font-bold">' + check.check + '</p>' +
+                    '<p class="text-[11px] mt-0.5 opacity-75">' + (check.value || 'Not configured') + '</p>' +
+                    '<p class="text-[10px] mt-1 font-semibold bg-red-100 rounded px-1.5 py-1 inline-block">' + check.advice + '</p>' +
                   '</div>' +
                 '</div>' +
               '</div>';
-            
-            // Group checks by status
-            const failedChecks = data.checks.filter(c => c.status === 'fail');
-            const warningChecks = data.checks.filter(c => c.status === 'warning');
-            const passedChecks = data.checks.filter(c => c.status === 'pass');
-            
-            // Show failed checks first (most critical)
-            if (failedChecks.length > 0) {
-              html += '<div class="mb-3"><p class="text-xs font-bold text-red-700 mb-2 flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg> Critical Issues (fix immediately):</p>';
-              failedChecks.forEach(function (check) {
-                html +=
-                  '<div class="audit-item p-3 rounded-xl border bg-red-50 border-red-200 text-red-700 mb-2">' +
-                    '<div class="flex items-start gap-3 w-full">' +
-                      '<span class="text-sm font-bold text-red-500">✗</span>' +
-                      '<div class="flex-1 min-w-0">' +
-                        '<p class="text-xs font-bold">' + check.check + '</p>' +
-                        '<p class="text-[11px] mt-0.5 opacity-75">' + (check.value || 'Not configured') + '</p>' +
-                        '<p class="text-[10px] mt-1 font-semibold bg-red-100 rounded px-1.5 py-1 inline-block">' + check.advice + '</p>' +
-                      '</div>' +
-                    '</div>' +
-                  '</div>';
-              });
-              html += '</div>';
-            }
-            
-            // Show warnings second
-            if (warningChecks.length > 0) {
-              html += '<div class="mb-3"><p class="text-xs font-bold text-amber-700 mb-2 flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Warnings (recommended to fix):</p>';
-              warningChecks.forEach(function (check) {
-                html +=
-                  '<div class="audit-item p-3 rounded-xl border bg-amber-50 border-amber-200 text-amber-700 mb-2">' +
-                    '<div class="flex items-start gap-3 w-full">' +
-                      '<span class="text-sm font-bold text-amber-500">⚠</span>' +
-                      '<div class="flex-1 min-w-0">' +
-                        '<p class="text-xs font-bold">' + check.check + '</p>' +
-                        '<p class="text-[11px] mt-0.5 opacity-75">' + (check.value || '—') + '</p>' +
-                        '<p class="text-[10px] mt-1 opacity-60">' + check.advice + '</p>' +
-                      '</div>' +
-                    '</div>' +
-                  '</div>';
-              });
-              html += '</div>';
-            }
-            
-            // Show passed checks last (collapsed by default)
-            if (passedChecks.length > 0) {
-              html +=
-                '<details class="mb-3">' +
-                  '<summary class="text-xs font-bold text-emerald-700 mb-2 cursor-pointer flex items-center gap-1">' +
-                    '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
-                    ' Passed Checks (' + passedChecks.length + ') — Click to expand' +
-                  '</summary>' +
-                  '<div class="ml-6 space-y-2 mt-2">';
-              passedChecks.forEach(function (check) {
-                html +=
-                  '<div class="audit-item p-2.5 rounded-lg border bg-emerald-50 border-emerald-100 text-emerald-700">' +
-                    '<div class="flex items-start gap-2.5 w-full">' +
-                      '<span class="text-sm font-bold text-emerald-500">✓</span>' +
-                      '<div class="flex-1 min-w-0">' +
-                        '<p class="text-xs font-semibold">' + check.check + '</p>' +
-                        '<p class="text-[11px] mt-0.5 opacity-75 truncate">' + (check.value || 'Configured') + '</p>' +
-                      '</div>' +
-                    '</div>' +
-                  '</div>';
-              });
-              html += '</div></details>';
-            }
-            
-            // Add quick action tips
+          });
+          html += '</div>';
+        }
+        
+        // Show warnings second
+        if (warningChecks.length > 0) {
+          html += '<div class="mb-3"><p class="text-xs font-bold text-amber-700 mb-2 flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Warnings (recommended to fix):</p>';
+          warningChecks.forEach(function (check) {
             html +=
-              '<div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">' +
-                '<p class="text-xs font-bold text-blue-900 mb-1">💡 Quick Tips:</p>' +
-                '<ul class="text-[11px] text-blue-800 space-y-1 list-disc list-inside">' +
-                  '<li>DNS changes can take 24-48 hours to propagate</li>' +
-                  '<li>Copy the exact TXT record values from your email provider</li>' +
-                  '<li>Click "Learn More" above for detailed instructions</li>' +
-                '</ul>' +
+              '<div class="audit-item p-3 rounded-xl border bg-amber-50 border-amber-200 text-amber-700 mb-2">' +
+                '<div class="flex items-start gap-3 w-full">' +
+                  '<span class="text-sm font-bold text-amber-500">⚠</span>' +
+                  '<div class="flex-1 min-w-0">' +
+                    '<p class="text-xs font-bold">' + check.check + '</p>' +
+                    '<p class="text-[11px] mt-0.5 opacity-75">' + (check.value || '—') + '</p>' +
+                    '<p class="text-[10px] mt-1 opacity-60">' + check.advice + '</p>' +
+                  '</div>' +
+                '</div>' +
               '</div>';
-            
-            resultContainer.innerHTML = html;
-          } else {
-            resultContainer.innerHTML = '<p class="text-xs text-red-600">DNS audit failed. Try again.</p>';
-          }
-        } catch (e) {
-          if (resultContainer) {
-            resultContainer.classList.remove('hidden');
-            resultContainer.innerHTML = '<p class="text-xs text-red-600">Network error: ' + (e.message || 'unknown') + '</p>';
-          }
-        } finally {
-          button.disabled = false;
-          button.classList.remove('opacity-60', 'cursor-not-allowed');
-          label.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg> Audit DNS';
+          });
+          html += '</div>';
         }
+        
+        // Show passed checks last (collapsed by default)
+        if (passedChecks.length > 0) {
+          html +=
+            '<details class="mb-3">' +
+              '<summary class="text-xs font-bold text-emerald-700 mb-2 cursor-pointer flex items-center gap-1">' +
+                '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
+                ' Passed Checks (' + passedChecks.length + ') — Click to expand' +
+              '</summary>' +
+              '<div class="ml-6 space-y-2 mt-2">';
+          passedChecks.forEach(function (check) {
+            html +=
+              '<div class="audit-item p-2.5 rounded-lg border bg-emerald-50 border-emerald-100 text-emerald-700">' +
+                '<div class="flex items-start gap-2.5 w-full">' +
+                  '<span class="text-sm font-bold text-emerald-500">✓</span>' +
+                  '<div class="flex-1 min-w-0">' +
+                    '<p class="text-xs font-semibold">' + check.check + '</p>' +
+                    '<p class="text-[11px] mt-0.5 opacity-75 truncate">' + (check.value || 'Configured') + '</p>' +
+                  '</div>' +
+                '</div>' +
+              '</div>';
+          });
+          html += '</div></details>';
+        }
+        
+        // Add quick action tips
+        html +=
+          '<div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">' +
+            '<p class="text-xs font-bold text-blue-900 mb-1">💡 Quick Tips:</p>' +
+            '<ul class="text-[11px] text-blue-800 space-y-1 list-disc list-inside">' +
+              '<li>DNS changes can take 24-48 hours to propagate</li>' +
+              '<li>Copy the exact TXT record values from your email provider</li>' +
+              '<li>Click "Learn More" above for detailed instructions</li>' +
+            '</ul>' +
+          '</div>';
+        
+        resultContainer.innerHTML = html;
+      } else {
+        resultContainer.innerHTML = '<p class="text-xs text-red-600">DNS audit failed. Try again.</p>';
+      }
+    } catch (e) {
+      if (resultContainer) {
+        resultContainer.classList.remove('hidden');
+        resultContainer.innerHTML = '<p class="text-xs text-red-600">Network error: ' + (e.message || 'unknown') + '</p>';
+      }
+    } finally {
+      button.disabled = false;
+      button.classList.remove('opacity-60', 'cursor-not-allowed');
+      button.innerHTML = originalButtonContent;
+    }
+  }
+
+  // Confirm password and perform verification
+  async function runTestPasswordConfirm(confirmBtn) {
+    var button = window.pendingTestButton;
+    if (!button) return;
+    var password = document.getElementById('test-password-input').value;
+    if (!password) { alert('Please enter a password.'); return; }
+    closeTestPasswordModal();
+
+    const senderId = button.dataset.senderId;
+    const host = button.dataset.host;
+    const port = button.dataset.port;
+    const username = button.dataset.username;
+    const fromEmail = button.dataset.fromEmail;
+    const useTls = button.dataset.useTls === 'true';
+    const label = button.querySelector('.sender-test-label');
+
+    button.disabled = true;
+    const originalLabelHtml = label.innerHTML;
+    label.innerHTML = '<svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9" stroke-opacity="0.25"></circle><path d="M21 12a9 9 0 00-9-9"/></svg>Testing...';
+
+    try {
+      const csrfFromForm = document.querySelector('input[name="csrfmiddlewaretoken"]')?.value || '';
+      const getCookie = function (name) {
+        const cookieValue = document.cookie
+          .split('; ')
+          .find((row) => row.startsWith(name + '='));
+        return cookieValue ? decodeURIComponent(cookieValue.split('=')[1]) : '';
+      };
+      const csrfToken = csrfFromForm || getCookie('csrftoken');
+      if (!csrfToken) {
+        throw new Error('CSRF token missing. Reload this page and try again.');
+      }
+
+      const response = await fetch("{% url 'senders:verify_sender' %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+          sender_id: senderId,
+          host: host,
+          port: port,
+          username: username,
+          from_email: fromEmail,
+          password: password,
+          use_tls: useTls,
+        })
       });
-    });
 
-    // ── SMTP Test Connection ────────────────────────────────────
-    if (!testButtons.length) return;
-
-    const getCookie = function (name) {
-      const cookieValue = document.cookie
-        .split('; ')
-        .find((row) => row.startsWith(name + '='));
-      return cookieValue ? decodeURIComponent(cookieValue.split('=')[1]) : '';
-    };
-
-    // Prefer hidden form token first, then cookie fallback for reliable CSRF protection in AJAX calls.
-    const csrfFromForm = document.querySelector('input[name="csrfmiddlewaretoken"]')?.value || '';
-
-    var pendingTestButton = null;
-
-    testButtons.forEach(function (button) {
-      button.addEventListener('click', function () {
-        pendingTestButton = button;
-        var info = button.dataset.fromEmail + ' via ' + button.dataset.host + ':' + button.dataset.port;
-        openTestPasswordModal(info);
-      });
-    });
-
-    document.getElementById('test-password-confirm').addEventListener('click', async function () {
-      var button = pendingTestButton;
-      if (!button) return;
-      var password = document.getElementById('test-password-input').value;
-      if (!password) { alert('Please enter a password.'); return; }
-      closeTestPasswordModal();
-
-      const senderId = button.dataset.senderId;
-      const host = button.dataset.host;
-      const port = button.dataset.port;
-      const username = button.dataset.username;
-      const fromEmail = button.dataset.fromEmail;
-      const useTls = button.dataset.useTls === 'true';
-      const label = button.querySelector('.sender-test-label');
-
-      button.disabled = true;
-      label.innerHTML = '<svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9" stroke-opacity="0.25"></circle><path d="M21 12a9 9 0 00-9-9"/></svg>Testing...';
-
+      const rawBody = await response.text();
+      let data;
       try {
-        const csrfToken = csrfFromForm || getCookie('csrftoken');
-        if (!csrfToken) {
-          throw new Error('CSRF token missing. Reload this page and try again.');
-        }
+        data = rawBody ? JSON.parse(rawBody) : {};
+      } catch (parseError) {
+        data = {
+          success: false,
+          error: response.ok
+            ? 'Failed: unexpected server response format.'
+            : `Failed: server returned ${response.status} ${response.statusText}.`
+        };
+      }
 
-        const response = await fetch("{% url 'senders:verify_sender' %}", {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken,
-            'X-Requested-With': 'XMLHttpRequest'
-          },
-          body: JSON.stringify({
-            sender_id: senderId,
-            host: host,
-            port: port,
-            username: username,
-            from_email: fromEmail,
-            password: password,
-            use_tls: useTls,
-          })
-        });
-
-          // Parse defensively: backend may return HTML on auth/CSRF/server failures.
-          const rawBody = await response.text();
-          let data;
-          try {
-            data = rawBody ? JSON.parse(rawBody) : {};
-          } catch (parseError) {
-            data = {
-              success: false,
-              error: response.ok
-                ? 'Failed: unexpected server response format.'
-                : `Failed: server returned ${response.status} ${response.statusText}.`
-            };
+      if (response.ok && data.success) {
+        var card = button.closest('.rounded-2xl.border');
+        if (card) {
+          var badge = card.querySelector('[class*="badge"]');
+          if (badge && (badge.textContent.trim() === 'Inactive' || badge.textContent.trim() === 'Unverified')) {
+            badge.textContent = 'Active';
+            badge.className = badge.className.replace(/bg-slate-100/g, 'bg-emerald-50').replace(/text-slate-/g, 'text-emerald-').replace(/variant="gray"/g, 'variant="green"');
+            badge.classList.remove('text-slate-600');
+            badge.classList.add('text-emerald-600', 'bg-emerald-50');
           }
-
-          if (response.ok && data.success) {
-            // Update badge from Inactive to Active
-            var card = button.closest('.rounded-2xl.border');
-            if (card) {
-              var badge = card.querySelector('[class*="badge"]');
-              if (badge && badge.textContent.trim() === 'Inactive') {
-                badge.textContent = 'Active';
-                badge.className = badge.className.replace(/bg-slate-100/g, 'bg-emerald-50').replace(/text-slate-/g, 'text-emerald-').replace(/variant="gray"/g, 'variant="green"');
-                badge.classList.remove('text-slate-600');
-                badge.classList.add('text-emerald-600', 'bg-emerald-50');
-              }
-            }
-            button.classList.remove('border-slate-200', 'text-slate-600');
-            button.classList.add('border-emerald-300', 'text-emerald-700', 'bg-emerald-50');
-            label.textContent = 'Passed ✓';
-            setTimeout(function () {
-              button.classList.remove('border-emerald-300', 'text-emerald-700', 'bg-emerald-50', 'border-red-300', 'text-red-700', 'bg-red-50');
-              button.classList.add('border-slate-200', 'text-slate-600');
-              label.textContent = 'Test Connection';
-            }, 2200);
-          } else {
-            // 403 is almost always auth/CSRF/session, so show actionable guidance.
-            const fallbackReason = response.status === 403
-              ? 'Failed: 403 Forbidden (session or CSRF). Reload page and test again.'
-              : `Failed: ${response.status} ${response.statusText}`;
-            const reason = data.error ? data.error : fallbackReason;
-            button.classList.remove('border-slate-200', 'text-slate-600');
-            button.classList.add('border-red-300', 'text-red-700', 'bg-red-50');
-            label.textContent = reason.startsWith('Failed') ? reason : `Failed: ${reason}`;
-          }
-        } catch (err) {
-          button.classList.remove('border-slate-200', 'text-slate-600');
-          button.classList.add('border-red-300', 'text-red-700', 'bg-red-50');
-          const reason = err && err.message ? err.message : 'Network error';
-          label.textContent = `Failed: ${reason}`;
-        } finally {
-          button.disabled = false;
         }
-      });
-    });
-  });
-  document.addEventListener('click', function (e) {
-    var btn = e.target.closest('.dns-education-trigger');
-    if (btn) {
-      var card = btn.closest('.rounded-2xl.border');
-      if (card) {
-        var modal = card.querySelector('[id^="dns-education-modal-"]');
-        if (modal) modal.classList.remove('hidden');
+        button.classList.remove('border-slate-200', 'text-slate-600');
+        button.classList.add('border-emerald-300', 'text-emerald-700', 'bg-emerald-50');
+        label.textContent = 'Passed ✓';
+        setTimeout(function () {
+          button.classList.remove('border-emerald-300', 'text-emerald-700', 'bg-emerald-50', 'border-red-300', 'text-red-700', 'bg-red-50');
+          button.classList.add('border-slate-200', 'text-slate-600');
+          label.innerHTML = originalLabelHtml;
+        }, 2200);
+      } else {
+        const fallbackReason = response.status === 403
+          ? 'Failed: 403 Forbidden (session or CSRF). Reload page and test again.'
+          : `Failed: ${response.status} ${response.statusText}`;
+        const reason = data.error ? data.error : fallbackReason;
+        button.classList.remove('border-slate-200', 'text-slate-600');
+        button.classList.add('border-red-300', 'text-red-700', 'bg-red-50');
+        label.textContent = reason.startsWith('Failed') ? reason : `Failed: ${reason}`;
+      }
+    } catch (err) {
+      button.classList.remove('border-slate-200', 'text-slate-600');
+      button.classList.add('border-red-300', 'text-red-700', 'bg-red-50');
+      const reason = err && err.message ? err.message : 'Network error';
+      label.textContent = `Failed: ${reason}`;
+    } finally {
+      button.disabled = false;
+    }
+  }
+</script>idden');
+            modal.classList.add('flex');
+        }
       }
     }
   });

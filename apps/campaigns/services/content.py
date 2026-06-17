@@ -39,7 +39,7 @@ def sanitize_html(raw_html: str) -> str:
         raw_html,
         tags=ALLOWED_TAGS,
         attributes=CLEAN_ATTRIBUTES,
-        clean_content_tags=frozenset({'script', 'style'}),
+        clean_content_tags=frozenset({'script'}),
     )
 
 

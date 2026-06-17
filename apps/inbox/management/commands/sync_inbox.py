@@ -1,4 +1,5 @@
 import logging
+
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
@@ -27,7 +28,8 @@ class Command(BaseCommand):
             inbox.last_sync_status = 'error'
             inbox.last_sync_error = 'No password stored. Please reconnect the inbox.'
             inbox.last_synced_at = timezone.now()
-            inbox.save(update_fields=['last_sync_status', 'last_sync_error', 'last_synced_at'])
+            inbox.save(update_fields=['last_sync_status',
+                       'last_sync_error', 'last_synced_at'])
             self.stderr.write(f'No password for inbox {inbox_id}')
             return
 
@@ -37,8 +39,9 @@ class Command(BaseCommand):
 
             # Auto-reply to important incoming messages after sync
             try:
-                from apps.intelligence.services.auto_reply import process_auto_reply
-                from apps.inbox.models import EmailMessage, EmailDraft
+                from apps.inbox.models import EmailDraft, EmailMessage
+                from apps.intelligence.services.auto_reply import \
+                    process_auto_reply
 
                 new_messages = EmailMessage.objects.filter(
                     thread__inbox=inbox,
@@ -55,7 +58,8 @@ class Command(BaseCommand):
                         continue
 
                 if auto_replied:
-                    self.stdout.write(f'Auto-replied to {auto_replied} messages')
+                    self.stdout.write(
+                        f'Auto-replied to {auto_replied} messages')
             except Exception as ar_err:
                 logger.warning(f'Auto-reply post-sync error: {ar_err}')
         except Exception as e:
@@ -63,5 +67,6 @@ class Command(BaseCommand):
             inbox.last_sync_status = 'error'
             inbox.last_sync_error = str(e)[:200]
             inbox.last_synced_at = timezone.now()
-            inbox.save(update_fields=['last_sync_status', 'last_sync_error', 'last_synced_at'])
+            inbox.save(update_fields=['last_sync_status',
+                       'last_sync_error', 'last_synced_at'])
             self.stderr.write(f'Sync failed for inbox {inbox_id}: {e}')

@@ -128,10 +128,22 @@
   function openPreviewModal(templateId) {
     document.getElementById('preview-modal-title').textContent = 'Loading preview…';
     previewModal.classList.remove('hidden');
-    previewModal.style.display = 'flex';
+    previewModal.classList.add('flex');
     document.body.classList.add('overflow-hidden');
+    previewIframe.style.height = '400px';
     previewIframe.srcdoc = '<html><body style="display:flex;align-items:center;justify-content:center;min-height:400px;font-family:sans-serif;color:#94a3b8"><p>Loading preview…</p></body></html>';
-    fetch('/campaigns/templates/' + templateId + '/preview/')
+    
+    previewIframe.onload = function() {
+      try {
+        var doc = previewIframe.contentDocument || previewIframe.contentWindow.document;
+        if (doc && doc.body) {
+          var h = doc.body.scrollHeight;
+          if (h > 200) previewIframe.style.height = (h + 32) + 'px'; // Add slight padding
+        }
+      } catch(e) {}
+    };
+
+    fetch('/campaign/templates/' + templateId + '/preview/')
       .then(function(r) { return r.text(); })
       .then(function(html) {
         previewIframe.srcdoc = html;
@@ -141,20 +153,11 @@
         previewIframe.srcdoc = '<html><body style="display:flex;align-items:center;justify-content:center;min-height:400px;font-family:sans-serif;color:#ef4444"><p>Failed to load preview.</p></body></html>';
         document.getElementById('preview-modal-title').textContent = 'Preview Error';
       });
-    setTimeout(function() {
-      try {
-        var doc = previewIframe.contentDocument || previewIframe.contentWindow.document;
-        if (doc && doc.body) {
-          var h = doc.body.scrollHeight;
-          if (h > 200) previewIframe.style.height = h + 'px';
-        }
-      } catch(e) {}
-    }, 800);
   }
 
   function closePreviewModal() {
     previewModal.classList.add('hidden');
-    previewModal.style.display = 'none';
+    previewModal.classList.remove('flex');
     document.body.classList.remove('overflow-hidden');
     previewIframe.srcdoc = '';
   }

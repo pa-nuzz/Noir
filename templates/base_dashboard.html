@@ -791,14 +791,44 @@
                     Email
                   </a>
                   <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                  <span class="text-slate-900 font-semibold p-2 capitalize">{{ view_name|cut:'_'|title }}</span>
+                  <span class="text-slate-900 font-semibold p-2 capitalize">
+                    {% if view_name == 'message_detail' %}
+                      Message Detail
+                    {% elif view_name == 'draft_detail' %}
+                      Draft Detail
+                    {% elif view_name == 'generate_draft' %}
+                      Generate Draft
+                    {% elif view_name == 'message_summarize' %}
+                      Message Summarize
+                    {% elif view_name == 'message_delete' %}
+                      Delete Message
+                    {% elif view_name == 'message_restore' %}
+                      Restore Message
+                    {% else %}
+                      {{ view_name|cut:'_'|title }}
+                    {% endif %}
+                  </span>
                 {% elif view_name == 'draft_detail' or view_name == 'draft_review' or view_name == 'draft_approve' or view_name == 'draft_send' or view_name == 'draft_send_test' %}
                   <a href="{% url 'inbox:dashboard' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                     Email
                   </a>
                   <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                  <span class="text-slate-900 font-semibold p-2 capitalize">{{ view_name|cut:'_'|title }}</span>
+                  <span class="text-slate-900 font-semibold p-2 capitalize">
+                    {% if view_name == 'draft_detail' %}
+                      Draft Detail
+                    {% elif view_name == 'draft_review' %}
+                      Draft Review
+                    {% elif view_name == 'draft_approve' %}
+                      Draft Approve
+                    {% elif view_name == 'draft_send' %}
+                      Send Draft
+                    {% elif view_name == 'draft_send_test' %}
+                      Send Test Draft
+                    {% else %}
+                      {{ view_name|cut:'_'|title }}
+                    {% endif %}
+                  </span>
                 {% endif %}
 
               <!-- Workspaces Section -->
@@ -1160,11 +1190,16 @@
         div.textContent = value || '';
         return div.innerHTML;
       }
+      var maxNotifId = 0;
       function pollNotifications() {
         if (document.hidden) { setTimeout(pollNotifications, 15000); return; }
         var wrapper = document.getElementById('notif-wrapper');
         if (!wrapper) { setTimeout(pollNotifications, 15000); return; }
-        fetch(wrapper.dataset.checkUrl, {
+        var url = new URL(wrapper.dataset.checkUrl, window.location.origin);
+        if (maxNotifId > 0) {
+          url.searchParams.set('since_id', maxNotifId);
+        }
+        fetch(url.toString(), {
           headers: { 'X-Requested-With': 'XMLHttpRequest' },
         }).then(function(r) { return r.json(); }).then(function(data) {
           var badge = document.getElementById('notif-badge');
@@ -1173,6 +1208,7 @@
             else badge.classList.add('hidden');
           }
           data.notifications.forEach(function(n) {
+            if (n.id > maxNotifId) maxNotifId = n.id;
             var list = document.getElementById('notif-list');
             if (!list) return;
             if (list.querySelector('[data-nid="' + n.id + '"]')) return;

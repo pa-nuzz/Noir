@@ -22,11 +22,11 @@ SKIP_DOMAINS = [
     'github.com', 'gitlab.com', 'slack.com', 'zoom.us', 'calendly.com',
     'notion.com', 'atlassian.com', 'eventbrite.com', 'meetup.com',
     'mailchimp.com', 'sendgrid.com', 'hubspot.com', 'salesforce.com',
-    'amazonses.com', 'awsapps.com', 'google.com', 'apple.com',
-    'microsoft.com', 'stripe.com', 'paypal.com', 'shopify.com',
+    'amazonses.com', 'awsapps.com', 'stripe.com', 'paypal.com', 'shopify.com',
     'medium.com', 'quora.com', 'reddit.com', 'discord.com',
     'trello.com', 'asana.com', 'dropbox.com', 'box.com',
     'dropboxmail.com', 'postmarkapp.com', 'mailgun.org',
+    'jira.com', 'zendesk.com', 'intercom.com', 'google.com',
 ]
 
 SKIP_SUBJECT_PATTERNS = [
@@ -123,7 +123,8 @@ def generate_auto_reply(
     importance: str,
     intent: str,
     from_name: str,
-    tone: str = "professional"
+    tone: str = "professional",
+    thread_history: str = ""
 ) -> str:
     """Generate intelligent auto-reply based on context.
     

@@ -720,3 +720,11 @@ tbody tr {
     transition: none !important;
   }
 }
+
+/* Dynamic Primary Utilities */
+.bg-primary { background-color: var(--primary) !important; }
+.text-primary { color: var(--primary) !important; }
+.hover\:bg-primary-hover:hover { background-color: var(--primary-hover) !important; }
+.border-primary { border-color: var(--primary) !important; }
+.ring-primary\/20 { --tw-ring-color: rgba(109, 40, 217, 0.2); }
+.focus\:ring-primary\/30:focus { --tw-ring-color: rgba(109, 40, 217, 0.3); }
