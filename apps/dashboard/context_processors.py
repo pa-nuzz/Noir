@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.campaigns.models import Campaign
+from apps.dashboard.models import Notification
 from apps.senders.models import Sender
 from apps.workspaces.models import TeamInvitation
 
@@ -16,26 +17,41 @@ def _build_notifications(user, dismissed_at):
     campaigns_qs = Campaign.objects.filter(user=user)
 
     active_senders_count = senders_qs.filter(is_active=True).count()
+    total_senders = senders_qs.count()
     latest_sender = senders_qs.order_by('-created_at').first()
+    sentinel = latest_sender.created_at if latest_sender else user.date_joined
 
-    if active_senders_count == 0:
+    if active_senders_count > 0:
         notifications.append(
             {
-                'title': 'No active sender connected',
-                'message': 'Add and verify an SMTP sender before launching campaigns.',
+                'id': 'sender-active',
+                'title': f"{active_senders_count} active sender{'' if active_senders_count == 1 else 's'} ready",
+                'message': 'Your SMTP configuration is available for outgoing campaigns.',
+                'tone': 'success',
+                'url': reverse('dashboard:settings'),
+                'created_at': sentinel,
+            }
+        )
+    elif total_senders > 0 and latest_sender:
+        notifications.append(
+            {
+                'id': f'sender-inactive-{latest_sender.id}',
+                'title': f'Sender "{latest_sender.display_name}" is inactive',
+                'message': f'Go to Settings and set {latest_sender.from_email} as active.',
                 'tone': 'warning',
                 'url': reverse('dashboard:settings'),
-                'created_at': latest_sender.created_at if latest_sender else user.date_joined,
+                'created_at': sentinel,
             }
         )
     else:
         notifications.append(
             {
-                'title': f"{active_senders_count} active sender{'' if active_senders_count == 1 else 's'} ready",
-                'message': 'Your SMTP configuration is available for outgoing campaigns.',
-                'tone': 'success',
+                'id': 'sender-missing',
+                'title': 'No SMTP sender configured',
+                'message': 'Add and verify an SMTP sender before launching campaigns.',
+                'tone': 'warning',
                 'url': reverse('dashboard:settings'),
-                'created_at': latest_sender.created_at if latest_sender else user.date_joined,
+                'created_at': sentinel,
             }
         )
 
@@ -44,6 +60,7 @@ def _build_notifications(user, dismissed_at):
     if failed_count:
         notifications.append(
             {
+                'id': 'campaigns-failed',
                 'title': f"{failed_count} campaign{'' if failed_count == 1 else 's'} failed",
                 'message': 'Review sender credentials and retry the affected campaign.',
                 'tone': 'danger',
@@ -57,6 +74,7 @@ def _build_notifications(user, dismissed_at):
     if scheduled_count:
         notifications.append(
             {
+                'id': 'campaigns-scheduled',
                 'title': f"{scheduled_count} campaign{'' if scheduled_count == 1 else 's'} scheduled",
                 'message': 'Scheduled campaigns are queued and waiting for send time.',
                 'tone': 'info',
@@ -70,6 +88,7 @@ def _build_notifications(user, dismissed_at):
     if draft_count:
         notifications.append(
             {
+                'id': 'campaigns-draft',
                 'title': f"{draft_count} draft campaign{'' if draft_count == 1 else 's'} pending",
                 'message': 'Complete subject/content checks and send when ready.',
                 'tone': 'info',
@@ -83,6 +102,7 @@ def _build_notifications(user, dismissed_at):
     if sent_today:
         notifications.append(
             {
+                'id': 'campaigns-sent-today',
                 'title': f"{sent_today} campaign{'' if sent_today == 1 else 's'} sent today",
                 'message': 'Delivery run completed successfully today.',
                 'tone': 'success',
@@ -96,6 +116,7 @@ def _build_notifications(user, dismissed_at):
     if high_risk_count:
         notifications.append(
             {
+                'id': 'campaigns-high-risk',
                 'title': f"{high_risk_count} high-risk campaign{'' if high_risk_count == 1 else 's'} detected",
                 'message': 'Run AI spam check before sending to improve inbox placement.',
                 'tone': 'warning',
@@ -104,15 +125,18 @@ def _build_notifications(user, dismissed_at):
             }
         )
 
-    pending_invites = TeamInvitation.objects.filter(email=user.email, status='pending').count()
+    pending_invites_qs = TeamInvitation.objects.filter(email=user.email, status='pending')
+    pending_invites = pending_invites_qs.count()
     if pending_invites:
+        latest_invite = pending_invites_qs.order_by('-created_at').first()
         notifications.append(
             {
+                'id': 'workspace-pending-invites',
                 'title': f"{pending_invites} pending invitation{'' if pending_invites == 1 else 's'}",
                 'message': 'You have workspace invitations waiting for your response.',
                 'tone': 'info',
                 'url': reverse('workspaces:my_invitations'),
-                'created_at': now,
+                'created_at': latest_invite.created_at if latest_invite else now,
             }
         )
 
@@ -138,6 +162,22 @@ def dashboard_notifications(request):
             dismissed_at = None
 
     notifications = _build_notifications(request.user, dismissed_at)
+    persistent_notifications = Notification.objects.filter(
+        user=request.user,
+        is_read=False,
+    ).order_by('-created_at')[:10]
+    notifications.extend([
+        {
+            'id': f'db-{item.id}',
+            'title': item.title,
+            'message': item.message,
+            'tone': item.tone,
+            'url': item.url or '#',
+            'created_at': item.created_at,
+        }
+        for item in persistent_notifications
+    ])
+    notifications.sort(key=lambda item: item['created_at'], reverse=True)
     return {
         'dashboard_notifications': notifications,
         'dashboard_notification_count': len(notifications),

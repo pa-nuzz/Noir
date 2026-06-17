@@ -22,6 +22,7 @@ urlpatterns = [
     # Email Templates
     path("templates/", views.template_list, name="template_list"),
     path("templates/create/", views.template_create, name="template_create"),
+    path("templates/<int:template_id>/preview/", views.template_preview, name="template_preview"),
     path("templates/<int:template_id>/edit/", views.template_edit, name="template_edit"),
     path("templates/<int:template_id>/delete/", views.template_delete, name="template_delete"),
     path("templates/<int:template_id>/use/", views.template_use, name="template_use"),

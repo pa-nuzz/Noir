@@ -20,7 +20,7 @@ def verify_sender(request):
         port = int(data.get('port', 0))
         username = str(data.get('username', '')).strip()
         from_email = str(data.get('from_email', '')).strip()
-        password = ''.join(str(data.get('password', '')).split())
+        password = str(data.get('password', '')).strip()
         use_tls = bool(data.get('use_tls', True))
         sender_id = data.get('sender_id')
 

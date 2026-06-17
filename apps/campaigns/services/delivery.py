@@ -10,6 +10,7 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
+from django.db import transaction
 from django.db.models import Count, F
 from django.urls import reverse
 from django.utils import timezone
@@ -142,9 +143,11 @@ def update_campaign_unique_open_count(campaign) -> None:
 # ──────────────────────────────────────────────
 
 def _build_variable_context(recipient_email: str, recipient_context: dict = None) -> dict:
+    RESERVED_KEYS = {'unsubscribe_url', 'unsubscribe'}
+
     context = {}
     if recipient_context and recipient_email:
-        context = dict(recipient_context.get(recipient_email, {}))
+        context = {k: v for k, v in recipient_context.get(recipient_email, {}).items() if k not in RESERVED_KEYS}
     try:
         from apps.contacts.models import Contact
         contact = Contact.objects.filter(email=recipient_email).first()
@@ -153,7 +156,8 @@ def _build_variable_context(recipient_email: str, recipient_context: dict = None
             context.setdefault('last_name', contact.last_name or '')
             context.setdefault('email', contact.email)
             for cfv in contact.custom_values.all():
-                context.setdefault(cfv.field.name, cfv.value)
+                if cfv.field.name not in RESERVED_KEYS:
+                    context.setdefault(cfv.field.name, cfv.value)
     except Exception:
         logger.debug(f"Failed to load contact context for {recipient_email}")
     context.setdefault('first_name', 'there')
@@ -485,8 +489,8 @@ def _send_single_recipient(
             if variant_obj:
                 variant_obj.sent_count = models.F('sent_count') + 1
                 variant_obj.save(update_fields=['sent_count'])
-            if sender.send_delay_seconds > 0:
-                time.sleep(sender.send_delay_seconds)
+            delay_seconds = max(float(sender.send_delay_seconds or 0), 1.0)
+            time.sleep(delay_seconds)
             return True, None
             
         except smtplib.SMTPAuthenticationError:
@@ -518,10 +522,12 @@ def send_campaign_with_smtp(campaign, base_url: str, recipients_override=None):
     if not recipients:
         raise ValueError('Add at least one recipient email before sending.')
 
-    sender.reset_daily_quota_if_needed()
-    available_quota = max(sender.daily_limit - sender.emails_sent_today, 0)
-    if available_quota == 0:
-        raise ValueError('Sender daily limit reached. Increase limit or wait until next reset.')
+    with transaction.atomic():
+        sender = type(sender).objects.select_for_update().get(id=sender.id)
+        sender.reset_daily_quota_if_needed()
+        available_quota = max(sender.daily_limit - sender.emails_sent_today, 0)
+        if available_quota == 0:
+            raise ValueError('Sender daily limit reached. Increase limit or wait until next reset.')
 
     # Build job list
     jobs = []
@@ -631,10 +637,12 @@ def send_test_email_with_smtp(campaign, test_email: str):
     from_header = f'{from_name} <{sender.from_email}>' if from_name else sender.from_email
     reply_to = campaign.reply_to or sender.from_email
 
-    sender.reset_daily_quota_if_needed()
-    available_quota = max(sender.daily_limit - sender.emails_sent_today, 0)
-    if available_quota == 0:
-        raise ValueError('Sender daily limit reached. Increase limit or wait until next reset.')
+    with transaction.atomic():
+        sender = type(sender).objects.select_for_update().get(id=sender.id)
+        sender.reset_daily_quota_if_needed()
+        available_quota = max(sender.daily_limit - sender.emails_sent_today, 0)
+        if available_quota == 0:
+            raise ValueError('Sender daily limit reached. Increase limit or wait until next reset.')
 
     subject = replace_variables(campaign.subject or 'Test Campaign', recipient, ctx)
 
@@ -645,6 +653,8 @@ def send_test_email_with_smtp(campaign, test_email: str):
         msg = _attach_campaign_files(msg, campaign)
         server.sendmail(from_header, [recipient], msg.as_string())
 
-    sender.emails_sent_today += 1
-    sender.last_reset_date = timezone.now().date()
-    sender.save(update_fields=['emails_sent_today', 'last_reset_date'])
+    from apps.senders.models import Sender
+    Sender.objects.filter(id=sender.id).update(
+        emails_sent_today=F('emails_sent_today') + 1,
+        last_reset_date=timezone.now().date()
+    )

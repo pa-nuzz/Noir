@@ -770,7 +770,7 @@
 </div>
 
 <!-- ── Campaign Preview Modal ── -->
-<div id="campaignPreviewOverlay" class="hidden fixed inset-0 z-[100] bg-black/20 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeCampaignPreview()">
+<div id="campaignPreviewOverlay" class="hidden fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeCampaignPreview()">
   <div id="campaignPreviewPanel" class="bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden w-full max-w-3xl max-h-[85vh] flex flex-col">
     <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 shrink-0">
       <span class="text-sm font-semibold text-slate-800">Campaign Preview</span>
@@ -786,6 +786,8 @@
     </div>
   </div>
 </div>
+
+</form>
 
 <style>
 .copilot-drawer {
@@ -904,10 +906,20 @@ function updateReviewStep() {
   document.getElementById('review-subject').textContent = subjectEl ? (subjectEl.value || '—') : '—';
   document.getElementById('review-from').textContent = fromEl ? (fromEl.value || '—') : '—';
 
+  var totalRecipients = 0;
   if (recipientEl) {
     var emails = recipientEl.value.split(/[,;\n]/).map(function(e) { return e.trim(); }).filter(Boolean);
-    document.getElementById('review-recipients').textContent = emails.length + ' recipient' + (emails.length !== 1 ? 's' : '');
+    totalRecipients += emails.length;
   }
+  document.querySelectorAll('input[name="contact_lists"]:checked').forEach(function(cb) {
+    totalRecipients += parseInt(cb.dataset.contactCount || 0, 10);
+  });
+  var csvInput = document.getElementById('csv_emails_input');
+  if (csvInput && csvInput.value) {
+    var csvEmails = csvInput.value.split(',').filter(Boolean);
+    totalRecipients += csvEmails.length;
+  }
+  document.getElementById('review-recipients').textContent = totalRecipients + ' recipient' + (totalRecipients !== 1 ? 's' : '');
 
   if (senderEl) {
     var selected = senderEl.options[senderEl.selectedIndex];
@@ -962,7 +974,7 @@ function switchTab(tab) {
 
 // ── Template Selector ──────────────────────────────────────────
 (function () {
-  var templateData = {{ templates_json|safe }};
+  var templateData = JSON.parse('{{ templates_json|escapejs }}');
   var selector = document.getElementById('template-selector');
   var applyBtn = document.getElementById('apply-template-btn');
   if (!selector || !applyBtn) return;
@@ -1062,7 +1074,14 @@ function openCampaignPreview(event) {
   var iframe = document.getElementById('campaignPreviewFrame');
   iframe.style.width = '100%'; iframe.style.maxWidth = '600px';
   iframe.style.height = ''; iframe.srcdoc = buildCampaignPreviewHtml();
-  iframe.onload = function() { try { var doc = iframe.contentWindow.document; iframe.style.height = Math.min(doc.documentElement.scrollHeight, 600) + 'px'; } catch(e) {} iframe.onload = null; };
+  iframe.onload = function() { 
+    try { 
+      var doc = iframe.contentWindow.document; 
+      var h = doc.documentElement.scrollHeight || doc.body.scrollHeight;
+      iframe.style.height = (h > 200 ? h + 32 : 400) + 'px'; 
+    } catch(e) {} 
+    iframe.onload = null; 
+  };
   overlay.classList.remove('hidden'); document.body.style.overflow = 'hidden';
 }
 function closeCampaignPreview() { document.getElementById('campaignPreviewOverlay').classList.add('hidden'); document.body.style.overflow = ''; }

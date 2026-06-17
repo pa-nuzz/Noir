@@ -34,13 +34,8 @@
         <label class="block text-sm font-semibold text-slate-700 mb-2">Email or Username</label>
         <div class="relative">
           {{ form.username|add_class:"auth-input"|attr:"placeholder:Email or Username"|attr:"id:id_username" }}
-          <div id="login-availability-indicator" class="absolute right-3 top-1/2 -translate-y-1/2 hidden flex items-center gap-1.5">
-            <svg id="login-availability-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <span id="login-availability-text" class="text-xs font-medium"></span>
-          </div>
         </div>
         {% if form.username.errors %}<p class="mt-2 text-sm text-red-600 font-medium">{{ form.username.errors.0 }}</p>{% endif %}
-        <p id="login-availability-hint" class="mt-1 text-xs text-slate-400 hidden"></p>
       </div>
 
       <div>
@@ -74,6 +69,10 @@
 </div>
 
 <script>
+  window.addEventListener('pageshow', function (event) {
+    if (event.persisted) window.location.reload();
+  });
+
   function togglePassword(id) {
     const input = document.getElementById(id);
     const icon = document.getElementById('eye-icon');
@@ -109,63 +108,6 @@
         btnText.innerHTML = 'Sign In <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>';
       }, 4000);
     });
-
-    const input = document.getElementById('id_username');
-    const availabilityIndicator = document.getElementById('login-availability-indicator');
-    const availabilityIcon = document.getElementById('login-availability-icon');
-    const availabilityText = document.getElementById('login-availability-text');
-    const availabilityHint = document.getElementById('login-availability-hint');
-    let checkTimeout = null;
-
-    function checkLoginAvailability(value) {
-      if (!value || value.length < 2) {
-        availabilityIndicator.classList.add('hidden');
-        availabilityHint.classList.add('hidden');
-        return;
-      }
-
-      availabilityHint.classList.remove('hidden');
-      availabilityHint.textContent = 'Checking...';
-      availabilityHint.className = 'mt-1 text-xs text-slate-400';
-
-      clearTimeout(checkTimeout);
-      checkTimeout = setTimeout(() => {
-        fetch(`{% url 'accounts:check_availability' %}?field=${encodeURIComponent(value)}`)
-          .then(response => response.json())
-          .then(data => {
-            availabilityIndicator.classList.remove('hidden');
-            availabilityHint.classList.remove('hidden');
-            
-            if (data.available) {
-              // Account does NOT exist → can't login → show red
-              availabilityIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>';
-              availabilityIcon.className = 'w-5 h-5 text-red-400';
-              availabilityText.textContent = 'Not found';
-              availabilityText.className = 'text-xs font-medium text-red-600';
-              availabilityHint.textContent = 'No account found — please register instead';
-              availabilityHint.className = 'mt-1 text-xs text-red-500';
-            } else {
-              // Account EXISTS → can login → show green
-              availabilityIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>';
-              availabilityIcon.className = 'w-5 h-5 text-emerald-500';
-              availabilityText.textContent = 'Account found';
-              availabilityText.className = 'text-xs font-medium text-emerald-600';
-              availabilityHint.textContent = 'You can sign in';
-              availabilityHint.className = 'mt-1 text-xs text-emerald-500';
-            }
-          })
-          .catch(() => {
-            availabilityIndicator.classList.add('hidden');
-            availabilityHint.classList.add('hidden');
-          });
-      }, 300);
-    }
-
-    if (input) {
-      input.addEventListener('input', (e) => {
-        checkLoginAvailability(e.target.value.trim());
-      });
-    }
   });
 </script>
 {% endblock %}

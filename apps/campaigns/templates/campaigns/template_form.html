@@ -192,7 +192,7 @@
 </div>
 </form>
 
-<div id="previewOverlay" class="hidden fixed inset-0 z-[100] bg-black/20 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closePreview()">
+<div id="previewOverlay" class="hidden fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closePreview()">
   <div id="previewPanel" class="bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden w-full max-w-3xl max-h-[85vh] flex flex-col">
     <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 shrink-0">
       <span class="text-sm font-semibold text-slate-800">Live Preview</span>
@@ -327,7 +327,8 @@ function openPreview(event) {
   iframe.onload = function () {
     try {
       var doc = iframe.contentWindow.document;
-      iframe.style.height = Math.min(doc.documentElement.scrollHeight, 600) + 'px';
+      var h = doc.documentElement.scrollHeight || doc.body.scrollHeight;
+      iframe.style.height = (h > 200 ? h + 32 : 400) + 'px';
     } catch (e) {}
     iframe.onload = null;
   };
