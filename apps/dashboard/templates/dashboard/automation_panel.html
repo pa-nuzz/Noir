@@ -1,0 +1,590 @@
+<style>
+  .auto-card {
+    display: flex; flex-direction: column; gap: 12px;
+    padding: 20px; border-radius: 14px;
+    border: 2px solid #E2E8F0; background: #FFFFFF;
+    transition: all 0.15s;
+  }
+  .auto-card.active {
+    border-color: #06B6D4;
+    background: #F0FDFA;
+    box-shadow: 0 0 0 1px #06B6D4;
+  }
+  .auto-card-header {
+    display: flex; align-items: center; gap: 12px; cursor: pointer;
+  }
+  .auto-card-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; flex-shrink: 0;
+  }
+  .auto-card-body { flex: 1; min-width: 0; }
+  .auto-card-name { font-size: 0.875rem; font-weight: 700; color: #0A2540; }
+  .auto-card-desc { font-size: 0.75rem; color: #64748B; margin-top: 1px; line-height: 1.4; }
+  .auto-toggle { cursor: pointer; font-size: 1.25rem; line-height: 1; }
+  .auto-settings { display: none; padding-top: 8px; border-top: 1px solid #E2E8F0; }
+  .auto-card.active .auto-settings { display: block; }
+  .auto-platform-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .auto-platform-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 8px;
+    border: 2px solid #E2E8F0; background: #FFFFFF;
+    font-size: 0.75rem; font-weight: 600; color: #64748B;
+    cursor: pointer; transition: all 0.12s; user-select: none;
+  }
+  .auto-platform-chip:hover { border-color: #CBD5E1; }
+  .auto-platform-chip.selected {
+    border-color: #6D28D9; background: #F5F3FF; color: #6D28D9;
+  }
+  .auto-platform-chip.disabled { opacity: 0.4; cursor: not-allowed; }
+  .auto-platform-chip input { display: none; }
+  .auto-platform-chip .connected-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #10B981; display: inline-block;
+  }
+  .auto-row { display: flex; align-items: center; gap: 16px; margin-top: 10px; flex-wrap: wrap; }
+  .auto-row label { font-size: 0.75rem; font-weight: 600; color: #64748B; }
+  .auto-row select {
+    padding: 4px 10px; border-radius: 6px; border: 1px solid #E2E8F0;
+    font-size: 0.75rem; font-weight: 500; color: #0A2540; background: #FFFFFF;
+  }
+  .auto-toggle-switch {
+    position: relative; display: inline-block; width: 36px; height: 20px;
+  }
+  .auto-toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .auto-toggle-slider {
+    position: absolute; cursor: pointer; inset: 0;
+    background: #CBD5E1; border-radius: 20px; transition: 0.2s;
+  }
+  .auto-toggle-slider::before {
+    content: ''; position: absolute; height: 16px; width: 16px;
+    left: 2px; bottom: 2px; background: #FFFFFF; border-radius: 50%; transition: 0.2s;
+  }
+  .auto-toggle-switch input:checked + .auto-toggle-slider { background: #6D28D9; }
+  .auto-toggle-switch input:checked + .auto-toggle-slider::before { transform: translateX(16px); }
+  .auto-actions { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+  .auto-all-check { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 600; color: #64748B; cursor: pointer; }
+  .auto-all-check input { width: 16px; height: 16px; accent-color: #6D28D9; cursor: pointer; }
+
+  .ag-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px 16px; border-radius: 12px;
+    border: 1px solid #E2E8F0; background: #FFFFFF;
+    transition: border-color 0.12s;
+  }
+  .ag-item:hover { border-color: #CBD5E1; }
+  .ag-item-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    background: #F1F5F9; flex-shrink: 0; font-size: 0.9rem;
+  }
+  .ag-item-body { flex: 1; min-width: 0; }
+  .ag-item-title { font-size: 0.8125rem; font-weight: 600; color: #0A2540; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .ag-item-meta { font-size: 0.6875rem; color: #94A3B8; margin-top: 2px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .ag-item-actions { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .ag-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px; border-radius: 6px;
+    font-size: 0.6875rem; font-weight: 600;
+    border: 1px solid #E2E8F0; background: #FFFFFF; color: #64748B;
+    cursor: pointer; transition: all 0.12s; text-decoration: none;
+  }
+  .ag-btn:hover { border-color: #06B6D4; color: #06B6D4; background: #F0FDFA; }
+  .ag-btn.primary { border-color: #6D28D9; color: #6D28D9; }
+  .ag-btn.primary:hover { background: #F5F3FF; }
+  .ag-btn.danger:hover { border-color: #DC2626; color: #DC2626; background: #FEF2F2; }
+  .ag-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .ag-btn:disabled:hover { border-color: #E2E8F0; color: #64748B; background: #FFFFFF; }
+  .ag-badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 2px 8px; border-radius: 999px;
+    font-size: 0.625rem; font-weight: 700; text-transform: uppercase;
+  }
+  .ag-badge-draft { background: #F1F5F9; color: #64748B; }
+  .ag-badge-scheduled { background: #ECFEFF; color: #06B6D4; }
+  .ag-badge-published { background: #ECFDF5; color: #059669; }
+
+  .auto-gen-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 14px; border-radius: 8px;
+    font-size: 0.75rem; font-weight: 700;
+    border: none; cursor: pointer; transition: all 0.15s;
+    background: linear-gradient(135deg, #6D28D9, #06B6D4);
+    color: #FFFFFF;
+  }
+  .auto-gen-btn:hover { box-shadow: 0 4px 12px rgba(109,40,217,0.3); transform: translateY(-1px); }
+  .auto-gen-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+  .auto-gen-btn svg { width: 14px; height: 14px; }
+</style>
+
+<div class="flex items-center justify-between mb-2">
+  <div>
+    <h3 class="text-base font-bold text-slate-900">Automation Rules</h3>
+    <p class="text-sm text-slate-500 mt-0.5">
+      Turn on a category, pick platforms, and generate content. Connected platforms can publish directly; others save as drafts.
+    </p>
+  </div>
+</div>
+
+<div class="flex items-center gap-3 mb-4">
+  <label class="auto-all-check">
+    <input type="checkbox" id="auto-enable-all" onchange="toggleAllRules(this.checked)">
+    Enable all
+  </label>
+  <span class="text-xs text-slate-400" id="auto-active-count">0 rule(s) active</span>
+</div>
+
+<div id="auto-rules-list" class="space-y-3">
+  {% for topic in trending_topics %}
+  <div class="auto-card{% if topic.id in subscribed_topic_ids %} active{% endif %}" data-topic-id="{{ topic.id }}">
+    <div class="auto-card-header" onclick="toggleAutoCategory(this.closest('.auto-card'))">
+      <div class="auto-card-icon" style="background:{{ topic.color }}18">
+        <span>{{ topic.icon }}</span>
+      </div>
+      <div class="auto-card-body">
+        <div class="auto-card-name">{{ topic.name }}</div>
+        <div class="auto-card-desc">{{ topic.description }}</div>
+      </div>
+      <span class="auto-toggle" id="auto-indicator-{{ topic.id }}">{% if topic.id in subscribed_topic_ids %}⚡{% else %}⊞{% endif %}</span>
+    </div>
+    <div class="auto-settings">
+      <label class="text-xs font-semibold text-slate-600">Platforms:</label>
+      <div class="auto-platform-grid">
+        {% for p in all_platforms %}
+        <span class="auto-platform-chip{% if not topic.id in subscribed_topic_ids %} disabled{% endif %}" onclick="togglePlatform({{ topic.id }}, '{{ p.platform }}', this)">
+          <input type="checkbox" value="{{ p.platform }}"{% if not topic.id in subscribed_topic_ids %} disabled{% endif %}>
+          {% if p.connected %}<span class="connected-dot"></span>{% endif %}
+          {{ p.name }}{% if p.connected and p.account_name %} · {{ p.account_name }}{% endif %}
+        </span>
+        {% endfor %}
+      </div>
+      <div class="auto-row">
+        <div>
+          <label>Schedule:</label>
+          <select onchange="updateRule({{ topic.id }}, 'schedule_interval', this.value)">
+            <option value="hourly">Every Hour</option>
+            <option value="every_6h">Every 6 Hours</option>
+            <option value="daily" selected>Daily</option>
+            <option value="weekly">Weekly</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="text-xs font-semibold text-slate-600">Auto-publish:</label>
+          <label class="auto-toggle-switch">
+            <input type="checkbox" onchange="updateRule({{ topic.id }}, 'auto_publish', this.checked)">
+            <span class="auto-toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="auto-row" style="margin-top:12px;">
+        <button onclick="generateNow({{ topic.id }})" class="auto-gen-btn" id="gen-btn-{{ topic.id }}">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+          Generate Now
+        </button>
+        <span class="text-xs text-slate-400" id="gen-status-{{ topic.id }}"></span>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="text-center py-10 text-slate-400">
+    <p class="text-sm">No categories available yet.</p>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="auto-actions">
+  <button onclick="saveAutomationRules()" class="btn-action btn-action-primary inline-flex text-sm">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+    Save All Automation Rules
+  </button>
+  <div id="auto-save-status" class="text-sm text-emerald-600 font-semibold hidden">Saved!</div>
+</div>
+
+<!-- Recently Generated -->
+<div style="margin-top:28px;border-top:1px solid #E2E8F0;padding-top:20px;">
+  <div class="flex items-center justify-between mb-3">
+    <div>
+      <h3 class="text-sm font-bold text-slate-900">Recently Generated</h3>
+      <p class="text-xs text-slate-400 mt-0.5">Content created from your automation rules.</p>
+    </div>
+  </div>
+  <div id="auto-generated-list" class="space-y-2">
+    {% for item in recent_generated_items %}
+    {% with meta=item.metadata %}
+    <div class="ag-item" data-item-id="{{ item.id }}">
+      <div class="ag-item-icon">{{ meta.topic_icon|default:'📄' }}</div>
+      <div class="ag-item-body">
+        <div class="ag-item-title">{{ item.title }}</div>
+        <div class="ag-item-meta">
+          <span>{{ meta.topic_name|default:'Unknown' }}</span>
+          <span class="ag-badge ag-badge-{{ item.status }}">{{ item.status }}</span>
+          <span>{{ item.platform|title }}</span>
+          <span>{{ item.created_at|timesince }} ago</span>
+        </div>
+        <div class="ag-item-actions">
+          <button onclick="publishNow({{ item.id }})" class="ag-btn primary" id="pub-btn-{{ item.id }}">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+            Publish Now
+          </button>
+          <button onclick="openScheduleModal({{ item.id }})" class="ag-btn">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Schedule
+          </button>
+        </div>
+      </div>
+    </div>
+    {% endwith %}
+    {% empty %}
+    <div class="text-center py-8 text-slate-400">
+      <p class="text-xs">No generated content yet. Enable categories and click "Generate Now".</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Schedule Modal -->
+<div id="auto-schedule-modal" class="rd-schedule-modal hidden" onclick="closeAutoScheduleModal()">
+  <div class="rd-schedule-modal-inner" onclick="event.stopPropagation()">
+    <h4 class="text-sm font-bold text-slate-900 mb-1">Schedule for Publishing</h4>
+    <p class="text-xs text-slate-500 mb-4">Choose when to publish this content to your social account.</p>
+    <input type="datetime-local" id="auto-schedule-datetime" class="auth-input w-full text-sm mb-4">
+    <div class="flex gap-3 justify-end">
+      <button type="button" onclick="closeAutoScheduleModal()" class="btn-action btn-action-secondary text-sm">Cancel</button>
+      <button type="button" onclick="confirmAutoSchedule()" class="btn-action btn-action-primary text-sm">Schedule</button>
+    </div>
+  </div>
+</div>
+
+{{ automation_rules_json|json_script:"auto-rules-data" }}
+
+<script>
+var autoRulesData = {};
+var autoScheduleItemId = null;
+
+function initAutoRules() {
+  var savedRules = {};
+  try {
+    var el = document.getElementById('auto-rules-data');
+    if (el) savedRules = JSON.parse(el.textContent);
+  } catch(e) {}
+
+  document.querySelectorAll('#auto-rules-list .auto-card').forEach(function(card) {
+    var topicId = parseInt(card.dataset.topicId);
+    var saved = savedRules[topicId] || {};
+    autoRulesData[topicId] = {
+      topic_id: topicId,
+      platforms: saved.platforms || [],
+      schedule_interval: saved.schedule_interval || 'daily',
+      auto_publish: saved.auto_publish || false,
+      is_active: card.classList.contains('active'),
+    };
+  });
+  applyLoadedRules();
+}
+
+function applyLoadedRules() {
+  Object.keys(autoRulesData).forEach(function(tid) {
+    var rule = autoRulesData[tid];
+    var card = document.querySelector('#auto-rules-list .auto-card[data-topic-id="' + tid + '"]');
+    if (!card) return;
+
+    rule.platforms.forEach(function(p) {
+      var chip = card.querySelector('.auto-platform-chip input[value="' + p + '"]');
+      if (chip) {
+        chip.checked = true;
+        chip.closest('.auto-platform-chip').classList.add('selected');
+      }
+    });
+
+    var scheduleSelect = card.querySelector('.auto-row select');
+    if (scheduleSelect) scheduleSelect.value = rule.schedule_interval;
+
+    var publishToggle = card.querySelector('.auto-toggle-switch input');
+    if (publishToggle) publishToggle.checked = rule.auto_publish;
+
+    card.classList.toggle('active', rule.is_active);
+    var indicator = card.querySelector('.auto-toggle');
+    if (indicator) indicator.textContent = rule.is_active ? '⚡' : '⊞';
+
+    var chips = card.querySelectorAll('.auto-platform-chip');
+    chips.forEach(function(chip) {
+      chip.classList.toggle('disabled', !rule.is_active);
+      var cb = chip.querySelector('input');
+      cb.disabled = !rule.is_active;
+    });
+  });
+  updateActiveCount();
+}
+
+function toggleAutoCategory(card) {
+  var topicId = parseInt(card.dataset.topicId);
+  var isActive = !card.classList.contains('active');
+  card.classList.toggle('active');
+  card.querySelector('#auto-indicator-' + topicId).textContent = isActive ? '⚡' : '⊞';
+  autoRulesData[topicId].is_active = isActive;
+  if (!isActive) autoRulesData[topicId].platforms = [];
+
+  var chips = card.querySelectorAll('.auto-platform-chip');
+  chips.forEach(function(chip) {
+    chip.classList.toggle('disabled', !isActive);
+    var cb = chip.querySelector('input');
+    cb.disabled = !isActive;
+    if (!isActive) {
+      cb.checked = false;
+      chip.classList.remove('selected');
+    }
+  });
+  updateActiveCount();
+}
+
+function togglePlatform(topicId, platform, el) {
+  if (!autoRulesData[topicId] || !autoRulesData[topicId].is_active) return;
+  var cb = el.querySelector('input');
+  cb.checked = !cb.checked;
+  el.classList.toggle('selected');
+  var platforms = autoRulesData[topicId].platforms;
+  if (cb.checked) {
+    if (!platforms.includes(platform)) platforms.push(platform);
+  } else {
+    var idx = platforms.indexOf(platform);
+    if (idx > -1) platforms.splice(idx, 1);
+  }
+}
+
+function updateRule(topicId, field, value) {
+  if (!autoRulesData[topicId]) return;
+  autoRulesData[topicId][field] = value;
+}
+
+function toggleAllRules(enable) {
+  document.querySelectorAll('#auto-rules-list .auto-card').forEach(function(card) {
+    var topicId = parseInt(card.dataset.topicId);
+    autoRulesData[topicId].is_active = enable;
+    card.classList.toggle('active', enable);
+    card.querySelector('#auto-indicator-' + topicId).textContent = enable ? '⚡' : '⊞';
+    if (!enable) autoRulesData[topicId].platforms = [];
+
+    var chips = card.querySelectorAll('.auto-platform-chip');
+    chips.forEach(function(chip) {
+      chip.classList.toggle('disabled', !enable);
+      var cb = chip.querySelector('input');
+      cb.disabled = !enable;
+      if (!enable) {
+        cb.checked = false;
+        chip.classList.remove('selected');
+      }
+    });
+  });
+  updateActiveCount();
+}
+
+function updateActiveCount() {
+  var count = 0;
+  Object.values(autoRulesData).forEach(function(r) { if (r.is_active) count++; });
+  document.getElementById('auto-active-count').textContent = count + ' rule(s) active';
+}
+
+function generateNow(topicId) {
+  var rule = autoRulesData[topicId];
+  if (!rule || !rule.is_active) {
+    showTrendingToast('Enable this category first', 'info');
+    return;
+  }
+  var platforms = rule.platforms;
+  if (platforms.length === 0) {
+    showTrendingToast('Select at least one platform', 'info');
+    return;
+  }
+
+  var btn = document.getElementById('gen-btn-' + topicId);
+  var statusEl = document.getElementById('gen-status-' + topicId);
+  btn.disabled = true;
+  btn.innerHTML = '<svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Generating...';
+  statusEl.textContent = '';
+
+  fetch('{% url "trending:generate_automation_content" %}', {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': getCSRFToken(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({topic_id: topicId, platforms: platforms}),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    btn.disabled = false;
+    btn.innerHTML = '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg> Generate Now';
+    if (data.count > 0) {
+      statusEl.textContent = data.count + ' item(s) generated';
+      showTrendingToast(data.count + ' content item(s) created', 'success', btn);
+      refreshGeneratedList();
+    } else {
+      statusEl.textContent = 'No new items to generate';
+      showTrendingToast('No trending items found for this category', 'info', btn);
+    }
+  })
+  .catch(function() {
+    btn.disabled = false;
+    btn.innerHTML = '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg> Generate Now';
+    showTrendingToast('Failed to generate content', 'error', btn);
+  });
+}
+
+function refreshGeneratedList() {
+  fetch('{% url "trending:list_generated_items" %}')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var list = document.getElementById('auto-generated-list');
+      if (!data.items || data.items.length === 0) {
+        list.innerHTML = '<div class="text-center py-8 text-slate-400"><p class="text-xs">No generated content yet.</p></div>';
+        return;
+      }
+      var html = '';
+      data.items.forEach(function(item) {
+        var statusClass = 'ag-badge-draft';
+        if (item.status === 'scheduled') statusClass = 'ag-badge-scheduled';
+        else if (item.status === 'published') statusClass = 'ag-badge-published';
+        html +=
+          '<div class="ag-item" data-item-id="' + item.id + '">' +
+            '<div class="ag-item-icon">' + (item.topic_icon || '📄') + '</div>' +
+            '<div class="ag-item-body">' +
+              '<div class="ag-item-title">' + escapeHtml(item.title) + '</div>' +
+              '<div class="ag-item-meta">' +
+                '<span>' + escapeHtml(item.topic_name || '') + '</span>' +
+                '<span class="ag-badge ' + statusClass + '">' + item.status + '</span>' +
+                '<span>' + (item.platform ? item.platform.charAt(0).toUpperCase() + item.platform.slice(1) : '') + '</span>' +
+                '<span>' + timeAgo(item.created_at) + '</span>' +
+              '</div>' +
+              '<div class="ag-item-actions">' +
+                '<button onclick="publishNow(' + item.id + ')" class="ag-btn primary" id="pub-btn-' + item.id + '">' +
+                  '<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>' +
+                  ' Publish Now' +
+                '</button>' +
+                '<button onclick="openScheduleModal(' + item.id + ')" class="ag-btn">' +
+                  '<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
+                  ' Schedule' +
+                '</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+      });
+      list.innerHTML = html;
+    })
+    .catch(function() {});
+}
+
+function publishNow(itemId) {
+  var btn = document.getElementById('pub-btn-' + itemId);
+  btn.disabled = true;
+  btn.textContent = 'Publishing...';
+
+  fetch('{% url "trending:publish_automation_item" 0 %}'.replace('0', itemId), {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': getCSRFToken(),
+      'Content-Type': 'application/json',
+    },
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    btn.disabled = false;
+    if (data.published) {
+      btn.textContent = 'Published ✓';
+      showTrendingToast('Published successfully!', 'success', btn);
+      refreshGeneratedList();
+    } else if (data.error === 'not_connected') {
+      btn.disabled = false;
+      btn.innerHTML = '<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> Publish Now';
+      showTrendingToast(data.message, 'info', btn);
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = '<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> Publish Now';
+      showTrendingToast(data.message || 'Failed to publish', 'error', btn);
+    }
+  })
+  .catch(function() {
+    btn.disabled = false;
+    btn.innerHTML = '<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> Publish Now';
+    showTrendingToast('Failed to publish', 'error', btn);
+  });
+}
+
+function openScheduleModal(itemId) {
+  autoScheduleItemId = itemId;
+  var now = new Date();
+  var pad = function(n) { return String(n).padStart(2, '0'); };
+  var localStr = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+  var input = document.getElementById('auto-schedule-datetime');
+  input.value = localStr;
+  input.min = localStr;
+  document.getElementById('auto-schedule-modal').classList.remove('hidden');
+}
+
+function closeAutoScheduleModal() {
+  document.getElementById('auto-schedule-modal').classList.add('hidden');
+  autoScheduleItemId = null;
+}
+
+function confirmAutoSchedule() {
+  var dt = document.getElementById('auto-schedule-datetime').value;
+  if (!dt) { showTrendingToast('Please select a date and time', 'error'); return; }
+
+  var scheduledAt = new Date(dt).toISOString();
+  var itemId = autoScheduleItemId;
+
+  fetch('{% url "trending:schedule_automation_item" 0 %}'.replace('0', itemId), {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': getCSRFToken(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({scheduled_at: scheduledAt}),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    closeAutoScheduleModal();
+    if (data.scheduled) {
+      showTrendingToast('Scheduled for ' + new Date(scheduledAt).toLocaleString(), 'success');
+      refreshGeneratedList();
+    } else if (data.error === 'not_connected') {
+      showTrendingToast(data.message, 'info');
+    } else {
+      showTrendingToast(data.message || 'Failed to schedule', 'error');
+    }
+  })
+  .catch(function() {
+    closeAutoScheduleModal();
+    showTrendingToast('Failed to schedule', 'error');
+  });
+}
+
+function saveAutomationRules() {
+  var statusEl = document.getElementById('auto-save-status');
+  statusEl.classList.add('hidden');
+
+  var rules = Object.values(autoRulesData).filter(function(r) { return r.is_active; });
+
+  fetch('{% url "trending:save_automation_rules" %}', {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': getCSRFToken(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({rules: rules}),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    statusEl.classList.remove('hidden');
+    statusEl.textContent = data.count + ' rule(s) saved!';
+    statusEl.className = 'text-sm text-emerald-600 font-semibold';
+    setTimeout(function() { statusEl.classList.add('hidden'); }, 3000);
+  })
+  .catch(function() {
+    statusEl.textContent = 'Failed to save. Please try again.';
+    statusEl.className = 'text-sm text-red-600 font-semibold';
+    statusEl.classList.remove('hidden');
+  });
+}
+
+document.addEventListener('DOMContentLoaded', initAutoRules);
+</script>

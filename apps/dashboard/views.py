@@ -1498,6 +1498,54 @@ def social_content_hub(request):
     except Exception:
         pass
 
+    # ─── Automation data ──────────────────────────────────────────────
+    all_platforms = []
+    automation_rules = []
+    automation_rules_json = {}
+    recent_generated_items = []
+    try:
+        from apps.social_accounts.models import SocialAccount
+        connected_accounts = _safe_list(
+            SocialAccount.objects.filter(user=user, is_active=True).values('platform', 'account_name')
+        )
+        connected_map = {a['platform']: a['account_name'] for a in connected_accounts}
+        PLATFORM_DISPLAY = {
+            'facebook': 'Facebook', 'instagram': 'Instagram', 'twitter': 'X (Twitter)',
+            'linkedin': 'LinkedIn', 'tiktok': 'TikTok', 'youtube': 'YouTube',
+        }
+        all_platforms = [
+            {
+                'platform': p,
+                'name': PLATFORM_DISPLAY.get(p, p.title()),
+                'connected': p in connected_map,
+                'account_name': connected_map.get(p, ''),
+            }
+            for p in ['linkedin', 'twitter', 'instagram', 'facebook', 'tiktok', 'youtube']
+        ]
+        from apps.trending.models import TrendingAutomationRule
+        automation_rules = _safe_list(
+            TrendingAutomationRule.objects.filter(user=user).select_related('topic')
+        )
+        import json as _json
+        automation_rules_json = {
+            rule.topic_id: {
+                'platforms': rule.platforms,
+                'schedule_interval': rule.schedule_interval,
+                'auto_publish': rule.auto_publish,
+            }
+            for rule in automation_rules
+        }
+        from apps.content_studio.models import ContentItem
+        recent_generated_items = _safe_list(
+            ContentItem.objects.filter(
+                user=user, is_auto_generated=True,
+            ).extra(
+                where=["metadata->>'source' = 'trending_automation'"]
+            ).order_by('-created_at')[:10]
+        )
+    except Exception:
+        pass
+
     context = {
         'posts': posts,
         'calendar_month_label': calendar_month_label,
@@ -1510,6 +1558,10 @@ def social_content_hub(request):
         'media_query': media_query,
         'trending_topics': trending_topics,
         'subscribed_topic_ids': subscribed_topic_ids,
+        'all_platforms': all_platforms,
+        'automation_rules': automation_rules,
+        'automation_rules_json': automation_rules_json,
+        'recent_generated_items': recent_generated_items,
     }
     return render(request, 'dashboard/social_content_hub.html', context)
 

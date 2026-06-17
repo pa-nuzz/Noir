@@ -121,3 +121,75 @@ def analyze_user_profiles():
 
     logger.info("analyze_user_profiles: processed %d users", processed)
     return processed
+
+
+@shared_task(queue='low')
+def run_automation():
+    from datetime import timedelta
+    from django.utils import timezone
+    from .models import TrendingAutomationRule, FeedItem
+    from .views import _generate_llm_content
+
+    rules = TrendingAutomationRule.objects.filter(is_active=True).select_related('user', 'topic')
+    processed = 0
+
+    for rule in rules:
+        try:
+            interval_hours = {
+                'hourly': 1,
+                'every_6h': 6,
+                'daily': 24,
+                'weekly': 168,
+            }.get(rule.schedule_interval, 24)
+
+            cutoff = timezone.now() - timedelta(hours=interval_hours)
+            items = list(FeedItem.objects.filter(
+                is_duplicate=False,
+                topic=rule.topic,
+                fetched_at__gte=cutoff,
+            ).order_by('-trending_score')[:5])
+
+            if not items:
+                continue
+
+            platforms = rule.platforms
+            if not platforms:
+                continue
+
+            content_items = _generate_llm_content(rule.user, rule.topic, platforms, items, rule.id)
+
+            if rule.auto_publish:
+                for ci in content_items:
+                    try:
+                        from apps.social_accounts.models import SocialAccount, SocialPost
+
+                        account = SocialAccount.objects.filter(
+                            user=rule.user, platform=ci.platform, is_active=True
+                        ).first()
+                        if account:
+                            SocialPost.objects.create(
+                                user=rule.user,
+                                account=account,
+                                platform=ci.platform,
+                                content=ci.body,
+                                hashtags=ci.tags or [],
+                                status='scheduled',
+                                scheduled_at=timezone.now(),
+                                content_item=ci,
+                            )
+                    except Exception:
+                        logger.exception(
+                            "Failed to create SocialPost for user %s, platform %s",
+                            rule.user.email, ci.platform,
+                        )
+
+            processed += len(content_items)
+
+        except Exception as e:
+            logger.exception(
+                "Automation rule failed for user %s topic %s: %s",
+                rule.user.email, rule.topic.name, e,
+            )
+
+    logger.info("run_automation: processed %d items from %d rules", processed, rules.count())
+    return processed
