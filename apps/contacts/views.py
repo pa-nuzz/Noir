@@ -51,7 +51,7 @@ def _get_or_create_tag(request, tag_name):
 @login_required
 def contacts_home(request):
     contact_lists = filter_by_context(request, ContactList.objects.all()).annotate(contact_count=Count('contacts'))
-    available_tags = filter_by_context(request, ContactTag.objects.all())
+    available_tags = filter_by_context(request, ContactTag.objects.all()).annotate(contact_count=Count('contacts'))
 
     contacts_qs = Contact.objects.filter(
         contact_list__in=filter_by_context(request, ContactList.objects.all())
@@ -80,9 +80,10 @@ def contacts_home(request):
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
 
-    segments = filter_by_context(request, ContactSegment.objects.all()).order_by('-created_at')[:5]
-    for seg in segments:
-        seg.matched_count = seg.get_matched_contacts().count()
+    gdpr_consent_count = Contact.objects.filter(
+        contact_list__in=filter_by_context(request, ContactList.objects.all()),
+        gdpr_consent=True,
+    ).count()
 
     return render(request, 'contacts/contacts_home.html', {
         'contact_lists': contact_lists,
@@ -93,12 +94,16 @@ def contacts_home(request):
         'search': search,
         'selected_list': selected_list,
         'selected_tag': selected_tag,
-        'segments': segments,
+        'gdpr_consent_count': gdpr_consent_count,
     })
 
 
 @login_required
 def tags_manager(request):
+    next_url = (request.POST.get('next') or request.GET.get('next') or '').strip()
+    if not next_url:
+        next_url = reverse('contacts:tags_manager')
+
     if request.method == 'POST':
         action = (request.POST.get('action') or '').strip()
 
@@ -106,7 +111,7 @@ def tags_manager(request):
             name = (request.POST.get('name') or '').strip()
             if not name:
                 messages.error(request, 'Tag name is required.')
-                return redirect('contacts:tags_manager')
+                return redirect(next_url)
             ws = _get_active_workspace(request)
             if ws:
                 tag_obj, created = ContactTag.objects.get_or_create(
@@ -118,14 +123,14 @@ def tags_manager(request):
                     user=request.user, name=name,
                 )
             messages.success(request, f'Tag "{tag_obj.name}" {"created" if created else "already exists"}.' if created else f'Tag "{tag_obj.name}" already exists.')
-            return redirect('contacts:tags_manager')
+            return redirect(next_url)
 
         if action == 'rename':
             tag_id = request.POST.get('tag_id')
             new_name = (request.POST.get('new_name') or '').strip()
             if not tag_id or not new_name:
                 messages.error(request, 'Tag and new name are required.')
-                return redirect('contacts:tags_manager')
+                return redirect(next_url)
             tag_obj = get_object_or_404(filter_by_context(request, ContactTag.objects.all()), id=tag_id)
             ws = _get_active_workspace(request)
             dup_filter = ContactTag.objects.filter(name=new_name).exclude(id=tag_obj.id)
@@ -135,26 +140,26 @@ def tags_manager(request):
                 dup_filter = dup_filter.filter(user=request.user)
             if dup_filter.exists():
                 messages.error(request, f'Tag "{new_name}" already exists.')
-                return redirect('contacts:tags_manager')
+                return redirect(next_url)
             old_name = tag_obj.name
             tag_obj.name = new_name
             tag_obj.save(update_fields=['name'])
             messages.success(request, f'Tag "{old_name}" renamed to "{new_name}".')
-            return redirect('contacts:tags_manager')
+            return redirect(next_url)
 
         if action == 'delete':
             tag_id = request.POST.get('tag_id')
             if not tag_id:
                 messages.error(request, 'Tag is required.')
-                return redirect('contacts:tags_manager')
+                return redirect(next_url)
             tag_obj = get_object_or_404(filter_by_context(request, ContactTag.objects.all()), id=tag_id)
             name = tag_obj.name
             tag_obj.delete()
             messages.success(request, f'Tag "{name}" deleted.')
-            return redirect('contacts:tags_manager')
+            return redirect(next_url)
 
         messages.error(request, 'Invalid action.')
-        return redirect('contacts:tags_manager')
+        return redirect(next_url)
 
     tags = filter_by_context(request, ContactTag.objects.all()).annotate(contact_count=Count('contacts')).order_by('name')
     return render(request, 'contacts/tags_manager.html', {'tags': tags})
@@ -394,6 +399,38 @@ def add_contact(request):
     else:
         messages.warning(request, f'{email} already exists in "{contact_list.name}".')
 
+    return redirect('contacts:list')
+
+
+@login_required
+@require_workspace_permission('contacts', 'delete')
+def bulk_delete_contacts(request):
+    if request.method != 'POST':
+        return redirect('contacts:list')
+
+    raw_ids = (request.POST.get('contact_ids') or '').strip()
+    if not raw_ids:
+        messages.error(request, 'Select at least one contact.')
+        return redirect('contacts:list')
+
+    selected_ids = []
+    for token in raw_ids.split(','):
+        token = token.strip()
+        if token and token.isdigit():
+            selected_ids.append(int(token))
+
+    if not selected_ids:
+        messages.error(request, 'Select at least one valid contact.')
+        return redirect('contacts:list')
+
+    contacts = Contact.objects.filter(
+        id__in=selected_ids,
+        contact_list__in=filter_by_context(request, ContactList.objects.all())
+    ).distinct()
+
+    deleted_count = contacts.count()
+    contacts.delete()
+    messages.success(request, f'Deleted {deleted_count} contact(s).')
     return redirect('contacts:list')
 
 
