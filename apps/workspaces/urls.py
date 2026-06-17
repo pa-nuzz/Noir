@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import storage_views, views
+from . import views
 
 app_name = 'workspaces'
 
@@ -29,19 +29,4 @@ urlpatterns = [
     path('<int:workspace_id>/onboarding/', views.workspace_onboarding, name='onboarding'),
 
     path('<int:workspace_id>/onboarding/', views.workspace_onboarding, name='onboarding'),
-    path('<int:workspace_id>/onboarding/dismiss/', views.onboarding_dismiss, name='dismiss_onboarding'),
-
-    path('storage/', storage_views.storage_settings, name='storage_settings'),
-    path('storage/select/', storage_views.storage_select_backend, name='storage_select'),
-    path('storage/google-drive/credentials/', storage_views.storage_google_drive_save_credentials, name='storage_google_drive_save_credentials'),
-    path('storage/google-drive/start/', storage_views.storage_google_drive_start, name='storage_google_drive_start'),
-    path('storage/google-drive/callback/', storage_views.storage_google_drive_callback, name='storage_google_drive_callback'),
-    path('storage/google-drive/disconnect/', storage_views.storage_google_drive_disconnect, name='storage_google_drive_disconnect'),
-    path('storage/dia-s3/test/', storage_views.storage_dia_s3_test, name='storage_dia_s3_test'),
-    path('storage/minio/test/', storage_views.storage_minio_test, name='storage_minio_test'),
-    path('storage/s3/save/', storage_views.storage_s3_save, name='storage_s3_save'),
-    path('storage/s3/test/', storage_views.storage_s3_test, name='storage_s3_test'),
-    path('storage/s3/disconnect/', storage_views.storage_s3_disconnect, name='storage_s3_disconnect'),
-    path('storage/test/', storage_views.storage_test, name='storage_test'),
-    path('storage/health/', storage_views.storage_health, name='storage_health'),
-]
+    path('<int:workspace_id>/onboarding/dismiss/', views.onboarding_dismiss, name='dismiss_onboarding'),]
