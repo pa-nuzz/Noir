@@ -193,3 +193,148 @@ def run_automation():
 
     logger.info("run_automation: processed %d items from %d rules", processed, rules.count())
     return processed
+
+
+@shared_task(queue='low')
+def generate_currents_snapshots():
+    import re
+    import uuid
+    from django.contrib.auth import get_user_model
+    from django.utils import timezone
+    from .models import TrendingAutomationRule, FeedItem, CurrentsSnapshot
+
+    User = get_user_model()
+    user_ids = set(
+        TrendingAutomationRule.objects.filter(is_active=True)
+        .exclude(platforms=[])
+        .values_list('user', flat=True)
+    )
+
+    if not user_ids:
+        logger.info("generate_currents_snapshots: no active rules found")
+        return
+
+    batch_id = uuid.uuid4().hex[:32]
+    users_processed = 0
+
+    for uid in user_ids:
+        try:
+            user = User.objects.get(id=uid)
+        except User.DoesNotExist:
+            continue
+
+        try:
+            rules = TrendingAutomationRule.objects.filter(
+                user=user, is_active=True,
+            ).exclude(platforms=[]).select_related('topic')
+
+            topic_platforms = {r.topic_id: r.platforms for r in rules}
+            all_active_platforms = sorted(set(
+                p for plats in topic_platforms.values() for p in plats
+            ))
+
+            # Top 5 per category → overall top 5
+            from itertools import chain
+            candidates = list(chain.from_iterable(
+                FeedItem.objects.filter(
+                    is_duplicate=False, topic_id=tid,
+                ).select_related('topic', 'source').order_by('-trending_score')[:5]
+                for tid in topic_platforms
+            ))
+            candidates.sort(key=lambda x: x.trending_score, reverse=True)
+            items = candidates[:5]
+            if not items:
+                continue
+
+            # Batched LLM call
+            from apps.content_studio.llm.llm_service import _call_llm
+
+            prompt_parts = []
+            for item in items:
+                title = item.title or ''
+                summary = item.ai_summary or item.content_cleaned or ''
+                prompt_parts.append(f"ITEM {item.id}:\nTitle: {title}\nSummary: {summary[:500]}\n")
+
+            platform_reqs = {
+                'linkedin': '- linkedin: Professional, thought-leadership, 1300-2000 chars, 3-5 hashtags',
+                'twitter': '- twitter: Concise, under 280 chars, 1-2 hashtags',
+                'instagram': '- instagram: Visual-first, 150-220 chars before \'more\', 5-8 hashtags',
+                'facebook': '- facebook: Conversational, 150-500 chars, 2-4 hashtags',
+                'tiktok': '- tiktok: Casual and punchy, under 100 chars, 1-3 hashtags',
+            }
+            req_lines = [platform_reqs[p] for p in all_active_platforms if p in platform_reqs]
+            if not req_lines:
+                req_lines = [f'- {p}: Standard social media post' for p in all_active_platforms]
+
+            platform_entries = '\n'.join(
+                f'      "{p}": {{"body": "...", "hashtags": "#tag1 #tag2"}},' for p in all_active_platforms
+            )
+
+            system_prompt = (
+                "You are a social media content strategist. For each news item below, generate "
+                "a platform-optimized post with relevant hashtags for each applicable platform.\n\n"
+                "Platforms and their requirements:\n" + "\n".join(req_lines) + "\n\n"
+                "For each item, follow this structure:\n"
+                "- HOOK: bold statement or question (under 15 words)\n"
+                "- BODY: deliver the core message in the platform's style\n"
+                "- CTA: End with an engaging question or action\n\n"
+                "Return ONLY a valid JSON array:\n"
+                "[\n"
+                "  {\n"
+                '    "id": <item_id>,\n'
+                '    "platforms": {\n'
+                + platform_entries +
+                "\n    }\n"
+                "  },\n"
+                "  ...\n"
+                "]\n\n"
+                "Do NOT include markdown code fences, backticks, or any text outside the JSON array."
+            )
+
+            user_prompt = "\n---\n".join(prompt_parts)
+            result = _call_llm(system_prompt, user_prompt)
+
+            gen_map = {}
+            if result['success'] and result['content']:
+                text = result['content'].strip()
+                json_match = re.search(r'\[.*\]', text, re.DOTALL)
+                if json_match:
+                    parsed = json.loads(json_match.group())
+                    gen_map = {entry['id']: entry for entry in parsed if 'id' in entry}
+
+            snapshots = []
+            for item in items:
+                entry = gen_map.get(item.id, {})
+                platforms_data = {}
+                active = topic_platforms.get(item.topic_id, all_active_platforms)
+
+                if isinstance(entry, dict) and isinstance(entry.get('platforms'), dict):
+                    for p, info in entry['platforms'].items():
+                        if p in active and isinstance(info, dict):
+                            platforms_data[p] = {
+                                'body': info.get('body', ''),
+                                'hashtags': info.get('hashtags', ''),
+                            }
+
+                snapshots.append(CurrentsSnapshot(
+                    user=user,
+                    feed_item=item,
+                    topic=item.topic,
+                    platforms_data=platforms_data,
+                    batch_id=batch_id,
+                ))
+
+            if snapshots:
+                CurrentsSnapshot.objects.bulk_create(snapshots)
+
+            users_processed += 1
+
+        except Exception as e:
+            logger.exception("generate_currents_snapshots failed for user %s: %s", uid, e)
+            continue
+
+    logger.info(
+        "generate_currents_snapshots complete: batch_id=%s, users=%d",
+        batch_id, users_processed,
+    )
+    return batch_id

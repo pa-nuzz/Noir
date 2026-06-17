@@ -177,3 +177,20 @@ class CurrentItem(models.Model):
 
     def __str__(self):
         return f"{self.user.email} → {self.feed_item.title[:60]}"
+
+
+class CurrentsSnapshot(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='currents_snapshots')
+    feed_item = models.ForeignKey(FeedItem, on_delete=models.CASCADE, related_name='currents_snapshots')
+    topic = models.ForeignKey(Topic, on_delete=models.SET_NULL, null=True, blank=True)
+    platforms_data = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    batch_id = models.CharField(max_length=32, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.email} → {self.feed_item.title[:60]}"
+
+
