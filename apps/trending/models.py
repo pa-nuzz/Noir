@@ -130,7 +130,33 @@ class UserFeedInteraction(AuditMixin):
         return f"{self.user.email} {self.interaction_type} → {self.feed_item.title[:50]}"
 
 
-class CurrentItem(AuditMixin):
+class TrendingAutomationRule(models.Model):
+    SCHEDULE_INTERVALS = [
+        ('hourly', 'Every Hour'),
+        ('every_6h', 'Every 6 Hours'),
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+    ]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='trending_automation_rules')
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='automation_rules')
+    platforms = models.JSONField(default=list, blank=True, help_text='List of platform strings to publish to')
+    schedule_interval = models.CharField(max_length=20, choices=SCHEDULE_INTERVALS, default='daily')
+    auto_publish = models.BooleanField(default=False, help_text='Auto-publish to social media without review')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('user', 'topic')
+        ordering = ['-created_at']
+        verbose_name = 'Trending Automation Rule'
+
+    def __str__(self):
+        return f"{self.user.email} → {self.topic.name} ({self.get_schedule_interval_display()})"
+
+
+class CurrentItem(models.Model):
     STATUS_CHOICES = [
         ('draft', 'Draft'),
         ('scheduled', 'Scheduled'),
