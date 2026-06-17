@@ -1,14 +1,16 @@
 import json
 import logging
 import os
-import time  # <--- Added for handling retry delays
+import time
 
 import httpx
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-GEMINI_MODEL = 'gemini-2.5-flash'
+LLM_MODEL = getattr(settings, 'LLM_MODEL', 'gpt-4o')
+LLM_BASE_URL = getattr(settings, 'LLM_BASE_URL', 'https://api.openai.com/v1').rstrip('/')
+LLM_API_KEY = getattr(settings, 'LLM_API_KEY', None) or os.environ.get('LLM_API_KEY')
 
 SYSTEM_PROMPTS = {
     'caption': (
@@ -206,21 +208,46 @@ def _build_system_prompt(content_type, platform=None, tone='professional', **kwa
     return "\n\n".join(p for p in parts if p)
 
 
-def _call_gemini(system_prompt, user_prompt, api_key):
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={api_key}"
+def _call_llm(system_prompt, user_prompt, api_key=None):
+    if not api_key:
+        api_key = (
+            getattr(settings, 'LLM_API_KEY', None)
+            or os.environ.get('LLM_API_KEY')
+            or ''
+        )
+
+    if not api_key:
+        logger.warning("LLM_API_KEY is not configured.")
+        return {"success": False, "error": "api_key_missing", "message": "LLM API key is not configured. Please set LLM_API_KEY in your .env file.", "content": None}
+
+    base_url = (
+        getattr(settings, 'LLM_BASE_URL', None)
+        or os.environ.get('LLM_BASE_URL')
+        or 'https://api.openai.com/v1'
+    )
+    model = (
+        getattr(settings, 'LLM_MODEL', None)
+        or os.environ.get('LLM_MODEL')
+        or 'gpt-4o'
+    )
+
+    url = f"{base_url.rstrip('/')}/chat/completions"
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
 
     payload = {
-        "contents": [
-            {"role": "user", "parts": [{"text": user_prompt}]}
-        ],
-        "systemInstruction": {
-            "parts": [{"text": system_prompt}]
-        },
+        "model": model,
+        "messages": messages,
     }
 
-    headers = {"Content-Type": "application/json"}
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
 
-    # Setup configurations for handling 503 transient errors
     max_retries = 3
     retry_delay = 1.5
 
@@ -228,79 +255,81 @@ def _call_gemini(system_prompt, user_prompt, api_key):
         try:
             response = httpx.post(url, json=payload, headers=headers, timeout=30.0)
 
-            # Handle explicit HTTP Status-level issues
             if response.status_code == 503:
                 if attempt < max_retries - 1:
-                    logger.warning(f"Gemini 503 service unavailable. Retrying in {retry_delay}s... (Attempt {attempt + 1}/{max_retries})")
+                    logger.warning(f"LLM API 503 service unavailable. Retrying in {retry_delay}s... (Attempt {attempt + 1}/{max_retries})")
                     time.sleep(retry_delay)
-                    retry_delay *= 2  # Exponential backoff
+                    retry_delay *= 2
                     continue
                 else:
-                    logger.error("Gemini API 503 retry quota exhausted.")
-                    return {"success": False, "error": "server_overloaded", "message": "Gemini servers are momentarily busy. Please try again in a few seconds.", "content": None}
+                    logger.error("LLM API 503 retry quota exhausted.")
+                    return {"success": False, "error": "server_overloaded", "message": "AI service is momentarily busy. Please try again in a few seconds.", "content": None}
+
+            if response.status_code == 401:
+                logger.error("LLM API returned 401 — invalid API key.")
+                return {"success": False, "error": "api_key_invalid", "message": "LLM API key is invalid. Please check your LLM_API_KEY.", "content": None}
 
             if response.status_code == 403:
-                logger.error("Gemini API returned 403 — invalid API key.")
-                return {"success": False, "error": "api_key_invalid", "message": "Gemini API key is invalid. Please check your GEMINI_API_KEY.", "content": None}
+                logger.error("LLM API returned 403 — forbidden.")
+                return {"success": False, "error": "forbidden", "message": "Access forbidden. Check your LLM_API_KEY and permissions.", "content": None}
 
             if response.status_code == 429:
-                logger.error("Gemini API returned 429 — rate limited.")
-                return {"success": False, "error": "rate_limited", "message": "Gemini API rate limit exceeded. Please wait a moment and try again.", "content": None}
+                logger.error("LLM API returned 429 — rate limited.")
+                return {"success": False, "error": "rate_limited", "message": "AI rate limit exceeded. Please wait a moment and try again.", "content": None}
 
             if response.status_code == 400:
                 body = response.text[:500]
-                logger.error(f"Gemini API returned 400 — bad request: {body}")
-                return {"success": False, "error": "bad_request", "message": f"Gemini API request was invalid: {body}", "content": None}
+                logger.error(f"LLM API returned 400 — bad request: {body}")
+                return {"success": False, "error": "bad_request", "message": f"AI request was invalid: {body}", "content": None}
 
             response.raise_for_status()
             result = response.json()
 
             try:
-                text = result["candidates"][0]["content"]["parts"][0]["text"].strip()
+                text = result["choices"][0]["message"]["content"].strip()
             except (KeyError, IndexError, AttributeError):
-                return {"success": False, "error": "unexpected_response", "message": "Received an unexpected response format from Gemini API.", "content": None}
+                return {"success": False, "error": "unexpected_response", "message": "Received an unexpected response format from the AI API.", "content": None}
 
             return {"success": True, "error": None, "message": None, "content": text}
 
         except httpx.HTTPStatusError as e:
-            # Fallback block to catch any unhandled structural HTTP exceptions explicitly
             if e.response.status_code == 503 and attempt < max_retries - 1:
                 time.sleep(retry_delay)
                 retry_delay *= 2
                 continue
-            logger.exception(f"Gemini HTTP status exception caught: {e}")
-            return {"success": False, "error": "http_error", "message": "A connection status error occurred with the AI cluster.", "content": None}
+            logger.exception(f"LLM HTTP status exception caught: {e}")
+            return {"success": False, "error": "http_error", "message": "A connection status error occurred with the AI service.", "content": None}
             
         except httpx.TimeoutException:
-            logger.error("Gemini API request timed out.")
-            return {"success": False, "error": "timeout", "message": "Gemini API request timed out. Please try again.", "content": None}
+            logger.error("LLM API request timed out.")
+            return {"success": False, "error": "timeout", "message": "AI request timed out. Please try again.", "content": None}
             
         except Exception as e:
-            logger.exception(f"Gemini API request failed: {e}")
-            return {"success": False, "error": "unknown", "message": f"An error occurred while contacting Gemini API: {str(e)}", "content": None}
+            logger.exception(f"LLM API request failed: {e}")
+            return {"success": False, "error": "unknown", "message": f"An error occurred while contacting the AI API: {str(e)}", "content": None}
 
 
 def generate_llm(content_type, prompt, platform=None, tone='professional', **kwargs):
-    api_key = getattr(settings, 'GEMINI_API_KEY', None) or os.environ.get('GEMINI_API_KEY')
+    api_key = LLM_API_KEY
 
     if not api_key:
-        logger.warning("GEMINI_API_KEY is not configured.")
+        logger.warning("LLM_API_KEY is not configured.")
         return {
             "success": False,
             "error": "api_key_missing",
-            "message": "Gemini API key is not configured. Please set GEMINI_API_KEY in your .env file.",
+            "message": "LLM API key is not configured. Please set LLM_API_KEY in your .env file.",
             "content": None,
         }
 
     system_prompt = _build_system_prompt(content_type, platform, tone, **kwargs)
-    return _call_gemini(system_prompt, prompt, api_key)
+    return _call_llm(system_prompt, prompt, api_key)
 
 
 def refine_llm(content_type, content, feedback, platform=None, tone='professional', **kwargs):
-    api_key = getattr(settings, 'GEMINI_API_KEY', None) or os.environ.get('GEMINI_API_KEY')
+    api_key = LLM_API_KEY
 
     if not api_key:
-        return {"success": False, "error": "api_key_missing", "message": "Gemini API key is not configured. Please set GEMINI_API_KEY in your .env file.", "content": None}
+        return {"success": False, "error": "api_key_missing", "message": "LLM API key is not configured. Please set LLM_API_KEY in your .env file.", "content": None}
 
     tone_str = TONE_DESCRIPTIONS.get(tone, 'polished, clear, and business-focused')
     platform_str = f"Platform: {platform}." if platform else ""
@@ -313,7 +342,7 @@ def refine_llm(content_type, content, feedback, platform=None, tone='professiona
 
     user_prompt = f"Original content:\n{content}\n\nFeedback:\n{feedback}\n\nPlease revise accordingly."
 
-    return _call_gemini(system_prompt, user_prompt, api_key)
+    return _call_llm(system_prompt, user_prompt, api_key)
 
 
 MULTI_PLATFORM_SYSTEM_PROMPT = (
@@ -353,7 +382,7 @@ def _extract_json(text):
 
 
 def generate_llm_multi(content_type, prompt, tone='professional', **kwargs):
-    api_key = getattr(settings, 'GEMINI_API_KEY', None) or os.environ.get('GEMINI_API_KEY')
+    api_key = LLM_API_KEY
 
     try:
         from apps.content_studio.models import ALL_PLATFORMS
@@ -361,8 +390,8 @@ def generate_llm_multi(content_type, prompt, tone='professional', **kwargs):
         from ..models import ALL_PLATFORMS
 
     if not api_key:
-        logger.warning("GEMINI_API_KEY is not configured.")
-        return {"success": False, "error": "api_key_missing", "message": "Gemini API key is not configured.", "content": None, "platform_data": None}
+        logger.warning("LLM_API_KEY is not configured.")
+        return {"success": False, "error": "api_key_missing", "message": "LLM API key is not configured.", "content": None, "platform_data": None}
 
     tone_str = TONE_DESCRIPTIONS.get(tone, 'polished, clear, and business-focused')
     extra = _extra_instructions(content_type, **kwargs)
@@ -380,7 +409,7 @@ def generate_llm_multi(content_type, prompt, tone='professional', **kwargs):
     except ImportError:
         from ..models import ALL_PLATFORMS
 
-    result = _call_gemini(system_prompt, prompt, api_key)
+    result = _call_llm(system_prompt, prompt, api_key)
     if not result['success']:
         return {"success": False, "error": result['error'], "message": result['message'], "content": None, "platform_data": None}
 

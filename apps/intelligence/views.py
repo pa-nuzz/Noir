@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import login_required
 import json
 import logging
 
+from django.conf import settings
 from .services import analyze_spam_text
 from apps.workspaces.decorators import require_workspace_permission
 
@@ -87,7 +88,7 @@ def generate_copilot_content(request):
             'body': content.get('body', ''),
             'spam_score': spam_result.get('spam_score', 0.0),
             'risk_level': spam_result.get('risk_level', 'Very Low'),
-            'mode': content.get('mode', 'gemini')
+            'mode': content.get('mode', getattr(settings, 'LLM_MODEL', 'gpt-4o'))
         })
     except Exception as e:
         logger.error(f"Content generation error: {str(e)}")

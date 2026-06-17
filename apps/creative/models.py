@@ -90,6 +90,13 @@ class CreativeStrategy(models.Model):
     ]
     STRATEGY_TYPES = [
         ('full_campaign', 'Full Campaign Strategy'),
+        ('campaign_idea', 'Marketing Campaign Ideas'),
+        ('brand_story', 'Brand Storytelling Concepts'),
+        ('social_strategy', 'Social Media Content Strategy'),
+        ('ad_copy', 'Ad Copy Variations'),
+        ('product_launch', 'Product Launch Ideas'),
+        ('tagline', 'Taglines & Slogans'),
+        ('creative_angles', 'Creative Angles'),
         ('image_prompt', 'Image Generation Prompt'),
         ('logo_design', 'Logo Design Brief'),
         ('post_content', 'Social Media Post'),

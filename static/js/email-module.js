@@ -1,4 +1,4 @@
-// mailFlow AI - Premium Email Module JavaScript
+
 // Features: GSAP Animations, TipTap Integration, AI Agent Interactions
 
 // ========================================
@@ -8,22 +8,26 @@ function initGSAPAnimations() {
   if (typeof gsap === 'undefined') return;
 
   // Page entrance animations
-  gsap.from('.page-shell', {
-    opacity: 0,
-    y: 20,
-    duration: 0.5,
-    ease: 'power2.out',
-  });
+  if (document.querySelector('.page-shell')) {
+    gsap.from('.page-shell', {
+      opacity: 0,
+      y: 20,
+      duration: 0.5,
+      ease: 'power2.out',
+    });
+  }
 
   // Card stagger animations
-  gsap.from('.glass-card', {
-    opacity: 0,
-    y: 15,
-    duration: 0.4,
-    stagger: 0.08,
-    ease: 'power2.out',
-    scrollTrigger: { trigger: '.glass-card', start: 'top 90%' }
-  });
+  if (document.querySelector('.glass-card')) {
+    gsap.from('.glass-card', {
+      opacity: 0,
+      y: 15,
+      duration: 0.4,
+      stagger: 0.08,
+      ease: 'power2.out',
+      scrollTrigger: { trigger: '.glass-card', start: 'top 90%' }
+    });
+  }
 
   // Button hover effects
   document.querySelectorAll('.btn-animated').forEach(btn => {

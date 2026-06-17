@@ -184,10 +184,15 @@
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Link to Strategy</label>
+            <div class="flex gap-1 mb-1.5">
+              <a href="?{% if current_type %}type={{ current_type }}&{% endif %}{% if current_folder %}folder={{ current_folder }}&{% endif %}{% if selected_asset %}selected={{ selected_asset.id }}&{% endif %}strategy_status=" class="px-2 py-0.5 rounded text-[10px] font-semibold {% if not strategy_status %}bg-primary/10 text-primary{% else %}bg-slate-100 text-slate-500 hover:bg-slate-200{% endif %}">All</a>
+              <a href="?{% if current_type %}type={{ current_type }}&{% endif %}{% if current_folder %}folder={{ current_folder }}&{% endif %}{% if selected_asset %}selected={{ selected_asset.id }}&{% endif %}strategy_status=draft" class="px-2 py-0.5 rounded text-[10px] font-semibold {% if strategy_status == 'draft' %}bg-amber-50 text-amber-600{% else %}bg-slate-100 text-slate-500 hover:bg-slate-200{% endif %}">Draft</a>
+              <a href="?{% if current_type %}type={{ current_type }}&{% endif %}{% if current_folder %}folder={{ current_folder }}&{% endif %}{% if selected_asset %}selected={{ selected_asset.id }}&{% endif %}strategy_status=approved" class="px-2 py-0.5 rounded text-[10px] font-semibold {% if strategy_status == 'approved' %}bg-emerald-50 text-emerald-600{% else %}bg-slate-100 text-slate-500 hover:bg-slate-200{% endif %}">Approved</a>
+            </div>
             <select name="strategy_id" class="input-field w-full text-sm">
               <option value="">No strategy</option>
               {% for s in strategies %}
-              <option value="{{ s.id }}">{{ s.title|truncatechars:40 }}</option>
+              <option value="{{ s.id }}" {% if strategy_status %}data-status="{{ s.status }}"{% endif %}>{{ s.title|truncatechars:35 }} {% if s.status == 'draft' %}[Draft]{% elif s.status == 'approved' %}[Approved]{% endif %}</option>
               {% endfor %}
             </select>
           </div>
@@ -278,6 +283,45 @@
   </div>
 </div>
 
+<!-- Upload Modal -->
+<div id="uploadModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/40 backdrop-blur-sm">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between p-5 border-b border-slate-200">
+      <h3 class="text-lg font-bold text-slate-800">Upload Media</h3>
+      <button onclick="closeUploadModal()" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
+        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form method="post" action="{% url 'media_assets:upload' %}" enctype="multipart/form-data" class="p-5 space-y-4">
+      {% csrf_token %}
+      <div class="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:border-primary/40 transition-colors cursor-pointer" onclick="document.getElementById('file-input').click()">
+        <svg class="w-10 h-10 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+        <p class="text-sm font-semibold text-slate-600 mb-1">Click to browse or drag & drop</p>
+        <p class="text-xs text-slate-400">Supports PNG, JPG, PDF, MP4, and more</p>
+        <input id="file-input" type="file" name="file" class="hidden" required onchange="document.getElementById('upload-file-name').textContent = this.files[0].name">
+        <p id="upload-file-name" class="text-xs text-primary font-semibold mt-2"></p>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Title (optional)</label>
+        <input type="text" name="title" class="input-field w-full" placeholder="e.g., Facebook Post - Dashain Offer">
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Target Folder</label>
+        <select name="folder_id" class="input-field w-full">
+          <option value="">Root (no folder)</option>
+          {% for f in folders %}
+          <option value="{{ f.id }}" {% if current_folder == f.id|stringformat:'s' %}selected{% endif %}>{{ f.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        {% include "components/button.html" with label="Cancel" onclick="closeUploadModal()" class="!bg-slate-100 !text-slate-700 hover:!bg-slate-200 !bg-none" %}
+        {% include "components/button.html" with label="Upload" type="submit" icon="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" %}
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Schedule Asset Modal -->
 <div id="scheduleModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/40 backdrop-blur-sm">
   <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden" onclick="event.stopPropagation()">
@@ -313,7 +357,7 @@
         <select name="strategy_id" class="input-field w-full">
           <option value="">No strategy</option>
           {% for s in strategies %}
-          <option value="{{ s.id }}">{{ s.title|truncatechars:50 }}</option>
+          <option value="{{ s.id }}">{{ s.title|truncatechars:45 }} {% if s.status == 'draft' %}[Draft]{% elif s.status == 'approved' %}[Approved]{% endif %}</option>
           {% endfor %}
         </select>
       </div>
@@ -329,6 +373,13 @@
 {% include "components/modal.html" with id="deleteModal" title="Delete Asset?" content='<div class="text-center"><div class="w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center"><svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg></div><p class="text-sm text-slate-500 mb-6">This action cannot be undone. The file will be permanently removed.</p><input type="hidden" name="action" value="delete_asset"><input type="hidden" name="asset_id" id="delete-asset-id" value=""><div class="flex gap-3 justify-center"><button type="button" onclick="closeModal("deleteModal")" class="!bg-slate-100 !text-slate-700 hover:!bg-slate-200 !bg-none btn-action btn-action-secondary" style="background:none!important;color:#475569!important">Cancel</button><button type="submit" style="background:linear-gradient(135deg,#DC2626,#EF4444)" class="btn-action">Delete</button></div></div>' form_action="." %}
 
 <script>
+function openUploadModal() {
+  document.getElementById('upload-file-name').textContent = '';
+  document.getElementById('file-input').value = '';
+  openModal('uploadModal');
+}
+function closeUploadModal() { closeModal('uploadModal'); }
+
 function openCreateFolderModal() { openFolderModal(); }
 function closeFolderModal() { closeModal('createFolderModal'); }
 

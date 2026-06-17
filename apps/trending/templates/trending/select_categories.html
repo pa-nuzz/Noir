@@ -1,0 +1,175 @@
+<style>
+  .sc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .sc-card {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 12px;
+    border: 2px solid #E2E8F0;
+    background: #FFFFFF;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .sc-card:hover { border-color: #CBD5E1; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+  .sc-card.selected {
+    border-color: #06B6D4;
+    background: #F0FDFA;
+    box-shadow: 0 0 0 1px #06B6D4;
+  }
+  .sc-card-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; flex-shrink: 0;
+  }
+  .sc-card-body { flex: 1; min-width: 0; }
+  .sc-card-name { font-size: 0.875rem; font-weight: 700; color: #0A2540; }
+  .sc-card-desc { font-size: 0.75rem; color: #64748B; margin-top: 2px; line-height: 1.4; }
+  .sc-card-meta { font-size: 0.6875rem; color: #94A3B8; margin-top: 4px; }
+  .sc-check {
+    width: 20px; height: 20px; border-radius: 6px;
+    border: 2px solid #CBD5E1;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 2px;
+    transition: all 0.12s;
+  }
+  .sc-card.selected .sc-check {
+    background: #06B6D4;
+    border-color: #06B6D4;
+  }
+  .sc-check svg {
+    width: 12px; height: 12px; color: #FFFFFF;
+    display: none;
+  }
+  .sc-card.selected .sc-check svg { display: block; }
+
+  .sc-actions {
+    display: flex; align-items: center; gap: 12px;
+    margin-top: 20px;
+  }
+  .sc-count {
+    font-size: 0.8125rem; color: #64748B;
+  }
+  .sc-count strong { color: #0A2540; }
+</style>
+
+<div class="flex items-center justify-between mb-2">
+  <div>
+    <h3 class="text-base font-bold text-slate-900">Select Categories</h3>
+    <p class="text-sm text-slate-500 mt-0.5">Choose the topics you want trending content about. Select as many as you like.</p>
+  </div>
+</div>
+
+<div class="flex items-center gap-2 mb-4">
+  <button onclick="selectAllCategories(true)" class="tr-feed-btn" style="padding:6px 14px;font-size:0.75rem">
+    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+    Select All
+  </button>
+  <button onclick="selectAllCategories(false)" class="tr-feed-btn" style="padding:6px 14px;font-size:0.75rem">
+    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+    Deselect All
+  </button>
+  <span class="sc-count" id="sc-count"><strong id="sc-selected-count">{{ subscribed_topic_ids|length }}</strong> of <strong>{{ trending_topics|length }}</strong> selected</span>
+</div>
+
+<div class="sc-grid" id="sc-grid">
+  {% for topic in trending_topics %}
+  <div class="sc-card{% if topic.id in subscribed_topic_ids %} selected{% endif %}" data-topic-id="{{ topic.id }}" onclick="toggleCategory(this)">
+    <div class="sc-card-icon" style="background:{{ topic.color }}18">
+      <span>{{ topic.icon }}</span>
+    </div>
+    <div class="sc-card-body">
+      <div class="sc-card-name">{{ topic.name }}</div>
+      <div class="sc-card-desc">{{ topic.description }}</div>
+      <div class="sc-card-meta">{{ topic.subscriber_count }} subscribers</div>
+    </div>
+    <div class="sc-check">
+      <svg fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="sc-actions">
+  <button onclick="saveCategorySelections()" class="btn-action btn-action-primary inline-flex text-sm">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+    Save Selections
+  </button>
+  <div id="sc-save-status" class="text-sm text-emerald-600 font-semibold hidden">Saved!</div>
+</div>
+
+<script>
+var selectedTopics = new Set();
+
+function initSelectedTopics() {
+  document.querySelectorAll('#sc-grid .sc-card.selected').forEach(function(card) {
+    selectedTopics.add(parseInt(card.dataset.topicId));
+  });
+  updateCount();
+}
+
+function toggleCategory(card) {
+  var id = parseInt(card.dataset.topicId);
+  if (selectedTopics.has(id)) {
+    selectedTopics.delete(id);
+    card.classList.remove('selected');
+  } else {
+    selectedTopics.add(id);
+    card.classList.add('selected');
+  }
+  updateCount();
+}
+
+function selectAllCategories(select) {
+  document.querySelectorAll('#sc-grid .sc-card').forEach(function(card) {
+    var id = parseInt(card.dataset.topicId);
+    if (select) {
+      selectedTopics.add(id);
+      card.classList.add('selected');
+    } else {
+      selectedTopics.delete(id);
+      card.classList.remove('selected');
+    }
+  });
+  updateCount();
+}
+
+function updateCount() {
+  document.getElementById('sc-selected-count').textContent = selectedTopics.size;
+}
+
+function saveCategorySelections() {
+  var statusEl = document.getElementById('sc-save-status');
+  statusEl.classList.add('hidden');
+
+  fetch('{% url "trending:bulk_subscribe" %}', {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': getCSRFToken(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({topic_ids: Array.from(selectedTopics)}),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    statusEl.classList.remove('hidden');
+    statusEl.textContent = 'Saved! ' + data.subscribed_ids.length + ' categories selected.';
+    statusEl.className = 'text-sm text-emerald-600 font-semibold';
+    setTimeout(function() { statusEl.classList.add('hidden'); }, 3000);
+  })
+  .catch(function() {
+    statusEl.textContent = 'Failed to save. Please try again.';
+    statusEl.className = 'text-sm text-red-600 font-semibold';
+    statusEl.classList.remove('hidden');
+  });
+}
+
+initSelectedTopics();
+</script>

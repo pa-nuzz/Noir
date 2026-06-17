@@ -42,143 +42,161 @@
     {% endfor %}
   </div>
 
-  <!-- Main: Cards Grid + Preview Panel -->
-  <div class="flex gap-6">
-    <!-- Left: Cards -->
-    <div class="flex-1 min-w-0">
-      {% if strategies %}
-      <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-        {% for strategy in strategies %}
-        <div class="premium-surface rounded-2xl overflow-hidden hover:shadow-md transition-all cursor-pointer group relative {% if strategy.status == 'approved' %}ring-2 ring-emerald-400 ring-offset-1{% endif %}" onclick="openStrategy({{ strategy.id }})">
-
-          <div class="p-4 border-b border-slate-100">
-            <div class="flex items-start justify-between gap-3">
-              <div class="flex-1 min-w-0">
-                <h3 class="text-sm font-bold text-slate-800 truncate">{{ strategy.title }}</h3>
-                <p class="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
-                  <span>{{ strategy.get_strategy_type_display }}</span>
-                  <span class="text-slate-300">&middot;</span>
-                  <span>{{ strategy.created_at|date:'M d, Y' }}</span>
-                </p>
+  <!-- Strategy Table -->
+  <div class="premium-surface rounded-2xl overflow-hidden">
+    {% if strategies %}
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead>
+          <tr class="border-b border-slate-100 bg-slate-50/50">
+            <th class="px-5 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Title</th>
+            <th class="px-5 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Type</th>
+            <th class="px-5 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
+            <th class="px-5 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Created</th>
+            <th class="px-5 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Platforms</th>
+            <th class="px-5 py-3 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50">
+          {% for strategy in strategies %}
+          <tr class="hover:bg-slate-50/50 transition-colors cursor-pointer" onclick="window.location.href='{% url 'creative:strategy_detail' strategy.id %}'">
+            <td class="px-5 py-4">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/10 to-purple-100 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5"/></svg>
+                </div>
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-slate-800 truncate">{{ strategy.title }}</p>
+                  {% if strategy.rejection_reason %}
+                  <p class="text-[10px] text-red-500 mt-0.5 truncate max-w-[200px]">{{ strategy.rejection_reason }}</p>
+                  {% endif %}
+                </div>
               </div>
-              {% include "components/badge.html" with label=strategy.get_status_display variant=strategy.status %}
-            </div>
-          </div>
-
-          <div class="p-4 min-h-[5rem]">
-            {% if strategy.generated_output %}
-            <div class="text-xs text-slate-600 leading-relaxed line-clamp-4">{{ strategy.generated_output|striptags|truncatewords:50 }}</div>
-            {% else %}
-            <p class="text-xs text-slate-400 italic">{{ strategy.campaign_goal|truncatewords:30 }}</p>
-            {% endif %}
-            {% if strategy.rejection_reason %}
-            <div class="mt-2 p-2 bg-red-50 rounded-lg border border-red-100">
-              <p class="text-[10px] font-semibold text-red-600 uppercase">Rejection Reason</p>
-              <p class="text-xs text-red-700 mt-0.5">{{ strategy.rejection_reason }}</p>
-            </div>
-            {% endif %}
-          </div>
-
-          <div class="px-4 py-3 border-t border-slate-100 flex gap-2 relative z-10" onclick="event.stopPropagation()">
-            {% if strategy.status == 'draft' %}
-            <form method="post" class="flex-1">
-              {% csrf_token %}
-              <input type="hidden" name="action" value="update_status">
-              <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
-              <input type="hidden" name="status" value="pending_review">
-              {% include "components/button.html" with label="Submit for Review" type="submit" primary_start="#D97706" primary_end="#F59E0B" class="!text-xs !py-2 w-full" %}
-            </form>
-            {% elif strategy.status == 'pending_review' %}
-            {% include "components/button.html" with label="Approve" onclick="event.stopPropagation();openApproveModal({{ strategy.id }}, '{{ strategy.title|escapejs }}')" primary_start="#059669" primary_end="#10B981" class="!text-xs !py-2 flex-1" %}
-            {% include "components/button.html" with label="Reject" onclick="event.stopPropagation();openRejectModal({{ strategy.id }}, '{{ strategy.title|escapejs }}')" primary_start="#DC2626" primary_end="#EF4444" class="!text-xs !py-2 flex-1" %}
-            {% elif strategy.status == 'approved' %}
-            <form method="post" class="flex-1">
-              {% csrf_token %}
-              <input type="hidden" name="action" value="update_status">
-              <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
-              <input type="hidden" name="status" value="published">
-              {% include "components/button.html" with label="Publish" type="submit" icon="M5 13l4 4L19 7" primary_start="#2563EB" primary_end="#3B82F6" class="!text-xs !py-2" %}
-            </form>
-            <form method="post">
-              {% csrf_token %}
-              <input type="hidden" name="action" value="update_status">
-              <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
-              <input type="hidden" name="status" value="draft">
-              {% include "components/button.html" with label="Send Back" type="submit" class="!bg-slate-100 !text-slate-600 hover:!bg-slate-200 !bg-none !rounded-xl !text-xs !py-2 !px-3" %}
-            </form>
-            {% elif strategy.status == 'rejected' %}
-            <form method="post" class="flex-1">
-              {% csrf_token %}
-              <input type="hidden" name="action" value="update_status">
-              <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
-              <input type="hidden" name="status" value="draft">
-              {% include "components/button.html" with label="Back to Draft" type="submit" class="!bg-slate-100 !text-slate-600 hover:!bg-slate-200 !bg-none !rounded-xl !text-xs !py-2 flex-1" %}
-            </form>
-            <form method="post">
-              {% csrf_token %}
-              <input type="hidden" name="action" value="delete_strategy">
-              <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
-              {% include "components/button.html" with label="Delete" type="submit" onclick="return confirm('Delete this strategy permanently?')" class="!bg-red-50 !text-red-600 hover:!bg-red-100 !bg-none !rounded-xl !text-xs !py-2 !px-3" %}
-            </form>
-            {% elif strategy.status == 'published' or strategy.status == 'archived' %}
-            <span class="px-3 py-2 bg-slate-50 text-slate-400 rounded-xl text-xs font-semibold">
-              {{ strategy.get_status_display }}
-            </span>
-            {% endif %}
-          </div>
-
-          {% if strategy.scheduled_platforms %}
-          <div class="px-4 py-2 border-t border-slate-50 flex flex-wrap gap-1.5">
-            {% for platform in strategy.scheduled_platforms %}
-            <span class="px-2 py-0.5 bg-slate-50 rounded text-[10px] font-medium text-slate-500">{{ platform|title }}</span>
-            {% endfor %}
-          </div>
-          {% endif %}
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <div class="premium-surface rounded-2xl p-8">
-        <div class="text-center">
-          <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-primary/10 to-purple-100 flex items-center justify-center">
-            <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5"/></svg>
-          </div>
-          <h3 class="text-lg font-bold text-slate-800 mb-1">No strategies yet</h3>
-          <p class="text-sm text-slate-500 mb-6 max-w-md mx-auto">Create your first Nepal-focused campaign strategy. Our AI will help you craft culturally-relevant content with just a few questions.</p>
-          {% include "components/button.html" with label="Create Your First Strategy" onclick="openChatbot()" icon="M12 4v16m8-8H4" %}
-        </div>
-      </div>
-      {% endif %}
+            </td>
+            <td class="px-5 py-4 text-xs text-slate-500">{{ strategy.get_strategy_type_display }}</td>
+            <td class="px-5 py-4">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold
+                {% if strategy.status == 'draft' %}bg-slate-100 text-slate-600
+                {% elif strategy.status == 'pending_review' %}bg-amber-50 text-amber-700
+                {% elif strategy.status == 'approved' %}bg-emerald-50 text-emerald-700
+                {% elif strategy.status == 'rejected' %}bg-red-50 text-red-700
+                {% elif strategy.status == 'published' %}bg-blue-50 text-blue-700
+                {% elif strategy.status == 'archived' %}bg-slate-100 text-slate-500{% endif %}">
+                <span class="w-1.5 h-1.5 rounded-full
+                  {% if strategy.status == 'draft' %}bg-slate-400
+                  {% elif strategy.status == 'pending_review' %}bg-amber-400
+                  {% elif strategy.status == 'approved' %}bg-emerald-400
+                  {% elif strategy.status == 'rejected' %}bg-red-400
+                  {% elif strategy.status == 'published' %}bg-blue-400
+                  {% elif strategy.status == 'archived' %}bg-slate-300{% endif %}"></span>
+                {{ strategy.get_status_display }}
+              </span>
+            </td>
+            <td class="px-5 py-4 text-xs text-slate-400">{{ strategy.created_at|date:'M d, Y' }}</td>
+            <td class="px-5 py-4">
+              <div class="flex flex-wrap gap-1">
+                {% if strategy.scheduled_platforms %}
+                  {% for platform in strategy.scheduled_platforms|slice:":3" %}
+                  <span class="px-2 py-0.5 bg-slate-50 rounded text-[10px] font-medium text-slate-500">{{ platform|title }}</span>
+                  {% endfor %}
+                  {% if strategy.scheduled_platforms|length > 3 %}
+                  <span class="px-2 py-0.5 bg-slate-50 rounded text-[10px] font-medium text-slate-400">+{{ strategy.scheduled_platforms|length|add:"-3" }}</span>
+                  {% endif %}
+                {% else %}
+                <span class="text-xs text-slate-300">—</span>
+                {% endif %}
+              </div>
+            </td>
+            <td class="px-5 py-4 text-right" onclick="event.stopPropagation()">
+              <div class="flex items-center justify-end gap-1.5">
+                {% if strategy.status == 'draft' %}
+                <form method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="update_status">
+                  <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
+                  <input type="hidden" name="status" value="pending_review">
+                  <button type="submit" class="px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-white" style="background:linear-gradient(135deg,#D97706,#F59E0B)">Submit</button>
+                </form>
+                {% elif strategy.status == 'approved' %}
+                <form method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="update_status">
+                  <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
+                  <input type="hidden" name="status" value="published">
+                  <button type="submit" class="px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-white" style="background:linear-gradient(135deg,#2563EB,#3B82F6)">Publish</button>
+                </form>
+                <form method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="update_status">
+                  <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
+                  <input type="hidden" name="status" value="draft">
+                  <button type="submit" class="px-2.5 py-1.5 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200">Draft</button>
+                </form>
+                {% elif strategy.status == 'rejected' %}
+                <form method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="update_status">
+                  <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
+                  <input type="hidden" name="status" value="draft">
+                  <button type="submit" class="px-2.5 py-1.5 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200">Reuse</button>
+                </form>
+                <form method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="delete_strategy">
+                  <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
+                  <button type="submit" onclick="return confirm('Delete this strategy permanently?')" class="px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-red-600 hover:bg-red-50">Delete</button>
+                </form>
+                {% elif strategy.status == 'published' or strategy.status == 'archived' or strategy.status == 'pending_review' %}
+                <a href="{% url 'creative:strategy_detail' strategy.id %}" class="px-2.5 py-1.5 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200">View</a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
 
-    <!-- Right: Preview Panel -->
-    <div id="previewPanel" class="hidden xl:block w-96 flex-shrink-0">
-      <div class="premium-surface rounded-2xl sticky top-6 overflow-hidden" style="max-height: calc(100vh - 8rem);">
-        <div id="preview-empty" class="p-6 text-center text-slate-400">
-          <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-slate-100 flex items-center justify-center">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
-          </div>
-          <p class="text-sm font-medium">Select a strategy</p>
-          <p class="text-xs mt-1">Click any strategy card to preview its full content here.</p>
-        </div>
-        <div id="preview-loaded" class="hidden flex flex-col" style="max-height: calc(100vh - 8rem);">
-          <div class="p-4 border-b border-slate-100">
-            <div class="flex items-start justify-between gap-3">
-              <div class="flex-1 min-w-0">
-                <h3 class="text-sm font-bold text-slate-800 truncate" id="preview-title"></h3>
-                <p class="text-xs text-slate-400 mt-0.5" id="preview-meta"></p>
-              </div>
-              <span id="preview-badge"></span>
-            </div>
-          </div>
-          <div class="p-4 overflow-y-auto flex-1 text-xs text-slate-600 leading-relaxed space-y-4" id="preview-body">
-          </div>
-          <div class="p-4 border-t border-slate-100 space-y-2" id="preview-actions">
-          </div>
-        </div>
+    {% if page_obj and page_obj.paginator.num_pages > 1 %}
+    <div class="px-5 py-3 border-t border-slate-100 bg-slate-50/30 flex items-center justify-between">
+      <p class="text-xs text-slate-500">
+        Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+        <span class="text-slate-300">•</span>
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+      </p>
+      <div class="flex items-center gap-1.5">
+        {% if page_obj.has_previous %}
+        <a href="?{% if current_status %}status={{ current_status }}&{% endif %}page=1" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-[10px] font-semibold transition-colors">First</a>
+        <a href="?{% if current_status %}status={{ current_status }}&{% endif %}page={{ page_obj.previous_page_number }}" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-[10px] font-semibold transition-colors">← Prev</a>
+        {% endif %}
+        {% for page_num in page_obj.paginator.page_range %}
+          {% if page_num == page_obj.number %}
+          <span class="px-2.5 py-1.5 rounded-lg bg-primary text-white text-[10px] font-semibold">{{ page_num }}</span>
+          {% elif page_num >= page_obj.number|add:-2 and page_num <= page_obj.number|add:2 %}
+          <a href="?{% if current_status %}status={{ current_status }}&{% endif %}page={{ page_num }}" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-[10px] font-semibold transition-colors">{{ page_num }}</a>
+          {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <a href="?{% if current_status %}status={{ current_status }}&{% endif %}page={{ page_obj.next_page_number }}" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-[10px] font-semibold transition-colors">Next →</a>
+        <a href="?{% if current_status %}status={{ current_status }}&{% endif %}page={{ page_obj.paginator.num_pages }}" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-[10px] font-semibold transition-colors">Last</a>
+        {% endif %}
       </div>
+    </div>
+    {% endif %}
+
+  </div>
+  {% else %}
+  <div class="premium-surface rounded-2xl p-8">
+    <div class="text-center">
+      <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-primary/10 to-purple-100 flex items-center justify-center">
+        <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5"/></svg>
+      </div>
+      <h3 class="text-lg font-bold text-slate-800 mb-1">No strategies yet</h3>
+      <p class="text-sm text-slate-500 mb-6 max-w-md mx-auto">Create your first Nepal-focused campaign strategy. Our AI will help you craft culturally-relevant content with just a few questions.</p>
+      {% include "components/button.html" with label="Create Your First Strategy" onclick="openChatbot()" icon="M12 4v16m8-8H4" %}
     </div>
   </div>
+  {% endif %}
 </div>
 
 <!-- Chatbot Modal -->
@@ -261,11 +279,7 @@
   </div>
 </div>
 
-<!-- Approve Modal -->
-{% include "components/modal.html" with id="approveModal" title="Approve Strategy" form_action="." content='<input type="hidden" name="action" value="update_status"><input type="hidden" name="strategy_id" id="approve-strategy-id" value=""><input type="hidden" name="status" value="approved"><p class="text-sm text-slate-600">Approve "<span id="approve-strategy-name" class="font-semibold"></span>"? This strategy will be ready for publishing.</p><div class="flex justify-end gap-3 pt-2"><button type="button" onclick="closeModal("approveModal")" class="!bg-slate-100 !text-slate-700 hover:!bg-slate-200 !bg-none btn-action btn-action-secondary" style="background:none!important;color:#475569!important">Cancel</button><button type="submit" style="background:linear-gradient(135deg,#059669,#10B981)" class="btn-action">Approve</button></div>' %}
 
-<!-- Reject Modal -->
-{% include "components/modal.html" with id="rejectModal" title="Reject Strategy" form_action="." content='<input type="hidden" name="action" value="update_status"><input type="hidden" name="strategy_id" id="reject-strategy-id" value=""><input type="hidden" name="status" value="rejected"><p class="text-sm font-semibold text-slate-700">Reject "<span id="reject-strategy-name"></span>"</p><div><label class="block text-sm font-semibold text-slate-700 mb-1.5">Reason for Rejection</label><textarea name="rejection_reason" rows="3" class="input-field w-full" placeholder="Provide feedback so the creator can improve this strategy..." required></textarea></div><div class="flex justify-end gap-3 pt-2"><button type="button" onclick="closeModal("rejectModal")" class="!bg-slate-100 !text-slate-700 hover:!bg-slate-200 !bg-none btn-action btn-action-secondary" style="background:none!important;color:#475569!important">Cancel</button><button type="submit" style="background:linear-gradient(135deg,#DC2626,#EF4444)" class="btn-action">Reject</button></div>' %}
 
 <script>
 // ──────────────────────────────────────────────
@@ -282,6 +296,15 @@ var steps = [
   { key: 'scheduled_at', label: 'Schedule', type: 'datetime', placeholder: 'Optional — pick a publish date' },
 ];
 
+function getStepLabel(s, stepIdx, val) {
+  if (s.type === 'option') {
+    var found = (s.options || []).find(function(o) { return (Array.isArray(o) ? o[0] : o) === val; });
+    return found ? (Array.isArray(found) ? found[1] : found) : val;
+  }
+  if (Array.isArray(val)) return val.join(', ');
+  return val;
+}
+
 function openChatbot() {
   chatState = { step: 0, data: {} };
   document.getElementById('chatbotModal').classList.remove('hidden');
@@ -289,6 +312,7 @@ function openChatbot() {
   document.getElementById('chatbot-loading').classList.add('hidden');
   document.getElementById('chatbot-input').classList.add('hidden');
   document.getElementById('chatbot-input-btn').classList.add('hidden');
+  document.getElementById('chatbot-input-area').classList.remove('hidden');
   document.getElementById('chatbot-step-label').textContent = "Let's build your strategy";
   chatAsk(0);
 }
@@ -301,7 +325,7 @@ document.getElementById('chatbotModal').addEventListener('click', closeChatbot);
 
 function chatAsk(stepIdx) {
   if (stepIdx >= steps.length) {
-    chatGenerate();
+    showReview();
     return;
   }
   var s = steps[stepIdx];
@@ -320,14 +344,18 @@ function chatAsk(stepIdx) {
     var grid = document.createElement('div');
     grid.className = 'mt-2 ' + (s.type === 'multi' ? 'flex flex-wrap gap-2' : 'grid grid-cols-2 gap-1.5');
     s.options.forEach(function(o) {
-      var btn = document.createElement('button');
       var key = Array.isArray(o) ? o[0] : o[0];
       var label = Array.isArray(o) ? o[1] : o[1];
+      var btn = document.createElement('button');
       btn.textContent = label;
       btn.dataset.value = key;
       btn.className = 'px-3 py-2 rounded-xl text-xs font-semibold ';
       if (s.type === 'multi') {
         btn.className += 'bg-slate-100 hover:bg-primary hover:text-white text-slate-700 transition-colors';
+        if (chatState.data[s.key] && chatState.data[s.key].indexOf(key) !== -1) {
+          btn.classList.remove('bg-slate-100', 'text-slate-700');
+          btn.classList.add('bg-primary', 'text-white');
+        }
         btn.onclick = function() {
           this.classList.toggle('bg-primary');
           this.classList.toggle('text-white');
@@ -336,6 +364,10 @@ function chatAsk(stepIdx) {
         };
       } else {
         btn.className += 'bg-slate-100 hover:bg-primary hover:text-white text-slate-700 transition-colors text-left';
+        if (chatState.data[s.key] === key) {
+          btn.classList.remove('bg-slate-100', 'text-slate-700');
+          btn.classList.add('bg-primary', 'text-white');
+        }
         btn.onclick = function() { chatAnswer(stepIdx, key); };
       }
       grid.appendChild(btn);
@@ -364,7 +396,7 @@ function chatAsk(stepIdx) {
     var inp = document.getElementById('chatbot-input');
     inp.classList.remove('hidden');
     inp.placeholder = s.placeholder || 'Type your answer...';
-    inp.value = '';
+    inp.value = chatState.data[s.key] || '';
     inp.dataset.step = stepIdx;
     inp.focus();
   } else if (s.type === 'textarea') {
@@ -375,7 +407,7 @@ function chatAsk(stepIdx) {
     var inp = document.getElementById('chatbot-input');
     inp.classList.remove('hidden');
     inp.placeholder = s.placeholder || 'Type your answer...';
-    inp.value = '';
+    inp.value = chatState.data[s.key] || '';
     inp.dataset.step = stepIdx;
     inp.focus();
   } else if (s.type === 'datetime') {
@@ -389,6 +421,7 @@ function chatAsk(stepIdx) {
     inp.type = 'datetime-local';
     inp.id = 'chat-datetime';
     inp.className = 'input-field w-full';
+    inp.value = chatState.data[s.key] || '';
     var btnWrap = document.createElement('div');
     btnWrap.className = 'flex gap-2';
     var skip = document.createElement('button');
@@ -405,6 +438,18 @@ function chatAsk(stepIdx) {
     wrap.appendChild(btnWrap);
     div.lastChild.appendChild(wrap);
   }
+
+  // Back link at bottom of bot message
+  if (stepIdx > 0) {
+    var backWrap = document.createElement('div');
+    backWrap.className = 'mt-3';
+    var backBtn = document.createElement('button');
+    backBtn.textContent = '← Back';
+    backBtn.className = 'text-[11px] text-slate-400 hover:text-primary transition-colors';
+    backBtn.onclick = function() { chatEdit(stepIdx - 1); };
+    backWrap.appendChild(backBtn);
+    div.lastChild.appendChild(backWrap);
+  }
   msg.scrollTop = msg.scrollHeight;
 }
 
@@ -419,18 +464,18 @@ function chatInputSubmit() {
 
 function chatAnswer(stepIdx, val) {
   var s = steps[stepIdx];
+  var msg = document.getElementById('chatbot-messages');
 
   // Show user's answer
-  var msg = document.getElementById('chatbot-messages');
   var udiv = document.createElement('div');
-  udiv.className = 'flex gap-3 justify-end message-user';
-  var label = val;
-  if (Array.isArray(val)) label = val.join(', ');
-  else if (s.type === 'option') {
-    var found = (s.options || []).find(function(o) { return (Array.isArray(o) ? o[0] : o) === val; });
-    if (found) label = Array.isArray(found) ? found[1] : found;
-  }
-  udiv.innerHTML = '<div class="bg-primary/10 rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-xs"><p class="text-sm text-primary font-medium">' + label + '</p></div>';
+  udiv.className = 'flex flex-col items-end message-user';
+  var label = getStepLabel(s, stepIdx, val);
+  udiv.innerHTML = '<div class="bg-primary/10 rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-xs inline-block"><p class="text-sm text-primary font-medium">' + label + '</p></div>';
+  var editLink = document.createElement('button');
+  editLink.textContent = 'Edit';
+  editLink.className = 'text-[10px] text-slate-400 hover:text-primary mt-0.5 mr-1 transition-colors';
+  editLink.onclick = function() { chatEdit(stepIdx); };
+  udiv.appendChild(editLink);
   msg.appendChild(udiv);
 
   // Store
@@ -443,6 +488,96 @@ function chatAnswer(stepIdx, val) {
   // Next
   msg.scrollTop = msg.scrollHeight;
   setTimeout(function() { chatAsk(stepIdx + 1); }, 400);
+}
+
+function chatEdit(stepIdx) {
+  var msg = document.getElementById('chatbot-messages');
+  // Walk forward from the start, count user messages,
+  // remove everything from the (stepIdx)th user message onward
+  var userCount = 0;
+  var removeFrom = null;
+  for (var i = 0; i < msg.children.length; i++) {
+    if (msg.children[i].classList.contains('message-user')) {
+      if (userCount === stepIdx) {
+        removeFrom = msg.children[i];
+        break;
+      }
+      userCount++;
+    }
+  }
+  if (removeFrom) {
+    while (removeFrom.nextSibling) {
+      msg.removeChild(removeFrom.nextSibling);
+    }
+    msg.removeChild(removeFrom);
+  }
+
+  // Reset data for this and future steps
+  for (var i = stepIdx; i < steps.length; i++) {
+    delete chatState.data[steps[i].key];
+  }
+  chatState.step = stepIdx;
+
+  // Hide input
+  document.getElementById('chatbot-input').classList.add('hidden');
+  document.getElementById('chatbot-input-area').classList.remove('hidden');
+
+  // Re-ask this step
+  setTimeout(function() { chatAsk(stepIdx); }, 200);
+}
+
+function showReview() {
+  document.getElementById('chatbot-step-label').textContent = 'Review & Confirm';
+  document.getElementById('chatbot-input').classList.add('hidden');
+
+  var msg = document.getElementById('chatbot-messages');
+  var div = document.createElement('div');
+  div.className = 'flex gap-3 message-bot';
+  div.innerHTML = '<div class="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center flex-shrink-0 mt-0.5"><svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div><p class="text-sm text-slate-700 font-medium">Here is the summary of your strategy. Review everything and generate when ready.</p></div>';
+  msg.appendChild(div);
+
+  var icons = { strategy_type: '🎯', title: '📝', description: '📋', target_audience: '👥', tone: '🎨', platforms: '📱', scheduled_at: '📅' };
+
+  var summaryDiv = document.createElement('div');
+  summaryDiv.className = 'ml-10 mt-3 space-y-2';
+
+  steps.forEach(function(s, idx) {
+    var val = chatState.data[s.key];
+    if (!val || (Array.isArray(val) && val.length === 0)) val = '(not set)';
+    var label = getStepLabel(s, idx, val);
+
+    var row = document.createElement('div');
+    row.className = 'flex items-start gap-2 p-2.5 rounded-xl bg-slate-50';
+    row.innerHTML = '<span class="text-sm flex-shrink-0">' + (icons[s.key] || '•') + '</span>' +
+      '<div class="flex-1 min-w-0"><p class="text-xs font-semibold text-slate-500">' + s.label + '</p><p class="text-sm text-slate-800 break-words">' + label + '</p></div>' +
+      '<button class="text-[10px] text-primary font-semibold hover:underline flex-shrink-0 mt-0.5">Edit</button>';
+    row.lastChild.onclick = function() {
+      // Remove review messages (bot summary + last bot message + summary div)
+      var reviewBot = div;
+      if (reviewBot && reviewBot.nextSibling) msg.removeChild(reviewBot.nextSibling);
+      msg.removeChild(reviewBot);
+      chatEdit(idx);
+    };
+    summaryDiv.appendChild(row);
+  });
+
+  var actionRow = document.createElement('div');
+  actionRow.className = 'flex gap-2 mt-4';
+  var genBtn = document.createElement('button');
+  genBtn.textContent = 'Generate Strategy →';
+  genBtn.className = 'flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all';
+  genBtn.style.background = 'linear-gradient(135deg,#7C3AED,#6D28D9)';
+  genBtn.onclick = function() {
+    summaryDiv.querySelectorAll('button').forEach(function(b) { b.disabled = true; b.opacity = '0.5'; });
+    genBtn.disabled = true;
+    genBtn.textContent = 'Generating...';
+    chatGenerate();
+  };
+  actionRow.appendChild(genBtn);
+  summaryDiv.appendChild(actionRow);
+
+  div.lastChild.appendChild(summaryDiv);
+  msg.scrollTop = msg.scrollHeight;
 }
 
 function chatGenerate() {
@@ -460,7 +595,6 @@ function chatGenerate() {
     document.getElementById('chatbot-loading').classList.add('hidden');
     if (d.success) {
       closeChatbot();
-      // Show result in a modal
       document.getElementById('result-title').textContent = d.title;
       document.getElementById('result-meta').textContent = d.strategy_type + ' \u00b7 ' + new Date(d.created_at).toLocaleDateString();
       document.getElementById('result-body').innerHTML = d.generated_output;
@@ -470,7 +604,6 @@ function chatGenerate() {
         document.getElementById('result-push-form').submit();
       };
       openModal('strategyResultModal');
-      // Reload to show new strategy
       setTimeout(function() { location.reload(); }, 1000);
     } else {
       showChatError(d.error || 'Generation failed');
@@ -491,72 +624,6 @@ function showChatError(msg) {
   msgDiv.scrollTop = msgDiv.scrollHeight;
   document.getElementById('chatbot-input-area').classList.remove('hidden');
   document.getElementById('chatbot-step-label').textContent = 'Something went wrong';
-}
-
-// ──────────────────────────────────────────────
-// Strategy Preview (Desktop side panel)
-// ──────────────────────────────────────────────
-var strategiesData = {};
-{% for s in strategies %}
-strategiesData[{{ s.id }}] = {
-  id: {{ s.id }},
-  title: '{{ s.title|escapejs }}',
-  type: '{{ s.get_strategy_type_display|escapejs }}',
-  status: '{{ s.status|escapejs }}',
-  status_label: '{{ s.get_status_display|escapejs }}',
-  created: '{{ s.created_at|date:"M d, Y"|escapejs }}',
-  output: '{{ s.generated_output|escapejs }}',
-  goal: '{{ s.campaign_goal|escapejs }}',
-  rejection: '{{ s.rejection_reason|escapejs }}',
-  platforms: {{ s.scheduled_platforms|safe|default:"[]" }},
-};
-{% endfor %}
-
-function openStrategy(id) {
-  var d = strategiesData[id];
-  if (!d) return;
-  document.getElementById('preview-empty').classList.add('hidden');
-  document.getElementById('preview-loaded').classList.remove('hidden');
-  document.getElementById('preview-title').textContent = d.title;
-  document.getElementById('preview-meta').textContent = d.type + ' \u00b7 ' + d.created;
-  var badgeColors = {draft:'bg-slate-100 text-slate-600', pending_review:'bg-amber-100 text-amber-700', approved:'bg-emerald-100 text-emerald-700', rejected:'bg-red-100 text-red-700', published:'bg-blue-100 text-blue-700', archived:'bg-slate-100 text-slate-500'};
-  document.getElementById('preview-badge').innerHTML = '<span class="px-2.5 py-1 rounded-lg text-[10px] font-semibold ' + (badgeColors[d.status]||'bg-slate-100 text-slate-600') + '">' + d.status_label + '</span>';
-  var body = d.output || d.goal || '<span class="text-slate-400 italic">No content yet</span>';
-  document.getElementById('preview-body').innerHTML = '<div class="prose prose-xs max-w-none">' + body + '</div>';
-  if (d.rejection) {
-    document.getElementById('preview-body').innerHTML += '<div class="p-3 bg-red-50 rounded-xl border border-red-100"><p class="text-[10px] font-semibold text-red-600 uppercase">Rejection Reason</p><p class="text-xs text-red-700 mt-1">' + d.rejection + '</p></div>';
-  }
-
-  var actions = document.getElementById('preview-actions');
-  actions.innerHTML = '';
-  if (d.status === 'draft') {
-    actions.innerHTML = '<form method="post">{% csrf_token %}<input type="hidden" name="action" value="update_status"><input type="hidden" name="strategy_id" value="' + d.id + '"><input type="hidden" name="status" value="pending_review"><button type="submit" class="w-full px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all" style="background:linear-gradient(135deg,#D97706,#F59E0B)">Submit for Review</button></form><form method="post">{% csrf_token %}<input type="hidden" name="action" value="delete_strategy"><input type="hidden" name="strategy_id" value="' + d.id + '"><button type="submit" onclick="return confirm(\'Delete permanently?\')" class="w-full px-4 py-2 rounded-xl text-sm font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-colors">Delete</button></form>';
-  } else if (d.status === 'pending_review') {
-    actions.innerHTML = '<div class="flex gap-2"><button onclick="openApproveModal(' + d.id + ',\'' + d.title.replace(/'/g,"\\'") + '\')" class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all" style="background:linear-gradient(135deg,#059669,#10B981)">Approve</button><button onclick="openRejectModal(' + d.id + ',\'' + d.title.replace(/'/g,"\\'") + '\')" class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all" style="background:linear-gradient(135deg,#DC2626,#EF4444)">Reject</button></div>';
-  } else if (d.status === 'approved') {
-    actions.innerHTML = '<form method="post">{% csrf_token %}<input type="hidden" name="action" value="update_status"><input type="hidden" name="strategy_id" value="' + d.id + '"><input type="hidden" name="status" value="published"><button type="submit" class="w-full px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all" style="background:linear-gradient(135deg,#2563EB,#3B82F6)">Publish</button></form><form method="post">{% csrf_token %}<input type="hidden" name="action" value="update_status"><input type="hidden" name="strategy_id" value="' + d.id + '"><input type="hidden" name="status" value="draft"><button type="submit" class="w-full px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">Send Back to Draft</button></form>';
-  } else if (d.status === 'rejected') {
-    actions.innerHTML = '<form method="post">{% csrf_token %}<input type="hidden" name="action" value="update_status"><input type="hidden" name="strategy_id" value="' + d.id + '"><input type="hidden" name="status" value="draft"><button type="submit" class="w-full px-4 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">Move to Draft</button></form><form method="post">{% csrf_token %}<input type="hidden" name="action" value="delete_strategy"><input type="hidden" name="strategy_id" value="' + d.id + '"><button type="submit" onclick="return confirm(\'Delete permanently?\')" class="w-full px-4 py-2 rounded-xl text-sm font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-colors">Delete</button></form>';
-  } else {
-    actions.innerHTML = '<span class="block text-center px-4 py-2 rounded-xl text-sm font-semibold bg-slate-50 text-slate-400">' + d.status_label + '</span>';
-  }
-  if (d.platforms && d.platforms.length) {
-    actions.innerHTML = '<div class="flex flex-wrap gap-1.5">' + d.platforms.map(function(p) { return '<span class="px-2 py-0.5 bg-slate-50 rounded text-[10px] font-medium text-slate-500">' + p[0].toUpperCase()+p.slice(1) + '</span>'; }).join('') + '</div>' + actions.innerHTML;
-  }
-}
-
-// ──────────────────────────────────────────────
-// Approve / Reject modals
-// ──────────────────────────────────────────────
-function openApproveModal(id, name) {
-  document.getElementById('approve-strategy-id').value = id;
-  document.getElementById('approve-strategy-name').textContent = name;
-  openModal('approveModal');
-}
-function openRejectModal(id, name) {
-  document.getElementById('reject-strategy-id').value = id;
-  document.getElementById('reject-strategy-name').textContent = name;
-  openModal('rejectModal');
 }
 </script>
 {% endblock %}

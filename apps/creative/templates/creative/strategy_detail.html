@@ -1,0 +1,1006 @@
+{% extends 'base_dashboard.html' %}
+{% load workspace_tags %}
+{% block title %}{{ strategy.title }} — Strategy Studio{% endblock %}
+{% block page_title %}{{ strategy.title }}{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none mx-auto">
+  <div class="flex items-center gap-3 mb-6">
+    <a href="{% url 'creative:strategy_studio' %}" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
+      <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    </a>
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center gap-3">
+        <h1 class="text-2xl font-bold text-slate-900 truncate">{{ strategy.title }}</h1>
+        <span class="px-2.5 py-1 rounded-lg text-[10px] font-semibold
+          {% if strategy.status == 'draft' %}bg-slate-100 text-slate-600
+          {% elif strategy.status == 'pending_review' %}bg-amber-100 text-amber-700
+          {% elif strategy.status == 'approved' %}bg-emerald-100 text-emerald-700
+          {% elif strategy.status == 'rejected' %}bg-red-100 text-red-700
+          {% elif strategy.status == 'published' %}bg-blue-100 text-blue-700
+          {% elif strategy.status == 'archived' %}bg-slate-100 text-slate-500{% endif %}">
+          {{ strategy.get_status_display }}
+        </span>
+      </div>
+      <p class="text-sm text-slate-500 mt-0.5">{{ strategy.get_strategy_type_display }} &middot; {{ strategy.created_at|date:'M d, Y' }}</p>
+    </div>
+    <div class="flex gap-2 flex-shrink-0" onclick="event.stopPropagation()">
+      {% if strategy.status == 'draft' %}
+      <form method="post" action="{% url 'creative:strategy_studio' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update_status">
+        <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
+        <input type="hidden" name="status" value="pending_review">
+        {% include "components/button.html" with label="Submit for Review" type="submit" primary_start="#D97706" primary_end="#F59E0B" class="!text-xs !py-2" %}
+      </form>
+      <form method="post" action="{% url 'creative:strategy_studio' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="delete_strategy">
+        <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
+        <button type="submit" onclick="return confirm('Delete this strategy permanently?')" class="px-4 py-2 rounded-xl text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors">Delete</button>
+      </form>
+      {% elif strategy.status == 'pending_review' %}
+      <button onclick="openApproveModal({{ strategy.id }}, '{{ strategy.title|escapejs }}')" class="px-4 py-2 rounded-xl text-xs font-semibold text-white" style="background:linear-gradient(135deg,#059669,#10B981)">Approve</button>
+      <button onclick="openRejectModal({{ strategy.id }}, '{{ strategy.title|escapejs }}')" class="px-4 py-2 rounded-xl text-xs font-semibold text-white" style="background:linear-gradient(135deg,#DC2626,#EF4444)">Reject</button>
+      {% elif strategy.status == 'approved' %}
+      <form method="post" action="{% url 'creative:strategy_studio' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update_status">
+        <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
+        <input type="hidden" name="status" value="published">
+        {% include "components/button.html" with label="Publish" type="submit" icon="M5 13l4 4L19 7" primary_start="#2563EB" primary_end="#3B82F6" class="!text-xs !py-2" %}
+      </form>
+      <form method="post" action="{% url 'creative:strategy_studio' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update_status">
+        <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
+        <input type="hidden" name="status" value="draft">
+        <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">Send Back</button>
+      </form>
+      {% elif strategy.status == 'rejected' %}
+      <form method="post" action="{% url 'creative:strategy_studio' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update_status">
+        <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
+        <input type="hidden" name="status" value="draft">
+        <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">Back to Draft</button>
+      </form>
+      <form method="post" action="{% url 'creative:strategy_studio' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="delete_strategy">
+        <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
+        <button type="submit" onclick="return confirm('Delete this strategy permanently?')" class="px-4 py-2 rounded-xl text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors">Delete</button>
+      </form>
+      {% elif strategy.status == 'published' or strategy.status == 'archived' %}
+      <span class="px-3 py-2 bg-slate-50 text-slate-400 rounded-xl text-xs font-semibold">{{ strategy.get_status_display }}</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if strategy.rejection_reason %}
+  <div class="mb-6 p-4 bg-red-50 rounded-2xl border border-red-100">
+    <p class="text-xs font-semibold text-red-600 uppercase mb-1">Rejection Reason</p>
+    <p class="text-sm text-red-700">{{ strategy.rejection_reason }}</p>
+  </div>
+  {% endif %}
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 space-y-5">
+      <div class="premium-surface rounded-2xl p-6">
+        <h2 class="text-base font-bold text-slate-800 mb-4">Generated Strategy</h2>
+        {% if strategy.generated_output %}
+        <!-- Raw text fallback (hidden when JS renders structured content) -->
+        <div id="strategy-raw-content" class="prose prose-sm max-w-none text-slate-700 leading-relaxed">{{ strategy.generated_output|safe }}</div>
+        <!-- Structured content container (populated by JS) -->
+        <div id="strategy-structured-content" class="hidden"></div>
+        {% else %}
+        <div class="prose prose-sm max-w-none text-slate-700 leading-relaxed">{{ strategy.campaign_goal|linebreaks }}</div>
+        {% endif %}
+      </div>
+
+      {% if strategy.linked_assets.exists %}
+      <div class="premium-surface rounded-2xl p-6">
+        <h2 class="text-base font-bold text-slate-800 mb-4">Linked Assets</h2>
+        <div class="grid grid-cols-3 gap-3">
+          {% for link in strategy.linked_assets.all %}
+          <div class="group relative aspect-square rounded-xl overflow-hidden bg-slate-100 hover:ring-2 hover:ring-primary transition-all">
+            {% if link.asset.thumbnail %}
+            <img src="{{ link.asset.thumbnail }}" alt="{{ link.asset.title|default:link.asset.original_filename }}" class="w-full h-full object-cover">
+            {% elif link.asset.file_type == 'image' %}
+            <img src="{{ link.asset.file.url }}" alt="{{ link.asset.title|default:link.asset.original_filename }}" class="w-full h-full object-cover">
+            {% else %}
+            <div class="flex items-center justify-center h-full text-slate-400">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            </div>
+            {% endif %}
+            <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 pt-4 opacity-0 group-hover:opacity-100 transition-opacity">
+              <p class="text-xs text-white truncate">{{ link.asset.title|default:link.asset.original_filename }}</p>
+              {% if link.platform %}<p class="text-[10px] text-white/80">{{ link.platform|title }}</p>{% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="space-y-5">
+      <div class="premium-surface rounded-2xl p-5">
+        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Details</h3>
+        <dl class="space-y-3 text-sm">
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Type</dt>
+            <dd class="font-semibold text-slate-800" id="strategy-type-label">{{ strategy.get_strategy_type_display }}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Status</dt>
+            <dd class="font-semibold text-slate-800">{{ strategy.get_status_display }}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Tone of Voice</dt>
+            <dd class="font-semibold text-slate-800 capitalize">{{ strategy.tone_of_voice }}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Created</dt>
+            <dd class="font-semibold text-slate-800">{{ strategy.created_at|date:'M d, Y' }}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Updated</dt>
+            <dd class="font-semibold text-slate-800">{{ strategy.updated_at|date:'M d, Y' }}</dd>
+          </div>
+          {% if strategy.llm_mode %}
+          <div class="flex justify-between">
+            <dt class="text-slate-500">AI Provider</dt>
+            <dd class="font-semibold text-slate-800 capitalize">{{ strategy.llm_mode }}</dd>
+          </div>
+          {% endif %}
+          {% if strategy.approved_by %}
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Approved By</dt>
+            <dd class="font-semibold text-slate-800">{{ strategy.approved_by.get_full_name|default:strategy.approved_by.email }}</dd>
+          </div>
+          {% endif %}
+        </dl>
+      </div>
+
+      {% if strategy.target_audience %}
+      <div class="premium-surface rounded-2xl p-5">
+        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Target Audience</h3>
+        <p class="text-sm text-slate-700">{{ strategy.target_audience|linebreaks }}</p>
+      </div>
+      {% endif %}
+
+      {% if strategy.campaign_goal %}
+      <div class="premium-surface rounded-2xl p-5">
+        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Campaign Goal</h3>
+        <p class="text-sm text-slate-700">{{ strategy.campaign_goal|linebreaks }}</p>
+      </div>
+      {% endif %}
+
+      {% if strategy.scheduled_platforms %}
+      <div class="premium-surface rounded-2xl p-5">
+        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Platforms</h3>
+        <div class="flex flex-wrap gap-1.5">
+          {% for platform in strategy.scheduled_platforms %}
+          <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 text-xs font-semibold">{{ platform|title }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if strategy.scheduled_at or strategy.published_at %}
+      <div class="premium-surface rounded-2xl p-5">
+        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Schedule</h3>
+        <dl class="space-y-2 text-sm">
+          {% if strategy.scheduled_at %}
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Scheduled</dt>
+            <dd class="font-semibold text-slate-800">{{ strategy.scheduled_at|date:'M d, Y H:i' }}</dd>
+          </div>
+          {% endif %}
+          {% if strategy.published_at %}
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Published</dt>
+            <dd class="font-semibold text-slate-800">{{ strategy.published_at|date:'M d, Y H:i' }}</dd>
+          </div>
+          {% endif %}
+        </dl>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Structured strategy data for JS rendering -->
+<script id="strategy-data" type="application/json">{
+  "id": {{ strategy.id }},
+  "type": "{{ strategy.strategy_type|escapejs }}",
+  "type_label": "{{ strategy.get_strategy_type_display|escapejs }}",
+  "title": "{{ strategy.title|escapejs }}",
+  "output": {{ strategy.generated_output|safe|default:"null" }}
+}</script>
+
+{% if strategy.status == 'pending_review' %}
+{% url 'creative:strategy_studio' as studio_url %}
+<!-- Approve Modal -->
+{% include "components/modal.html" with id="approveModal" title="Approve Strategy" form_action=studio_url content='<input type="hidden" name="action" value="update_status"><input type="hidden" name="strategy_id" id="approve-strategy-id" value="{{ strategy.id }}"><input type="hidden" name="status" value="approved"><p class="text-sm text-slate-600">Approve "<span id="approve-strategy-name" class="font-semibold">{{ strategy.title }}</span>"? This strategy will be ready for publishing.</p><div class="flex justify-end gap-3 pt-2"><button type="button" onclick="closeModal(&#x27;approveModal&#x27;)" class="!bg-slate-100 !text-slate-700 hover:!bg-slate-200 !bg-none btn-action btn-action-secondary" style="background:none!important;color:#475569!important">Cancel</button><button type="submit" style="background:linear-gradient(135deg,#059669,#10B981)" class="btn-action">Approve</button></div>' %}
+
+<!-- Reject Modal -->
+{% include "components/modal.html" with id="rejectModal" title="Reject Strategy" form_action=studio_url content='<input type="hidden" name="action" value="update_status"><input type="hidden" name="strategy_id" id="reject-strategy-id" value="{{ strategy.id }}"><input type="hidden" name="status" value="rejected"><p class="text-sm font-semibold text-slate-700">Reject "<span id="reject-strategy-name">{{ strategy.title }}</span>"</p><div><label class="block text-sm font-semibold text-slate-700 mb-1.5">Reason for Rejection</label><textarea name="rejection_reason" rows="3" class="input-field w-full" placeholder="Provide feedback so the creator can improve this strategy..." required></textarea></div><div class="flex justify-end gap-3 pt-2"><button type="button" onclick="closeModal(&#x27;rejectModal&#x27;)" class="!bg-slate-100 !text-slate-700 hover:!bg-slate-200 !bg-none btn-action btn-action-secondary" style="background:none!important;color:#475569!important">Cancel</button><button type="submit" style="background:linear-gradient(135deg,#DC2626,#EF4444)" class="btn-action">Reject</button></div>' %}
+
+<script>
+function openApproveModal(id, name) {
+  document.getElementById('approve-strategy-id').value = id;
+  document.getElementById('approve-strategy-name').textContent = name;
+  openModal('approveModal');
+}
+function openRejectModal(id, name) {
+  document.getElementById('reject-strategy-id').value = id;
+  document.getElementById('reject-strategy-name').textContent = name;
+  openModal('rejectModal');
+}
+</script>
+{% endif %}
+
+<script>
+(function() {
+  // ─── Platform icon map ────────────────────────────────
+  var platformIcons = {
+    facebook: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>',
+    instagram: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>',
+    linkedin: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>',
+    twitter: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>',
+    tiktok: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>',
+    youtube: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>',
+  };
+  var platformColors = {
+    facebook: '#1877F2', instagram: '#E4405F', linkedin: '#0A66C2',
+    twitter: '#000000', tiktok: '#000000', youtube: '#FF0000',
+  };
+  var platformNames = {
+    facebook: 'Facebook', instagram: 'Instagram', linkedin: 'LinkedIn',
+    twitter: 'X (Twitter)', tiktok: 'TikTok', youtube: 'YouTube',
+  };
+
+  // ─── Read strategy data ────────────────────────────────
+  var dataEl = document.getElementById('strategy-data');
+  if (!dataEl) return;
+  var strategy;
+  try { strategy = JSON.parse(dataEl.textContent); } catch(e) { return; }
+  if (!strategy.output) return;
+
+  // Try to parse the output as JSON
+  var parsed;
+  try { parsed = JSON.parse(strategy.output); } catch(e) { return; }
+
+  var rawEl = document.getElementById('strategy-raw-content');
+  var structEl = document.getElementById('strategy-structured-content');
+  if (!rawEl || !structEl) return;
+
+  var type = strategy.type;
+  var hasPlatforms = parsed.platforms && Array.isArray(parsed.platforms) && parsed.platforms.length > 0;
+  var hasSections = parsed.sections && Array.isArray(parsed.sections) && parsed.sections.length > 0;
+  var hasTaglines = parsed.taglines && Array.isArray(parsed.taglines) && parsed.taglines.length > 0;
+  var hasHeadlines = parsed.headlines && Array.isArray(parsed.headlines) && parsed.headlines.length > 0;
+  var hasAngles = parsed.angles && Array.isArray(parsed.angles) && parsed.angles.length > 0;
+  var hasMasterPrompt = parsed.master_prompt;
+  var hasLogoConcepts = parsed.logo_concepts && Array.isArray(parsed.logo_concepts) && parsed.logo_concepts.length > 0;
+  var hasWeeklyThemes = parsed.weekly_themes && Array.isArray(parsed.weekly_themes) && parsed.weekly_themes.length > 0;
+  var hasBodyCopy = parsed.body_copy && Array.isArray(parsed.body_copy) && parsed.body_copy.length > 0;
+  var hasDailyBreakdown = parsed.daily_breakdown && Array.isArray(parsed.daily_breakdown) && parsed.daily_breakdown.length > 0;
+
+  // ─── Helpers ──────────────────────────────────────────
+  function h(tag, attrs, children) {
+    var el = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function(k) { el.setAttribute(k, attrs[k]); });
+    (children || []).forEach(function(c) { if (typeof c === 'string') el.appendChild(document.createTextNode(c)); else if (c) el.appendChild(c); });
+    return el;
+  }
+  function esc(s) { var d = document.createElement('div'); d.appendChild(document.createTextNode(s)); return d.innerHTML; }
+
+  function renderSection(heading, body, items) {
+    var div = document.createElement('div');
+    div.className = 'mb-5';
+    if (heading) {
+      var h4 = document.createElement('h4');
+      h4.className = 'text-sm font-bold text-slate-800 mb-2';
+      h4.textContent = heading;
+      div.appendChild(h4);
+    }
+    if (body) {
+      var p = document.createElement('p');
+      p.className = 'text-sm text-slate-700 leading-relaxed whitespace-pre-wrap';
+      p.textContent = body;
+      div.appendChild(p);
+    }
+    if (items && items.length) {
+      var ul = document.createElement('ul');
+      ul.className = 'mt-2 space-y-1';
+      items.forEach(function(item) {
+        var li = document.createElement('li');
+        li.className = 'text-sm text-slate-700 flex items-start gap-2';
+        li.innerHTML = '<span class="text-primary mt-1 flex-shrink-0">•</span> ' + esc(item);
+        ul.appendChild(li);
+      });
+      div.appendChild(ul);
+    }
+    return div;
+  }
+
+  function renderSections(sections) {
+    var frag = document.createDocumentFragment();
+    sections.forEach(function(s) { frag.appendChild(renderSection(s.heading, s.body, s.items)); });
+    return frag;
+  }
+
+  function renderChip(label, bgColor, textColor) {
+    var span = document.createElement('span');
+    span.className = 'px-2.5 py-1 rounded-lg text-[10px] font-semibold inline-block';
+    span.style.background = bgColor || '#e2e8f0';
+    span.style.color = textColor || '#475569';
+    span.textContent = label;
+    return span;
+  }
+
+  function renderPlatformBadge(platform) {
+    var name = platformNames[platform] || platform.charAt(0).toUpperCase() + platform.slice(1);
+    var color = platformColors[platform] || '#6366f1';
+    var badge = document.createElement('div');
+    badge.className = 'flex items-center gap-2';
+    if (platformIcons[platform]) {
+      var iconSpan = document.createElement('span');
+      iconSpan.style.color = color;
+      iconSpan.innerHTML = platformIcons[platform];
+      badge.appendChild(iconSpan);
+    }
+    var label = document.createElement('span');
+    label.className = 'text-sm font-bold';
+    label.style.color = color;
+    label.textContent = name;
+    badge.appendChild(label);
+    return badge;
+  }
+
+  // ─── Category renderers ──────────────────────────────
+  var renderers = {};
+
+  // -- Social Post (post_content / social_post) --
+  renderers.post_content = function() {
+    if (!hasPlatforms) return null;
+    var wrapper = document.createElement('div');
+    wrapper.className = 'space-y-5';
+
+    if (parsed.content) {
+      var overview = document.createElement('p');
+      overview.className = 'text-sm text-slate-700 leading-relaxed mb-4';
+      overview.textContent = parsed.content;
+      wrapper.appendChild(overview);
+    }
+
+    parsed.platforms.forEach(function(post) {
+      var card = document.createElement('div');
+      var color = platformColors[post.platform] || '#6366f1';
+      card.className = 'rounded-2xl border overflow-hidden';
+      card.style.borderColor = color + '30';
+
+      // Header
+      var header = document.createElement('div');
+      header.className = 'px-5 py-3 flex items-center justify-between';
+      header.style.background = color + '08';
+      header.appendChild(renderPlatformBadge(post.platform));
+      if (post.best_time) {
+        var time = document.createElement('span');
+        time.className = 'text-[10px] font-semibold text-slate-500';
+        time.textContent = '🕐 ' + post.best_time;
+        header.appendChild(time);
+      }
+      card.appendChild(header);
+
+      // Body
+      var body = document.createElement('div');
+      body.className = 'px-5 py-4 space-y-3';
+
+      // Hook
+      if (post.hook) {
+        var hookEl = document.createElement('div');
+        hookEl.className = 'text-sm font-semibold text-slate-900 italic border-l-3 pl-3';
+        hookEl.style.borderLeft = '3px solid ' + color;
+        hookEl.textContent = post.hook;
+        body.appendChild(hookEl);
+      }
+
+      // Body copy
+      if (post.body) {
+        var p = document.createElement('p');
+        p.className = 'text-sm text-slate-700 leading-relaxed whitespace-pre-wrap';
+        p.textContent = post.body;
+        body.appendChild(p);
+      }
+
+      // CTA
+      if (post.cta) {
+        var ctaEl = document.createElement('div');
+        ctaEl.className = 'inline-block px-4 py-2 rounded-xl text-xs font-bold text-white';
+        ctaEl.style.background = 'linear-gradient(135deg, ' + color + ', ' + color + 'cc)';
+        ctaEl.textContent = post.cta;
+        body.appendChild(ctaEl);
+      }
+
+      // Hashtags
+      if (post.hashtags && post.hashtags.length) {
+        var tagWrap = document.createElement('div');
+        tagWrap.className = 'flex flex-wrap gap-1.5 mt-1';
+        post.hashtags.forEach(function(tag) {
+          tagWrap.appendChild(renderChip(tag, color + '15', color));
+        });
+        body.appendChild(tagWrap);
+      }
+
+      // Visual description
+      if (post.visual_description) {
+        var vis = document.createElement('div');
+        vis.className = 'flex items-start gap-2 text-xs text-slate-500 bg-slate-50 rounded-xl p-3';
+        vis.innerHTML = '<svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><span>' + esc(post.visual_description) + '</span>';
+        body.appendChild(vis);
+      }
+
+      // Engagement tactic
+      if (post.engagement_tactic) {
+        var eg = document.createElement('div');
+        eg.className = 'flex items-start gap-2 text-xs text-amber-700 bg-amber-50 rounded-xl p-3';
+        eg.innerHTML = '<svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>💡 ' + esc(post.engagement_tactic) + '</span>';
+        body.appendChild(eg);
+      }
+
+      card.appendChild(body);
+      wrapper.appendChild(card);
+    });
+
+    return wrapper;
+  };
+
+  // -- Taglines --
+  renderers.tagline = function() {
+    if (!hasTaglines) return null;
+    var wrapper = document.createElement('div');
+    wrapper.className = 'space-y-4';
+
+    if (parsed.content) {
+      var p = document.createElement('p');
+      p.className = 'text-sm text-slate-700 mb-3';
+      p.textContent = parsed.content;
+      wrapper.appendChild(p);
+    }
+
+    if (parsed.top_picks && parsed.top_picks.length) {
+      var picksTitle = document.createElement('h4');
+      picksTitle.className = 'text-xs font-bold text-emerald-700 uppercase tracking-wider mb-2';
+      picksTitle.textContent = '🏆 Top Picks';
+      wrapper.appendChild(picksTitle);
+      parsed.top_picks.forEach(function(pick) {
+        var card = document.createElement('div');
+        card.className = 'bg-emerald-50 rounded-xl p-4 border border-emerald-100 mb-4';
+        var tag = document.createElement('p');
+        tag.className = 'text-lg font-bold text-emerald-800 italic mb-1';
+        tag.textContent = '“' + pick.tagline + '”';
+        card.appendChild(tag);
+        if (pick.rationale) {
+          var r = document.createElement('p');
+          r.className = 'text-xs text-emerald-700';
+          r.textContent = pick.rationale;
+          card.appendChild(r);
+        }
+        wrapper.appendChild(card);
+      });
+    }
+
+    var grid = document.createElement('div');
+    grid.className = 'grid grid-cols-1 sm:grid-cols-2 gap-3';
+    parsed.taglines.forEach(function(t) {
+      var card = document.createElement('div');
+      card.className = 'bg-slate-50 rounded-xl p-4 border border-slate-100';
+      var tag = document.createElement('p');
+      tag.className = 'text-base font-semibold text-slate-900 italic mb-1';
+      tag.textContent = '“' + t.tagline + '”';
+      card.appendChild(tag);
+      if (t.angle) {
+        var a = document.createElement('span');
+        a.className = 'inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary mb-1';
+        a.textContent = t.angle;
+        card.appendChild(a);
+      }
+      if (t.rationale) {
+        var r = document.createElement('p');
+        r.className = 'text-xs text-slate-500 mt-1';
+        r.textContent = t.rationale;
+        card.appendChild(r);
+      }
+      grid.appendChild(card);
+    });
+    wrapper.appendChild(grid);
+    return wrapper;
+  };
+
+  // -- Ad Copy --
+  renderers.ad_copy = function() {
+    if (!hasHeadlines && !hasBodyCopy && !hasCtas) return null;
+    var wrapper = document.createElement('div');
+    wrapper.className = 'space-y-5';
+
+    if (parsed.content) {
+      var p = document.createElement('p');
+      p.className = 'text-sm text-slate-700 mb-2';
+      p.textContent = parsed.content;
+      wrapper.appendChild(p);
+    }
+
+    // Headlines
+    if (hasHeadlines) {
+      var hTitle = document.createElement('h4');
+      hTitle.className = 'text-xs font-bold text-slate-500 uppercase tracking-wider mb-2';
+      hTitle.textContent = 'Headlines';
+      wrapper.appendChild(hTitle);
+      var hGrid = document.createElement('div');
+      hGrid.className = 'grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4';
+      parsed.headlines.forEach(function(h) {
+        var card = document.createElement('div');
+        card.className = 'bg-slate-50 rounded-xl px-4 py-3 border border-slate-100 text-sm font-semibold text-slate-800';
+        card.textContent = h;
+        hGrid.appendChild(card);
+      });
+      wrapper.appendChild(hGrid);
+    }
+
+    // Body copy (funnel variants)
+    if (hasBodyCopy) {
+      var bTitle = document.createElement('h4');
+      bTitle.className = 'text-xs font-bold text-slate-500 uppercase tracking-wider mb-2';
+      bTitle.textContent = 'Body Copy by Funnel Stage';
+      wrapper.appendChild(bTitle);
+      parsed.body_copy.forEach(function(bc) {
+        var card = document.createElement('div');
+        card.className = 'rounded-xl border p-4 mb-3';
+        card.style.borderColor = '#e2e8f0';
+        var label = document.createElement('div');
+        label.className = 'text-[10px] font-bold uppercase tracking-wider mb-2';
+        label.style.color = '#6366f1';
+        label.textContent = bc.variant || 'Body Copy';
+        card.appendChild(label);
+        var copy = document.createElement('p');
+        copy.className = 'text-sm text-slate-700 leading-relaxed whitespace-pre-wrap';
+        copy.textContent = bc.copy;
+        card.appendChild(copy);
+        wrapper.appendChild(card);
+      });
+    }
+
+    // CTAs
+    if (parsed.ctas && parsed.ctas.length) {
+      var cTitle = document.createElement('h4');
+      cTitle.className = 'text-xs font-bold text-slate-500 uppercase tracking-wider mb-2';
+      cTitle.textContent = 'Call to Action Variations';
+      wrapper.appendChild(cTitle);
+      var cGrid = document.createElement('div');
+      cGrid.className = 'flex flex-wrap gap-2 mb-3';
+      parsed.ctas.forEach(function(cta) {
+        cGrid.appendChild(renderChip(cta, '#6366f115', '#6366f1'));
+      });
+      wrapper.appendChild(cGrid);
+    }
+
+    // Hooks
+    if (parsed.hooks && parsed.hooks.length) {
+      var hkTitle = document.createElement('h4');
+      hkTitle.className = 'text-xs font-bold text-slate-500 uppercase tracking-wider mb-2';
+      hkTitle.textContent = 'Opening Hooks';
+      wrapper.appendChild(hkTitle);
+      var hkList = document.createElement('ul');
+      hkList.className = 'space-y-1 mb-3';
+      parsed.hooks.forEach(function(hk) {
+        var li = document.createElement('li');
+        li.className = 'text-sm text-slate-700 flex items-start gap-2';
+        li.innerHTML = '<span class="text-primary mt-1">•</span> ' + esc(hk);
+        hkList.appendChild(li);
+      });
+      wrapper.appendChild(hkList);
+    }
+
+    // A/B testing hypotheses
+    if (parsed.ab_testing_hypotheses && parsed.ab_testing_hypotheses.length) {
+      var abTitle = document.createElement('h4');
+      abTitle.className = 'text-xs font-bold text-slate-500 uppercase tracking-wider mb-2';
+      abTitle.textContent = 'A/B Testing Hypotheses';
+      wrapper.appendChild(abTitle);
+      parsed.ab_testing_hypotheses.forEach(function(ab) {
+        var card = document.createElement('div');
+        card.className = 'bg-amber-50 rounded-xl px-4 py-3 border border-amber-100 text-xs text-amber-800 mb-2';
+        card.textContent = ab;
+        wrapper.appendChild(card);
+      });
+    }
+
+    // Visual notes
+    if (parsed.visual_notes) {
+      var vn = document.createElement('div');
+      vn.className = 'flex items-start gap-2 text-xs text-slate-500 bg-slate-50 rounded-xl p-3';
+      vn.innerHTML = '<svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><span>' + esc(parsed.visual_notes) + '</span>';
+      wrapper.appendChild(vn);
+    }
+
+    return wrapper;
+  };
+
+  // -- Creative Angles --
+  renderers.creative_angles = function() {
+    if (!hasAngles) return null;
+    var wrapper = document.createElement('div');
+    wrapper.className = 'space-y-4';
+
+    if (parsed.content) {
+      var p = document.createElement('p');
+      p.className = 'text-sm text-slate-700 mb-3';
+      p.textContent = parsed.content;
+      wrapper.appendChild(p);
+    }
+
+    parsed.angles.forEach(function(a, idx) {
+      var card = document.createElement('div');
+      card.className = 'bg-slate-50 rounded-xl p-5 border border-slate-100';
+      var header = document.createElement('div');
+      header.className = 'flex items-center justify-between mb-3';
+      var num = document.createElement('span');
+      num.className = 'w-7 h-7 rounded-lg bg-primary text-white text-xs font-bold flex items-center justify-center';
+      num.textContent = idx + 1;
+      header.appendChild(num);
+      if (a.best_channel) {
+        header.appendChild(renderChip(a.best_channel, '#6366f115', '#6366f1'));
+      }
+      card.appendChild(header);
+
+      if (a.name) {
+        var n = document.createElement('h4');
+        n.className = 'text-base font-bold text-slate-900 mb-2';
+        n.textContent = a.name;
+        card.appendChild(n);
+      }
+      if (a.insight) {
+        var ins = document.createElement('div');
+        ins.className = 'mb-2';
+        ins.innerHTML = '<span class="text-[10px] font-bold text-slate-500 uppercase">Insight</span><p class="text-sm text-slate-700 italic">' + esc(a.insight) + '</p>';
+        card.appendChild(ins);
+      }
+      if (a.execution) {
+        var ex = document.createElement('div');
+        ex.className = 'mb-2';
+        ex.innerHTML = '<span class="text-[10px] font-bold text-slate-500 uppercase">Execution</span><p class="text-sm text-slate-700">' + esc(a.execution) + '</p>';
+        card.appendChild(ex);
+      }
+      if (a.differentiation) {
+        var df = document.createElement('div');
+        df.innerHTML = '<span class="text-[10px] font-bold text-slate-500 uppercase">Why It\'s Different</span><p class="text-sm text-slate-700">' + esc(a.differentiation) + '</p>';
+        card.appendChild(df);
+      }
+      wrapper.appendChild(card);
+    });
+    return wrapper;
+  };
+
+  // -- Image Prompt --
+  renderers.image_prompt = function() {
+    if (!hasMasterPrompt) return null;
+    var wrapper = document.createElement('div');
+    wrapper.className = 'space-y-4';
+
+    if (parsed.content) {
+      var p = document.createElement('p');
+      p.className = 'text-sm text-slate-700 mb-2';
+      p.textContent = parsed.content;
+      wrapper.appendChild(p);
+    }
+
+    // Master prompt
+    var mpCard = document.createElement('div');
+    mpCard.className = 'bg-slate-900 rounded-xl p-4';
+    var mpLabel = document.createElement('div');
+    mpLabel.className = 'flex items-center justify-between mb-2';
+    mpLabel.innerHTML = '<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Master Prompt</span>';
+    var copyBtn = document.createElement('button');
+    copyBtn.className = 'text-[10px] font-semibold text-blue-400 hover:text-blue-300 transition-colors';
+    copyBtn.textContent = '📋 Copy';
+    copyBtn.onclick = function() {
+      navigator.clipboard.writeText(parsed.master_prompt).then(function() {
+        copyBtn.textContent = '✅ Copied!';
+        setTimeout(function() { copyBtn.textContent = '📋 Copy'; }, 2000);
+      });
+    };
+    mpLabel.appendChild(copyBtn);
+    mpCard.appendChild(mpLabel);
+    var mpText = document.createElement('pre');
+    mpText.className = 'text-sm text-slate-300 whitespace-pre-wrap font-mono leading-relaxed';
+    mpText.textContent = parsed.master_prompt;
+    mpCard.appendChild(mpText);
+    wrapper.appendChild(mpCard);
+
+    // Aspect ratio
+    if (parsed.aspect_ratio) {
+      var ar = renderChip('Aspect Ratio: ' + parsed.aspect_ratio, '#e2e8f0', '#475569');
+      wrapper.appendChild(ar);
+    }
+
+    // Style variations
+    if (parsed.style_variations && parsed.style_variations.length) {
+      var svTitle = document.createElement('h4');
+      svTitle.className = 'text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 mt-2';
+      svTitle.textContent = 'Style Variations';
+      wrapper.appendChild(svTitle);
+      parsed.style_variations.forEach(function(sv) {
+        var card = document.createElement('div');
+        card.className = 'bg-slate-50 rounded-xl p-4 border border-slate-100 mb-3';
+        var name = document.createElement('div');
+        name.className = 'text-xs font-bold text-slate-700 mb-1';
+        name.textContent = sv.name;
+        card.appendChild(name);
+        var prompt = document.createElement('pre');
+        prompt.className = 'text-xs text-slate-600 whitespace-pre-wrap font-mono leading-relaxed bg-white rounded-lg p-3';
+        prompt.textContent = sv.prompt;
+        card.appendChild(prompt);
+        if (sv.negative_prompt) {
+          var neg = document.createElement('div');
+          neg.className = 'mt-2';
+          neg.innerHTML = '<span class="text-[10px] font-bold text-red-500">Negative Prompt:</span><pre class="text-xs text-slate-500 whitespace-pre-wrap font-mono mt-1">' + esc(sv.negative_prompt) + '</pre>';
+          card.appendChild(neg);
+        }
+        wrapper.appendChild(card);
+      });
+    }
+
+    return wrapper;
+  };
+
+  // -- Logo Design --
+  renderers.logo_design = function() {
+    var wrapper = document.createElement('div');
+    wrapper.className = 'space-y-5';
+
+    if (parsed.content) {
+      var p = document.createElement('p');
+      p.className = 'text-sm text-slate-700 mb-3';
+      p.textContent = parsed.content;
+      wrapper.appendChild(p);
+    }
+
+    if (hasSections) {
+      wrapper.appendChild(renderSections(parsed.sections));
+    }
+
+    if (hasLogoConcepts) {
+      var lcTitle = document.createElement('h4');
+      lcTitle.className = 'text-xs font-bold text-slate-500 uppercase tracking-wider mb-3';
+      lcTitle.textContent = 'Logo Concepts';
+      wrapper.appendChild(lcTitle);
+      var grid = document.createElement('div');
+      grid.className = 'grid grid-cols-1 sm:grid-cols-3 gap-3';
+      parsed.logo_concepts.forEach(function(lc) {
+        var card = document.createElement('div');
+        card.className = 'bg-gradient-to-br from-slate-50 to-white rounded-xl p-5 border border-slate-100 text-center';
+        var icon = document.createElement('div');
+        icon.className = 'w-16 h-16 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-primary/20 to-purple-100 flex items-center justify-center text-2xl';
+        icon.textContent = lc.name ? lc.name.charAt(0).toUpperCase() : '★';
+        card.appendChild(icon);
+        if (lc.name) {
+          var n = document.createElement('h5');
+          n.className = 'text-sm font-bold text-slate-900 mb-1';
+          n.textContent = lc.name;
+          card.appendChild(n);
+        }
+        if (lc.description) {
+          var d = document.createElement('p');
+          d.className = 'text-[11px] text-slate-500 leading-relaxed mb-2';
+          d.textContent = lc.description;
+          card.appendChild(d);
+        }
+        if (lc.style) {
+          card.appendChild(renderChip(lc.style, '#e2e8f0', '#475569'));
+        }
+        if (lc.color_palette && lc.color_palette.length) {
+          var colors = document.createElement('div');
+          colors.className = 'flex justify-center gap-1 mt-2';
+          lc.color_palette.forEach(function(hex) {
+            var dot = document.createElement('span');
+            dot.className = 'w-4 h-4 rounded-full border border-slate-200 inline-block';
+            dot.style.background = hex;
+            colors.appendChild(dot);
+          });
+          card.appendChild(colors);
+        }
+        grid.appendChild(card);
+      });
+      wrapper.appendChild(grid);
+    }
+
+    return wrapper;
+  };
+
+  // -- Content Calendar --
+  renderers.content_calendar = function() {
+    var wrapper = document.createElement('div');
+    wrapper.className = 'space-y-5';
+
+    if (parsed.content) {
+      var p = document.createElement('p');
+      p.className = 'text-sm text-slate-700 mb-3';
+      p.textContent = parsed.content;
+      wrapper.appendChild(p);
+    }
+
+    // Weekly themes
+    if (hasWeeklyThemes) {
+      var wtTitle = document.createElement('h4');
+      wtTitle.className = 'text-xs font-bold text-slate-500 uppercase tracking-wider mb-2';
+      wtTitle.textContent = 'Weekly Themes';
+      wrapper.appendChild(wtTitle);
+      var wtGrid = document.createElement('div');
+      wtGrid.className = 'grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4';
+      parsed.weekly_themes.forEach(function(wt) {
+        var card = document.createElement('div');
+        card.className = 'bg-slate-50 rounded-xl p-4 border border-slate-100';
+        var week = document.createElement('span');
+        week.className = 'text-[10px] font-bold text-slate-400 uppercase tracking-wider';
+        week.textContent = 'Week ' + (wt.week || '');
+        card.appendChild(week);
+        if (wt.theme) {
+          var th = document.createElement('p');
+          th.className = 'text-sm font-bold text-slate-900 mt-1';
+          th.textContent = wt.theme;
+          card.appendChild(th);
+        }
+        if (wt.focus) {
+          var fo = document.createElement('p');
+          fo.className = 'text-xs text-slate-500 mt-1';
+          fo.textContent = wt.focus;
+          card.appendChild(fo);
+        }
+        wtGrid.appendChild(card);
+      });
+      wrapper.appendChild(wtGrid);
+    }
+
+    // Content format mix
+    if (parsed.content_format_mix) {
+      var fmTitle = document.createElement('h4');
+      fmTitle.className = 'text-xs font-bold text-slate-500 uppercase tracking-wider mb-2';
+      fmTitle.textContent = 'Content Format Mix';
+      wrapper.appendChild(fmTitle);
+      var fm = document.createElement('div');
+      fm.className = 'flex flex-wrap gap-2 mb-4';
+      Object.keys(parsed.content_format_mix).forEach(function(fmt) {
+        var pct = parsed.content_format_mix[fmt];
+        fm.appendChild(renderChip(fmt + ' ' + pct, '#6366f115', '#6366f1'));
+      });
+      wrapper.appendChild(fm);
+    }
+
+    // Special dates
+    if (parsed.special_dates && parsed.special_dates.length) {
+      var sdTitle = document.createElement('h4');
+      sdTitle.className = 'text-xs font-bold text-slate-500 uppercase tracking-wider mb-2';
+      sdTitle.textContent = 'Special Dates / Festivals';
+      wrapper.appendChild(sdTitle);
+      parsed.special_dates.forEach(function(sd) {
+        var item = document.createElement('div');
+        item.className = 'text-xs text-slate-700 flex items-start gap-2 mb-1';
+        item.innerHTML = '<span class="text-amber-500">🎉</span> ' + esc(sd);
+        wrapper.appendChild(item);
+      });
+    }
+
+    // Daily breakdown
+    if (hasDailyBreakdown) {
+      var dbTitle = document.createElement('h4');
+      dbTitle.className = 'text-xs font-bold text-slate-500 uppercase tracking-wider mb-2';
+      dbTitle.textContent = 'Daily Breakdown';
+      wrapper.appendChild(dbTitle);
+      var table = document.createElement('div');
+      table.className = 'overflow-x-auto';
+      var tbl = document.createElement('table');
+      tbl.className = 'w-full text-xs';
+      var thead = document.createElement('thead');
+      thead.innerHTML = '<tr class="border-b border-slate-200"><th class="px-3 py-2 text-left font-semibold text-slate-500">Day</th><th class="px-3 py-2 text-left font-semibold text-slate-500">Platform</th><th class="px-3 py-2 text-left font-semibold text-slate-500">Type</th><th class="px-3 py-2 text-left font-semibold text-slate-500">Topic</th><th class="px-3 py-2 text-left font-semibold text-slate-500">Engagement</th></tr>';
+      tbl.appendChild(thead);
+      var tbody = document.createElement('tbody');
+      parsed.daily_breakdown.forEach(function(d) {
+        var tr = document.createElement('tr');
+        tr.className = 'border-b border-slate-100 hover:bg-slate-50/50';
+        tr.innerHTML = '<td class="px-3 py-2 text-slate-700">' + esc(d.day || '') + '</td><td class="px-3 py-2"><span class="font-semibold" style="color:' + (platformColors[d.platform] || '#6366f1') + '">' + esc(platformNames[d.platform] || d.platform) + '</span></td><td class="px-3 py-2 text-slate-600">' + esc(d.post_type || '') + '</td><td class="px-3 py-2 text-slate-700">' + esc(d.topic || '') + '</td><td class="px-3 py-2 text-slate-500">' + esc(d.engagement_tactic || '') + '</td>';
+        tbody.appendChild(tr);
+      });
+      tbl.appendChild(tbody);
+      table.appendChild(tbl);
+      wrapper.appendChild(table);
+    }
+
+    // Repurposing suggestions
+    if (parsed.repurposing_suggestions && parsed.repurposing_suggestions.length) {
+      var rsTitle = document.createElement('h4');
+      rsTitle.className = 'text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 mt-2';
+      rsTitle.textContent = 'Repurposing Suggestions';
+      wrapper.appendChild(rsTitle);
+      parsed.repurposing_suggestions.forEach(function(rs) {
+        var item = document.createElement('div');
+        item.className = 'text-xs text-slate-700 flex items-start gap-2 mb-1';
+        item.innerHTML = '<span class="text-primary mt-1">↻</span> ' + esc(rs);
+        wrapper.appendChild(item);
+      });
+    }
+
+    // Production deadlines
+    if (parsed.production_deadlines && parsed.production_deadlines.length) {
+      var pdTitle = document.createElement('h4');
+      pdTitle.className = 'text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 mt-2';
+      pdTitle.textContent = 'Production Deadlines';
+      wrapper.appendChild(pdTitle);
+      parsed.production_deadlines.forEach(function(pd) {
+        var item = document.createElement('div');
+        item.className = 'text-xs text-slate-700 flex items-start gap-2 mb-1';
+        item.innerHTML = '<span class="text-red-400 mt-1">📌</span> ' + esc(pd);
+        wrapper.appendChild(item);
+      });
+    }
+
+    return wrapper;
+  };
+
+  // -- Sections-based fallback (for doc-style categories) --
+  renderers._sections = function() {
+    var wrapper = document.createElement('div');
+    wrapper.className = 'space-y-4';
+
+    if (parsed.content) {
+      var p = document.createElement('p');
+      p.className = 'text-sm text-slate-700 leading-relaxed mb-4';
+      p.textContent = parsed.content;
+      wrapper.appendChild(p);
+    }
+
+    if (hasSections) {
+      wrapper.appendChild(renderSections(parsed.sections));
+    } else {
+      // Fallback: render raw content
+      return null;
+    }
+
+    return wrapper;
+  };
+
+  // ─── Determine which renderer to use ─────────────────
+  var renderer;
+  if (renderers[type]) {
+    renderer = renderers[type];
+  } else if (hasPlatforms) {
+    renderer = renderers.post_content;
+  } else if (hasTaglines) {
+    renderer = renderers.tagline;
+  } else if (hasHeadlines || hasBodyCopy) {
+    renderer = renderers.ad_copy;
+  } else if (hasAngles) {
+    renderer = renderers.creative_angles;
+  } else if (hasMasterPrompt) {
+    renderer = renderers.image_prompt;
+  } else if (hasLogoConcepts) {
+    renderer = renderers.logo_design;
+  } else if (hasWeeklyThemes || hasDailyBreakdown) {
+    renderer = renderers.content_calendar;
+  } else {
+    renderer = renderers._sections;
+  }
+
+  var content = renderer();
+  if (content) {
+    structEl.appendChild(content);
+    structEl.classList.remove('hidden');
+    rawEl.classList.add('hidden');
+  }
+})();
+</script>
+
+{% endblock %}

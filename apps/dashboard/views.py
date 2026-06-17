@@ -7,7 +7,8 @@ campaign statistics, and user profile/settings management.
 from datetime import datetime, timedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Avg, Count, Sum, Q
+from django.db.models import Avg, Count, Q, Sum
+from django.db.models.functions import TruncDate
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import NoReverseMatch, reverse
@@ -97,7 +98,7 @@ def dashboard_view(request):
     prev_week_start_dt, _ = _day_bounds_static(prev_week_start, now)
     _, prev_week_end_next_dt = _day_bounds_static(prev_week_end, now)
 
-    # ─── Email Campaign Core (existing logic, preserved) ─────────────
+    # ─── Email Campaign Core ───────────────────────────────────────────
     user_campaigns = Campaign.objects.filter(user=user)
     user_engagements = EmailEngagement.objects.filter(campaign__user=user)
     senders = Sender.objects.filter(user=user, is_active=True)
@@ -135,40 +136,91 @@ def dashboard_view(request):
             }
         )
 
-    weekly_campaigns = user_campaigns.filter(
-        updated_at__gte=week_start_dt, updated_at__lt=tomorrow_dt
+    # ─── BATCH: Weekly engagement aggregates (2 queries vs 6) ─────
+    weekly_eng_agg = user_engagements.filter(
+        sent_at__gte=week_start_dt, sent_at__lt=tomorrow_dt
+    ).aggregate(
+        sent=Count('id'),
+        opened=Count('id', filter=Q(opened_at__isnull=False)),
+        clicked=Count('id', filter=Q(clicked_at__isnull=False)),
     )
-    weekly_engagements = user_engagements.filter(
-        sent_at__gte=week_start_dt, sent_at__lt=tomorrow_dt,
-    )
-    weekly_sent = weekly_engagements.count()
-    weekly_bounced = weekly_campaigns.aggregate(Sum('bounce_count'))['bounce_count__sum'] or 0
-    weekly_opened = weekly_engagements.filter(opened_at__isnull=False).count()
-    weekly_clicked = weekly_engagements.filter(clicked_at__isnull=False).count()
-    weekly_open_rate = round((weekly_opened / weekly_sent * 100), 1) if weekly_sent > 0 else 0
-    weekly_spam_score = (
-        weekly_campaigns.filter(spam_score__isnull=False)
-        .aggregate(Avg('spam_score'))['spam_score__avg'] or 0
-    )
+    weekly_sent = weekly_eng_agg['sent'] or 0
+    weekly_opened = weekly_eng_agg['opened'] or 0
+    weekly_clicked = weekly_eng_agg['clicked'] or 0
 
-    prev_weekly_campaigns = user_campaigns.filter(
+    prev_weekly_eng_agg = user_engagements.filter(
+        sent_at__gte=prev_week_start_dt, sent_at__lt=prev_week_end_next_dt
+    ).aggregate(
+        sent=Count('id'),
+        opened=Count('id', filter=Q(opened_at__isnull=False)),
+        clicked=Count('id', filter=Q(clicked_at__isnull=False)),
+    )
+    prev_weekly_sent = prev_weekly_eng_agg['sent'] or 0
+    prev_weekly_opened = prev_weekly_eng_agg['opened'] or 0
+    prev_weekly_clicked = prev_weekly_eng_agg['clicked'] or 0
+
+    # ─── BATCH: Weekly campaign aggregates (2 queries vs 4) ─────
+    weekly_camp_agg = user_campaigns.filter(
+        updated_at__gte=week_start_dt, updated_at__lt=tomorrow_dt
+    ).aggregate(
+        bounce_sum=Sum('bounce_count'),
+        spam_avg=Avg('spam_score', filter=Q(spam_score__isnull=False)),
+    )
+    weekly_bounced = weekly_camp_agg['bounce_sum'] or 0
+    weekly_spam_score = weekly_camp_agg['spam_avg'] or 0
+
+    prev_weekly_camp_agg = user_campaigns.filter(
         updated_at__gte=prev_week_start_dt, updated_at__lt=prev_week_end_next_dt
+    ).aggregate(
+        spam_avg=Avg('spam_score', filter=Q(spam_score__isnull=False)),
+        active=Count('id', filter=Q(status__in=['sending', 'scheduled'])),
     )
-    prev_weekly_engagements = user_engagements.filter(
-        sent_at__gte=prev_week_start_dt, sent_at__lt=prev_week_end_next_dt,
+    prev_spam_score = prev_weekly_camp_agg['spam_avg'] or 0
+    prev_active_campaigns = prev_weekly_camp_agg['active'] or 0
+
+    # ─── All-time totals (2 queries vs 4) ─────
+    total_agg = user_engagements.aggregate(
+        total_sent=Count('id'),
+        total_opened=Count('id', filter=Q(opened_at__isnull=False)),
     )
-    prev_weekly_sent = prev_weekly_engagements.count()
-    prev_weekly_opened = prev_weekly_engagements.filter(opened_at__isnull=False).count()
-    prev_weekly_clicked = prev_weekly_engagements.filter(clicked_at__isnull=False).count()
-    prev_open_rate = round((prev_weekly_opened / prev_weekly_sent * 100), 1) if prev_weekly_sent > 0 else 0
-    prev_spam_score = (
-        prev_weekly_campaigns.filter(spam_score__isnull=False)
-        .aggregate(Avg('spam_score'))['spam_score__avg'] or 0
-    )
-    prev_active_campaigns = prev_weekly_campaigns.filter(
+    total_sent = total_agg['total_sent'] or 0
+    total_opened = total_agg['total_opened'] or 0
+
+    today_start_dt, today_end_dt = _day_bounds_static(today, now)
+    sent_today = user_engagements.filter(
+        sent_at__gte=today_start_dt, sent_at__lt=today_end_dt
+    ).count()
+
+    active_campaigns = user_campaigns.filter(
         status__in=['sending', 'scheduled']
     ).count()
 
+    # ─── BATCH: Daily date-bucketed counts (2 queries replaces 28 loop queries) ─────
+    fourteen_days_ago = today - timedelta(days=13)
+    fourteen_days_ago_dt, _ = _day_bounds_static(fourteen_days_ago, now)
+    sent_14d = dict(
+        user_engagements.filter(
+            sent_at__gte=fourteen_days_ago_dt, sent_at__lt=tomorrow_dt
+        )
+        .annotate(day=TruncDate('sent_at'))
+        .values('day')
+        .annotate(count=Count('id'))
+        .order_by('day')
+        .values_list('day', 'count')
+    )
+    opened_7d = dict(
+        user_engagements.filter(
+            opened_at__gte=week_start_dt, opened_at__lt=tomorrow_dt,
+            opened_at__isnull=False,
+        )
+        .annotate(day=TruncDate('opened_at'))
+        .values('day')
+        .annotate(count=Count('id'))
+        .order_by('day')
+        .values_list('day', 'count')
+    )
+
+    # ─── fmt_delta helper ─────
     def fmt_delta(current, previous, suffix=''):
         if previous == 0:
             if current == 0:
@@ -179,15 +231,8 @@ def dashboard_view(request):
         sign = '+' if delta >= 0 else ''
         return f'{sign}{delta}{suffix}', trend
 
-    total_sent = user_engagements.count()
-    total_opened = user_engagements.filter(opened_at__isnull=False).count()
-    today_start_dt, today_end_dt = _day_bounds_static(today, now)
-    sent_today = user_engagements.filter(
-        sent_at__gte=today_start_dt, sent_at__lt=today_end_dt
-    ).count()
-    active_campaigns = user_campaigns.filter(
-        status__in=['sending', 'scheduled']
-    ).count()
+    weekly_open_rate = round((weekly_opened / weekly_sent * 100), 1) if weekly_sent > 0 else 0
+    prev_open_rate = round((prev_weekly_opened / prev_weekly_sent * 100), 1) if prev_weekly_sent > 0 else 0
 
     sent_delta, sent_trend = fmt_delta(weekly_sent, prev_weekly_sent)
     open_delta, open_trend = fmt_delta(weekly_open_rate, prev_open_rate, '%')
@@ -236,38 +281,33 @@ def dashboard_view(request):
         },
     ]
 
-    # Build chart data — last 7 days buckets, timezone-safe
+    # Build chart data from pre-aggregated dicts (0 queries vs 14)
     chart_data = []
     max_sent = 1
     max_open = 1
     day_buckets = []
     for offset in range(6, -1, -1):
         day = today - timedelta(days=offset)
-        day_start_dt, day_end_dt = _day_bounds_static(day, now)
-        sent = user_engagements.filter(
-            sent_at__gte=day_start_dt, sent_at__lt=day_end_dt
-        ).count()
-        opens = user_engagements.filter(
-            opened_at__gte=day_start_dt, opened_at__lt=day_end_dt
-        ).count()
-        max_sent = max(max_sent, sent)
-        max_open = max(max_open, opens)
-        day_buckets.append((day, sent, opens))
-
-    for day, sent, opens in day_buckets:
+        s = sent_14d.get(day, 0)
+        o = opened_7d.get(day, 0)
+        max_sent = max(max_sent, s)
+        max_open = max(max_open, o)
+        day_buckets.append((day, s, o))
+    for day, s, o in day_buckets:
         chart_data.append(
             {
                 'day': day.strftime('%a'),
                 'date_label': day.strftime('%b %d'),
-                'sent': sent,
-                'opens': opens,
-                'sent_pct': round((sent / max_sent) * 100) if max_sent else 0,
-                'opens_pct': round((opens / max_open) * 100) if max_open else 0,
+                'sent': s,
+                'opens': o,
+                'sent_pct': round((s / max_sent) * 100) if max_sent else 0,
+                'opens_pct': round((o / max_open) * 100) if max_open else 0,
             }
         )
 
+    senders_count = senders.count()
     max_weekly_value = max(
-        weekly_sent, weekly_opened, weekly_bounced, senders.count(), weekly_clicked, 1
+        weekly_sent, weekly_opened, weekly_bounced, senders_count, weekly_clicked, 1
     )
     deliverability_rate = (
         round(((weekly_sent - weekly_bounced) / weekly_sent) * 100, 1)
@@ -291,8 +331,8 @@ def dashboard_view(request):
             'color': 'bg-rose-400',
         },
         {
-            'label': 'Senders', 'value': str(senders.count()),
-            'width': f"{int((senders.count() / max_weekly_value) * 100)}%",
+            'label': 'Senders', 'value': str(senders_count),
+            'width': f"{int((senders_count / max_weekly_value) * 100)}%",
             'color': 'bg-slate-400',
         },
     ]
@@ -603,52 +643,68 @@ def dashboard_view(request):
     activity.sort(key=lambda r: r['when'] or now, reverse=True)
     activity = activity[:8]
 
-    # Audience health + 7-day growth sparkline
+    # Audience health + 7-day growth sparkline (TruncDate, 1-2 queries vs 9)
     contacts_total = total_contacts
     contacts_new_this_week = 0
     contacts_unsubscribed = 0
     growth_buckets = [0] * 7
     if Contact:
         try:
-            contacts_new_this_week = Contact.objects.filter(
-                is_active=True, created_at__gte=week_start_dt
-            ).count()
             contacts_unsubscribed = Contact.objects.filter(
                 unsubscribed=True, unsubscribed_at__gte=week_start_dt
             ).count()
-            for offset in range(6, -1, -1):
-                day = today - timedelta(days=offset)
-                ds, de = _day_bounds_static(day, now)
-                growth_buckets[6 - offset] = Contact.objects.filter(
-                    is_active=True, created_at__gte=ds, created_at__lt=de
-                ).count()
+            contacts_growth = dict(
+                Contact.objects.filter(
+                    is_active=True, created_at__gte=week_start_dt, created_at__lt=tomorrow_dt
+                )
+                .annotate(day=TruncDate('created_at'))
+                .values('day')
+                .annotate(count=Count('id'))
+                .order_by('day')
+                .values_list('day', 'count')
+            )
+            contacts_new_this_week = sum(contacts_growth.values()) if contacts_growth else 0
+            growth_buckets = [contacts_growth.get(today - timedelta(days=offset), 0) for offset in range(6, -1, -1)]
         except Exception:
             pass
     growth_max = max(growth_buckets) or 1
     growth_pcts = [int((v / growth_max) * 100) for v in growth_buckets]
 
-    # Multi-channel chart data — last 14 days of three datasets
+    # Multi-channel chart — 14-day TruncDate aggregations (3 queries vs 42)
+    social_published_14d = {}
+    ai_created_14d = {}
+    if SocialPost:
+        social_published_14d = dict(
+            SocialPost.objects.filter(
+                user=user, status='published',
+                published_at__gte=fourteen_days_ago_dt, published_at__lt=tomorrow_dt,
+            )
+            .annotate(day=TruncDate('published_at'))
+            .values('day')
+            .annotate(count=Count('id'))
+            .order_by('day')
+            .values_list('day', 'count')
+        )
+    if ContentItem:
+        ai_created_14d = dict(
+            ContentItem.objects.filter(
+                user=user,
+                created_at__gte=fourteen_days_ago_dt, created_at__lt=tomorrow_dt,
+            )
+            .annotate(day=TruncDate('created_at'))
+            .values('day')
+            .annotate(count=Count('id'))
+            .order_by('day')
+            .values_list('day', 'count')
+        )
+
     multi_chart_buckets = {'email': [], 'social': [], 'ai': []}
     for offset in range(13, -1, -1):
         day = today - timedelta(days=offset)
-        ds, de = _day_bounds_static(day, now)
         label = day.strftime('%b %d')
-        e_sent = user_engagements.filter(sent_at__gte=ds, sent_at__lt=de).count()
-        s_published = (
-            SocialPost.objects.filter(
-                user=user, status='published', published_at__gte=ds, published_at__lt=de
-            ).count()
-            if SocialPost else 0
-        )
-        ai_made = (
-            ContentItem.objects.filter(
-                user=user, created_at__gte=ds, created_at__lt=de
-            ).count()
-            if ContentItem else 0
-        )
-        multi_chart_buckets['email'].append({'label': label, 'value': e_sent, 'day': day.strftime('%a')})
-        multi_chart_buckets['social'].append({'label': label, 'value': s_published, 'day': day.strftime('%a')})
-        multi_chart_buckets['ai'].append({'label': label, 'value': ai_made, 'day': day.strftime('%a')})
+        multi_chart_buckets['email'].append({'label': label, 'value': sent_14d.get(day, 0), 'day': day.strftime('%a')})
+        multi_chart_buckets['social'].append({'label': label, 'value': social_published_14d.get(day, 0), 'day': day.strftime('%a')})
+        multi_chart_buckets['ai'].append({'label': label, 'value': ai_created_14d.get(day, 0), 'day': day.strftime('%a')})
 
     for channel_data in multi_chart_buckets.values():
         m = max([c['value'] for c in channel_data] + [1])
@@ -1221,10 +1277,16 @@ def clear_notifications_view(request):
 
 @login_required
 def check_notifications_view(request):
-    unread = NotificationModel.objects.filter(user=request.user, is_read=False)
-    count = unread.count()
+    since_id = request.GET.get('since_id')
+    qs = NotificationModel.objects.filter(user=request.user, is_read=False)
+    if since_id:
+        try:
+            qs = qs.filter(id__gt=int(since_id))
+        except (ValueError, TypeError):
+            pass
+    count = NotificationModel.objects.filter(user=request.user, is_read=False).count()
     items = []
-    for n in unread.order_by('-created_at')[:5]:
+    for n in qs.order_by('-created_at')[:5]:
         items.append({
             'id': n.id,
             'title': n.title,
