@@ -392,7 +392,6 @@ ML_MODEL_PATH = Path(config('ML_MODEL_PATH', default=str(BASE_DIR / 'models_ml' 
 ML_VECTORIZER_PATH = Path(config('ML_VECTORIZER_PATH', default=str(BASE_DIR / 'models_ml' / 'tfidf_vectorizer.pkl')))
 
 # Email/intelligence LLM provider.
-# Set LLM_BASE_URL/LLM_MODEL to Gemini values in local env while the app uses Gemini.
 LLM_API_KEY = config('LLM_API_KEY', default=config('GEMINI_API_KEY', default=''))
 LLM_BASE_URL = config('LLM_BASE_URL', default='https://api.openai.com/v1')
 LLM_MODEL = config('LLM_MODEL', default='gpt-4o')
@@ -457,11 +456,6 @@ STORAGES = {
 }
 
 # --- Storage backends ---
-# Google Drive OAuth client credentials are now configured per-workspace by the
-# workspace owner/admin from the storage settings UI (encrypted at rest). Only
-# the redirect URI and OAuth scopes are kept as application-level settings.
-GOOGLE_DRIVE_REDIRECT_URI = config('GOOGLE_DRIVE_REDIRECT_URI', default=f"{PUBLIC_BASE_URL}/workspaces/storage/google-drive/callback/")
-GOOGLE_DRIVE_OAUTH_SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
 # --- Google Sheets (workspace-level OAuth, same pattern as Drive) ---
 # Credentials are per-workspace (encrypted in WorkspaceStorageConfig).

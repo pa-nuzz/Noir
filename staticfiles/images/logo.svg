@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 400" width="1400" height="400">
+  <defs>
+    <!-- Primary gradient: Purple to Deep Purple -->
+    <linearGradient id="primaryGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6D28D9"/>
+      <stop offset="100%" stop-color="#5B21B6"/>
+    </linearGradient>
+
+    <!-- Cyan accent gradient -->
+    <linearGradient id="cyanGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="100%" stop-color="#0891B2"/>
+    </linearGradient>
+
+    <!-- IDA text gradient: Purple to Cyan -->
+    <linearGradient id="idaGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6D28D9"/>
+      <stop offset="50%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+
+    <!-- Subtle glow filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Arc path for curved text -->
+    <path id="rightArc" d="M 520 216 A 1000 1000 0 0 1 1360 216" fill="none"/>
+  </defs>
+
+  <!-- Background (transparent) -->
+
+  <!-- === FLAME DOT OF "I" === -->
+  <g>
+    <!-- Cyan light rays emanating from the flame -->
+    <g stroke="#06B6D4" stroke-width="2.5" stroke-linecap="round" opacity="0.8">
+      <line x1="51" y1="87" x2="51" y2="72"/>
+      <line x1="36" y1="93" x2="26" y2="83"/>
+      <line x1="66" y1="93" x2="76" y2="83"/>
+      <line x1="32" y1="103" x2="20" y2="108"/>
+      <line x1="70" y1="103" x2="82" y2="108"/>
+      <line x1="25" y1="83" x2="15" y2="78"/>
+      <line x1="77" y1="83" x2="87" y2="78"/>
+    </g>
+
+    <!-- Flame shape (the dot of "I") — Purple to Cyan gradient -->
+    <g transform="translate(45, 82) scale(1.35)">
+      <path d="M 4.5,24 Q -5,17 -2,9 Q 0,1 4.5,-6 Q 9,1 11,9 Q 14,17 4.5,24 Z"
+            fill="url(#cyanGradient)" stroke="#0891B2" stroke-width="1.5"/>
+      <path d="M 4.5,17 Q 0,12 2,7 Q 3,2 4.5,-2 Q 6,2 7,7 Q 9,12 4.5,17 Z"
+            fill="#ECFEFF" opacity="0.8"/>
+      <circle cx="3" cy="7" r="1.5" fill="#FFFFFF" opacity="0.9"/>
+      <circle cx="7" cy="4" r="1" fill="#FFFFFF" opacity="0.8"/>
+      <circle cx="4.5" cy="1" r="1.5" fill="#FFFFFF" opacity="0.7"/>
+    </g>
+  </g>
+
+  <!-- Separator line -->
+  <line x1="465" y1="157" x2="465" y2="257" stroke="#6D28D9" stroke-width="1.5" opacity="0.25"/>
+
+  <!-- Main text: IDA — Purple to Cyan gradient -->
+  <text x="225" y="307"
+        text-anchor="middle"
+        font-family="'Helvetica Neue', 'Arial Black', 'Arial', sans-serif"
+        font-size="230"
+        font-weight="900"
+        fill="url(#idaGradient)"
+        letter-spacing="-6"
+        filter="url(#glow)">IDA</text>
+
+  <!-- Arc text: INTELLIGENCE -->
+  <text font-family="'Helvetica Neue', 'Arial', sans-serif"
+        font-size="44"
+        font-weight="600"
+        fill="#6D28D9"
+        letter-spacing="12">
+    <textPath href="#rightArc" startOffset="50%" text-anchor="middle">INTELLIGENCE</textPath>
+  </text>
+
+  <!-- Bottom text: DIGITAL AUTOMATION -->
+  <text x="940" y="307"
+        text-anchor="middle"
+        font-family="'Helvetica Neue', 'Arial', sans-serif"
+        font-size="48"
+        font-weight="600"
+        fill="#0A2540"
+        letter-spacing="15">DIGITAL AUTOMATION</text>
+
+  <!-- Subtle cyan accent line under "DIGITAL AUTOMATION" -->
+  <line x1="680" y1="325" x2="1200" y2="325"
+        stroke="url(#cyanGradient)" stroke-width="2" opacity="0.4"/>
+</svg>
