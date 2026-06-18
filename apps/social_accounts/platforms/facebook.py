@@ -45,6 +45,13 @@ class FacebookPlatform(BaseSocialPlatform):
 
     def _publish_facebook(self, content, media_urls=None, link_url=None, scheduled_at=None):
         import json
+        
+        # If both media and a link are provided, Facebook doesn't allow both.
+        # We append the link to the message and remove it from the dedicated link parameter.
+        if link_url and media_urls:
+            content = f"{content}\n\n{link_url}" if content else link_url
+            link_url = None
+
         data = {
             'access_token': self.access_token,
             'message': content,
