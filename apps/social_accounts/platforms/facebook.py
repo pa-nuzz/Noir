@@ -44,6 +44,7 @@ class FacebookPlatform(BaseSocialPlatform):
         return self._publish_facebook(content, media_urls, link_url, scheduled_at)
 
     def _publish_facebook(self, content, media_urls=None, link_url=None, scheduled_at=None):
+        import json
         data = {
             'access_token': self.access_token,
             'message': content,
@@ -51,16 +52,17 @@ class FacebookPlatform(BaseSocialPlatform):
         if link_url:
             data['link'] = link_url
 
+        page_id = self.account.account_id if self.account else 'me'
+
         if media_urls:
-            resp = self._upload_media(media_urls[0])
+            resp = self._upload_media(media_urls[0], page_id)
             if resp:
-                data['attached_media'] = [{'media_fbid': resp['id']}]
+                data['attached_media'] = json.dumps([{'media_fbid': resp['id']}])
 
         if scheduled_at:
             data['published'] = False
             data['scheduled_publish_time'] = int(scheduled_at.timestamp())
 
-        page_id = self.account.account_id if self.account else 'me'
         resp = requests.post(f"{GRAPH_API}/{page_id}/feed", data=data)
         if resp.status_code == 200:
             return {'post_id': resp.json().get('id'), 'url': f"https://facebook.com/{resp.json().get('id')}"}
@@ -91,14 +93,36 @@ class FacebookPlatform(BaseSocialPlatform):
         logger.error(f"Instagram publish failed: {publish.text}")
         return None
 
-    def _upload_media(self, media_url):
-        resp = requests.post(f"{GRAPH_API}/me/photos", data={
+    def _upload_media(self, media_url, page_id='me'):
+        from django.conf import settings
+        import os
+        
+        data = {
             'access_token': self.access_token,
-            'url': media_url,
             'published': False,
-        })
+        }
+        files = None
+
+        if media_url.startswith('/'):
+            file_path = os.path.join(settings.BASE_DIR, media_url.lstrip('/'))
+            try:
+                # requests handles closing the file when passed this way
+                files = {'source': open(file_path, 'rb')}
+            except Exception as e:
+                logger.error(f"Failed to open media file {file_path}: {e}")
+                return None
+        else:
+            data['url'] = media_url
+
+        resp = requests.post(f"{GRAPH_API}/{page_id}/photos", data=data, files=files)
+        
+        # If files were opened, close them
+        if files and 'source' in files and hasattr(files['source'], 'close'):
+            files['source'].close()
+
         if resp.status_code == 200:
             return resp.json()
+        logger.error(f"Facebook media upload failed: {resp.text}")
         return None
 
     def schedule_post(self, content, scheduled_at, media_urls=None, link_url=None):
