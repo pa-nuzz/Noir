@@ -56,7 +56,7 @@ class OAuth2Flow:
             'linkedin': {
                 'authorize_url': 'https://www.linkedin.com/oauth/v2/authorization',
                 'token_url': 'https://www.linkedin.com/oauth/v2/accessToken',
-                'scopes': ['openid', 'profile', 'email', 'w_member_social', 'offline_access'],
+                'scopes': ['openid', 'profile', 'email', 'w_member_social'],
                 'extra_authorize_params': {},
                 'revoke_url': 'https://www.linkedin.com/oauth/v2/revoke',
             },

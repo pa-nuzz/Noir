@@ -20,7 +20,7 @@ LINKEDIN_VERSION = getattr(settings, 'LINKEDIN_VERSION', '202605')
 
 class LinkedInPlatform(BaseSocialPlatform):
     def validate_token(self):
-        resp = self._request(\'GET\', f"{LINKEDIN_API}/userinfo", headers=self._headers())
+        resp = self._request('GET', f"{LINKEDIN_API}/userinfo", headers=self._headers())
         return resp.status_code == 200
 
     def _headers(self):
@@ -47,7 +47,7 @@ class LinkedInPlatform(BaseSocialPlatform):
         return resp
 
     def get_profile(self):
-        resp = self._request(\'GET\', f"{LINKEDIN_API}/userinfo", headers=self._headers())
+        resp = self._request('GET', f"{LINKEDIN_API}/userinfo", headers=self._headers())
         if resp.status_code == 200:
             data = resp.json()
             return {
@@ -61,7 +61,7 @@ class LinkedInPlatform(BaseSocialPlatform):
     def _get_author_urn(self):
         if self.account:
             return f"urn:li:person:{self.account.account_id}"
-        resp = self._request(\'GET\', f"{LINKEDIN_API}/userinfo", headers=self._headers())
+        resp = self._request('GET', f"{LINKEDIN_API}/userinfo", headers=self._headers())
         if resp.status_code == 200:
             return f"urn:li:person:{resp.json().get('sub', 'me')}"
         return 'urn:li:person:me'
@@ -106,7 +106,7 @@ class LinkedInPlatform(BaseSocialPlatform):
                 },
             }
 
-        resp = self._request(\'POST\', f"{LINKEDIN_REST_API}/posts", headers=self._json_headers(), json=payload)
+        resp = self._request('POST', f"{LINKEDIN_REST_API}/posts", headers=self._json_headers(), json=payload)
         if resp.status_code == 201:
             post_id = resp.headers.get('x-restli-id', '')
             if not post_id:
@@ -204,7 +204,7 @@ class LinkedInPlatform(BaseSocialPlatform):
         if not content_type.startswith('image/'):
             raise RuntimeError('LinkedIn image posts require an image attachment. Video support is not enabled yet.')
 
-        resp = self._request(\'POST\', f"{LINKEDIN_REST_API}/images?action=initializeUpload", headers=self._json_headers(), json={
+        resp = self._request('POST', f"{LINKEDIN_REST_API}/images?action=initializeUpload", headers=self._json_headers(), json={
             'initializeUploadRequest': {
                 'owner': author,
             }
@@ -223,7 +223,7 @@ class LinkedInPlatform(BaseSocialPlatform):
 
         upload_headers = self._headers()
         upload_headers['Content-Type'] = content_type
-        upload_resp = self._request(\'PUT\', upload_url, data=media_content, headers=upload_headers, timeout=60)
+        upload_resp = self._request('PUT', upload_url, data=media_content, headers=upload_headers, timeout=60)
         if upload_resp.status_code not in (200, 201, 202):
             logger.error("LinkedIn media upload failed: %s", upload_resp.text)
             raise RuntimeError(f"LinkedIn media upload failed with HTTP {upload_resp.status_code}.")
@@ -234,13 +234,13 @@ class LinkedInPlatform(BaseSocialPlatform):
         return self.publish_post(content, media_urls, link_url)
 
     def delete_post(self, post_id):
-        resp = self._request(\'DELETE\', f"{LINKEDIN_API}/ugcPosts/{post_id}", headers=self._headers())
+        resp = self._request('DELETE', f"{LINKEDIN_API}/ugcPosts/{post_id}", headers=self._headers())
         return resp.status_code == 200
 
     def get_post_analytics(self, post_id):
         urn = f"urn:li:share:{post_id.split(':')[-1] if ':' in post_id else post_id}"
         resp = self._request(
-            \'GET\', f"{LINKEDIN_API}/organizationalEntityShareStatistics?q=owners&owners={urn}",
+            'GET', f"{LINKEDIN_API}/organizationalEntityShareStatistics?q=owners&owners={urn}",
             headers=self._headers(),
         )
         if resp.status_code == 200:
@@ -269,7 +269,7 @@ class LinkedInPlatform(BaseSocialPlatform):
             params['timeIntervals.timeRange.end'] = int(until.timestamp() * 1000) if hasattr(until, 'timestamp') else until
 
         resp = self._request(
-            \'GET\', f"{LINKEDIN_API}/organizationalEntityShareStatistics",
+            'GET', f"{LINKEDIN_API}/organizationalEntityShareStatistics",
             headers=self._headers(), params=params,
         )
         if resp.status_code == 200:
