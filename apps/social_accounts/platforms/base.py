@@ -1,5 +1,7 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
+
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -8,6 +10,18 @@ class BaseSocialPlatform:
     def __init__(self, account=None):
         self.account = account
         self.access_token = account.access_token if account else None
+        self.try_refresh_token()
+
+    def try_refresh_token(self):
+        if not self.account or not self.account.token_expires_at:
+            return
+        if timezone.now() >= self.account.token_expires_at - timedelta(minutes=5):
+            try:
+                new_token = self.refresh_token()
+                if new_token:
+                    self.access_token = new_token
+            except NotImplementedError:
+                pass
 
     def validate_token(self):
         raise NotImplementedError

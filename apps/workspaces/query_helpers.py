@@ -37,4 +37,6 @@ def filter_by_context(request, queryset, user_field='user', workspace_field='wor
             return queryset.filter(**{workspace_field: active_ws_id})
         return queryset.filter(**{user_field: user})
 
+    if hasattr(queryset.model, workspace_field):
+        return queryset.filter(**{user_field: user}, **{workspace_field + '__isnull': True})
     return queryset.filter(**{user_field: user})

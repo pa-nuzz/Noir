@@ -1,9 +1,11 @@
 import json
 import logging
+from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from django.contrib import messages
 
@@ -239,6 +241,10 @@ def oauth_callback(request, platform):
         return redirect('social_accounts:social_hub')
 
     access_token = token_data.get('access_token')
+    refresh_token = token_data.get('refresh_token', '')
+    expires_in = token_data.get('expires_in')
+    token_expires_at = timezone.now() + timedelta(seconds=expires_in) if expires_in else None
+
     platform_instance = get_platform(platform)
     platform_instance.access_token = access_token
     profile = platform_instance.get_profile()
@@ -271,11 +277,11 @@ def oauth_callback(request, platform):
                 avatar_url=page.get('picture', {}).get('data', {}).get('url', ''),
                 profile_url=page.get('link', ''),
             )
-            service.connect_account(platform, page['access_token'], profile, workspace=active_workspace)
+            service.connect_account(platform, page['access_token'], profile, refresh_token=refresh_token, token_expires_at=token_expires_at, workspace=active_workspace)
             messages.success(request, f'Facebook Page "{page["name"]}" connected.')
             return redirect('social_accounts:social_hub')
 
-    service.connect_account(platform, access_token, profile, workspace=active_workspace)
+    service.connect_account(platform, access_token, profile, refresh_token=refresh_token, token_expires_at=token_expires_at, workspace=active_workspace)
     messages.success(request, f'{platform.title()} account connected.')
     return redirect('social_accounts:social_hub')
 

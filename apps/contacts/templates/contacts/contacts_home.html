@@ -8,9 +8,22 @@
 
 {% block content %}
 <style>
-  .sch-tab { color: #94a3b8; }
-  .sch-tab:hover { color: #64748b; }
-  .sch-tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+  .sch-tabs {
+    display: flex; align-items: center; gap: 0;
+    border-bottom: 1px solid #E2E8F0; margin-top: 4px;
+  }
+  .sch-tab {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 20px; height: 44px;
+    font-size: 0.875rem; font-weight: 600;
+    color: #64748B; background: transparent;
+    border: none; border-bottom: 2px solid transparent;
+    cursor: pointer; transition: all 0.15s ease;
+    text-decoration: none; white-space: nowrap;
+  }
+  .sch-tab:hover { color: #0A2540; background: #F8FAFC; }
+  .sch-tab.active { color: #0A2540; border-bottom-color: var(--primary); font-weight: 700; }
+  .sch-tab svg { width: 18px; height: 18px; }
   .sch-tab-panel { display: none; }
   .sch-tab-panel.active { display: block; }
   .contacts-actions-cell { min-width: 80px; white-space: nowrap; }
@@ -25,13 +38,13 @@
       <h1 class="text-2xl lg:text-[1.7rem] font-extrabold tracking-tight text-slate-900">Contacts</h1>
       <p class="text-sm text-slate-500 mt-1.5">Manage your contacts, lists, and tags</p>
     </div>
-    <div class="flex flex-wrap gap-2">
-      {% include "components/button.html" with label="New List" icon="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" onclick="switchTab('overview'); setTimeout(openNewListModal, 150);" size="sm" class="gap-1.5" %}
-      <button type="button" class="btn-action btn-action-secondary" onclick="switchTab('import')">
+    <div class="grid grid-cols-2 gap-2 lg:flex lg:flex-wrap lg:gap-2">
+      {% include "components/button.html" with label="New List" icon="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" onclick="switchTab('overview'); setTimeout(openNewListModal, 150);" class="w-full lg:w-auto col-span-2 lg:col-span-1" %}
+      <button type="button" class="btn-action btn-action-secondary w-full lg:w-auto" onclick="switchTab('import')">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
         <span>Import CSV</span>
       </button>
-      <button type="button" class="btn-action btn-action-secondary" onclick="openAddContactModal()">
+      <button type="button" class="btn-action btn-action-secondary w-full lg:w-auto" onclick="openAddContactModal()">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
         <span>Add Contact</span>
       </button>
@@ -39,7 +52,7 @@
   </div>
 
   <!-- Stats Cards -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 stagger-children">
+  <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-5 stagger-children">
     <div class="premium-surface card-elevate rounded-xl p-5 flex items-center gap-4">
       <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
         <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -114,12 +127,19 @@
   {% endif %}
 
   <!-- Tab Navigation -->
-  <div class="flex flex-wrap items-center gap-4 border-b border-gray-200">
-    <div class="flex gap-6">
-      <button type="button" class="pb-3 text-sm font-medium border-b-2 border-transparent transition-colors sch-tab active" onclick="switchTab('overview')" id="tab-overview">Overview</button>
-      <button type="button" class="pb-3 text-sm font-medium border-b-2 border-transparent transition-colors sch-tab" onclick="switchTab('import')" id="tab-import">Import</button>
-      <button type="button" class="pb-3 text-sm font-medium border-b-2 border-transparent transition-colors sch-tab" onclick="switchTab('tags')" id="tab-tags">Tags</button>
-    </div>
+  <div class="sch-tabs" role="tablist">
+    <button class="sch-tab active" role="tab" aria-selected="true" onclick="switchTab('overview')" id="tab-overview">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5z"/><path d="M4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6z"/><path d="M16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
+      Overview
+    </button>
+    <button class="sch-tab" role="tab" aria-selected="false" onclick="switchTab('import')" id="tab-import">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+      Import CSV
+    </button>
+    <button class="sch-tab" role="tab" aria-selected="false" onclick="switchTab('tags')" id="tab-tags">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 7h.01M7 3h5.586a1 1 0 01.707.293l7.414 7.414a2 2 0 010 2.828l-7.172 7.172a2 2 0 01-2.828 0L3.293 13.293A1 1 0 013 12.586V7a4 4 0 014-4z"/></svg>
+      Tags
+    </button>
   </div>
 
   <!-- Panel: Overview -->
@@ -127,21 +147,32 @@
 
     <!-- Your Lists -->
     <div class="premium-surface card-elevate section-card">
-      <div class="flex items-center justify-between mb-3">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
         <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-2">
           <svg class="w-4 h-4" style="color: var(--primary);" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
           Your Lists
           <span class="text-xs text-gray-300 ml-1">(Click to filter)</span>
         </h3>
-        <button type="button" class="btn-action btn-action-primary btn-sm" onclick="openNewListModal()">
+        <button type="button" class="btn-action btn-action-primary btn-sm w-full sm:w-auto" onclick="openNewListModal()">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
           <span>Create List</span>
         </button>
       </div>
       {% if contact_lists %}
+      <div class="flex items-center gap-3 mb-3 px-1">
+        <label class="flex items-center gap-2 text-sm text-slate-500 cursor-pointer">
+          <input type="checkbox" id="select-all-lists" class="accent-indigo-600" />
+          <span>Select all</span>
+        </label>
+        <span class="text-xs text-gray-400" id="selected-lists-count"></span>
+        <button type="button" class="btn-action btn-action-danger btn-sm ml-auto hidden" id="bulk-delete-lists-btn" onclick="confirmBulkDeleteLists()">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          <span>Delete selected</span>
+        </button>
+      </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {% for cl in contact_lists %}
-        <a href="{% url 'contacts:list' %}?list_id={{ cl.id }}{% if selected_tag %}&tag_id={{ selected_tag.id }}{% endif %}{% if search %}&q={{ search }}{% endif %}"
+        <div
           class="group relative flex items-start justify-between gap-2 p-3 rounded-xl border-2 transition-all {% if selected_list and selected_list.id == cl.id %}border-primary bg-indigo-50/50 ring-2 ring-primary/20{% else %}border-gray-100 bg-gray-50/60 hover:border-indigo-200 hover:bg-indigo-50/30{% endif %}">
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2 mb-1">
@@ -158,15 +189,16 @@
             <p class="text-xs text-gray-400 truncate mt-0.5">{{ cl.description }}</p>
             {% endif %}
           </div>
-          <form method="post" action="{% url 'contacts:delete_list' cl.id %}" class="opacity-0 group-hover:opacity-100 transition-opacity"
-            onsubmit="return confirm('Delete list \'{{ cl.name }}\' and all its contacts? This cannot be undone.')">
-            {% csrf_token %}
-            <button type="submit"
-              class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all flex-shrink-0">
+          <div class="flex items-center gap-1">
+            <input type="checkbox" class="list-selector accent-indigo-600" value="{{ cl.id }}" aria-label="Select {{ cl.name }}" onclick="setTimeout(function(){refreshSelectedLists();}, 0)" />
+            <button type="button"
+              class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              onclick="event.stopPropagation(); confirmDeleteList('{{ cl.name|escapejs }}', this)"
+              data-delete-url="{% url 'contacts:delete_list' cl.id %}">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
             </button>
-          </form>
-        </a>
+          </div>
+        </div>
         {% endfor %}
       </div>
       {% else %}
@@ -199,10 +231,9 @@
       <div class="px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div class="flex items-center gap-2">
           <p class="text-base font-semibold" style="color: var(--navy);">All Contacts</p>
-          <span class="bg-gray-100 text-gray-500 text-xs font-medium px-2 py-0.5 rounded-full">{{ all_contacts.count }}</span>
         </div>
-        <div class="flex items-center gap-3">
-          <form method="get" class="w-full sm:w-64">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          <form method="get" class="sm:w-64">
             {% if selected_list %}<input type="hidden" name="list_id" value="{{ selected_list.id }}">{% endif %}
             {% if selected_tag %}<input type="hidden" name="tag_id" value="{{ selected_tag.id }}">{% endif %}
             <div class="relative">
@@ -216,7 +247,7 @@
               {% endif %}
             </div>
           </form>
-          <a href="{% url 'contacts:export_csv' %}{% if selected_list %}?list_id={{ selected_list.id }}{% endif %}" class="btn-action btn-action-secondary btn-sm flex-shrink-0">
+          <a href="{% url 'contacts:export_csv' %}{% if selected_list %}?list_id={{ selected_list.id }}{% endif %}" class="btn-action btn-action-secondary btn-sm flex-shrink-0 w-full sm:w-auto">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
             <span>Export CSV</span>
           </a>
@@ -257,54 +288,11 @@
         <p class="text-[11px] text-slate-400">Use this to add contacts into tags, transfer them to another tag set, or remove tags from existing contacts.</p>
       </form>
 
-      <!-- Confirmation Overlay -->
-      <div id="confirm-overlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm" onclick="closeConfirmOverlay()">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 mx-4" onclick="event.stopPropagation()">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-              <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-            </div>
-            <div>
-              <h3 class="text-base font-bold text-slate-900" id="confirm-title">Confirm Action</h3>
-              <p class="text-sm text-slate-500" id="confirm-message">Are you sure?</p>
-            </div>
-          </div>
-          <div class="flex gap-3">
-            <button type="button" class="btn-action btn-action-secondary flex-1" onclick="closeConfirmOverlay()">Cancel</button>
-            <button type="button" class="btn-action btn-action-danger flex-1" id="confirm-proceed-btn" onclick="proceedConfirm()">Proceed</button>
-          </div>
-        </div>
-      </div>
-
       <div class="overflow-x-auto">
-        <div class="px-6 py-3 border-b border-gray-100 bg-gray-50/30 flex items-center justify-between">
+        <div class="px-6 py-3 border-b border-gray-100 bg-gray-50/30">
           <p class="text-xs text-slate-500">
-            Showing <span class="font-semibold text-slate-700">{{ all_contacts|length }}</span> of <span class="font-semibold text-slate-700">{{ total }}</span> contacts
-            {% if page_obj %}
-              <span class="text-slate-400">• Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-            {% endif %}
+            Showing <span class="font-semibold text-slate-700" id="showing-count">{{ all_contacts|length }}</span> of <span class="font-semibold text-slate-700">{{ total }}</span> contacts
           </p>
-          {% if page_obj and page_obj.paginator.num_pages > 1 %}
-          <div class="flex items-center gap-1">
-            {% if page_obj.has_previous %}
-              <a href="?{% if selected_list %}list_id={{ selected_list.id }}&{% endif %}{% if selected_tag %}tag_id={{ selected_tag.id }}&{% endif %}{% if search %}q={{ search }}&{% endif %}page={{ page_obj.previous_page_number }}" class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-slate-600 hover:bg-gray-50 text-xs font-semibold transition-colors">← Prev</a>
-            {% else %}
-              <span class="px-3 py-1.5 rounded-lg border border-gray-100 bg-gray-50 text-gray-300 text-xs font-semibold cursor-not-allowed">← Prev</span>
-            {% endif %}
-            {% for page_num in page_obj.paginator.page_range %}
-              {% if page_num == page_obj.number %}
-                <span class="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold">{{ page_num }}</span>
-              {% elif page_num >= page_obj.number|add:-2 and page_num <= page_obj.number|add:2 %}
-                <a href="?{% if selected_list %}list_id={{ selected_list.id }}&{% endif %}{% if selected_tag %}tag_id={{ selected_tag.id }}&{% endif %}{% if search %}q={{ search }}&{% endif %}page={{ page_num }}" class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-slate-600 hover:bg-gray-50 text-xs font-semibold transition-colors">{{ page_num }}</a>
-              {% endif %}
-            {% endfor %}
-            {% if page_obj.has_next %}
-              <a href="?{% if selected_list %}list_id={{ selected_list.id }}&{% endif %}{% if selected_tag %}tag_id={{ selected_tag.id }}&{% endif %}{% if search %}q={{ search }}&{% endif %}page={{ page_obj.next_page_number }}" class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-slate-600 hover:bg-gray-50 text-xs font-semibold transition-colors">Next →</a>
-            {% else %}
-              <span class="px-3 py-1.5 rounded-lg border border-gray-100 bg-gray-50 text-gray-300 text-xs font-semibold cursor-not-allowed">Next →</span>
-            {% endif %}
-          </div>
-          {% endif %}
         </div>
 
         <table class="w-full">
@@ -322,9 +310,9 @@
               <th class="px-6 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest contacts-actions-cell">Actions</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-50">
+          <tbody class="divide-y divide-gray-50" id="contacts-tbody">
             {% for contact in all_contacts %}
-            <tr class="hover:bg-gray-50/50 transition-colors cursor-pointer" onclick="window.location='{% url 'contacts:contact_detail' contact.id %}'">
+            <tr class="hover:bg-gray-50/50 transition-colors cursor-pointer" data-list-id="{{ contact.contact_list_id }}" onclick="window.location='{% url 'contacts:contact_detail' contact.id %}'">
               <td class="px-6 py-3.5" onclick="event.stopPropagation()">
                 <input type="checkbox" class="contact-selector accent-indigo-600" value="{{ contact.id }}" aria-label="Select {{ contact.email }}" />
               </td>
@@ -401,17 +389,25 @@
         </table>
 
         {% if page_obj and page_obj.paginator.num_pages > 1 %}
-        <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between">
+        <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <p class="text-xs text-slate-500">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</p>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-1">
             {% if page_obj.has_previous %}
-              <a href="?{% if selected_list %}list_id={{ selected_list.id }}&{% endif %}{% if selected_tag %}tag_id={{ selected_tag.id }}&{% endif %}{% if search %}q={{ search }}&{% endif %}page=1" class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-slate-600 hover:bg-gray-50 text-xs font-semibold transition-colors">First</a>
-              <a href="?{% if selected_list %}list_id={{ selected_list.id }}&{% endif %}{% if selected_tag %}tag_id={{ selected_tag.id }}&{% endif %}{% if search %}q={{ search }}&{% endif %}page={{ page_obj.previous_page_number }}" class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-slate-600 hover:bg-gray-50 text-xs font-semibold transition-colors">← Previous</a>
+              <a href="?{% if selected_list %}list_id={{ selected_list.id }}&{% endif %}{% if selected_tag %}tag_id={{ selected_tag.id }}&{% endif %}{% if search %}q={{ search }}&{% endif %}page={{ page_obj.previous_page_number }}" class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-slate-600 hover:bg-gray-50 text-xs font-semibold transition-colors">← Prev</a>
+            {% else %}
+              <span class="px-3 py-1.5 rounded-lg border border-gray-100 bg-gray-50 text-gray-300 text-xs font-semibold cursor-not-allowed">← Prev</span>
             {% endif %}
-            <span class="px-3 py-1.5 text-xs text-slate-500">{{ page_obj.start_index }} - {{ page_obj.end_index }} of {{ page_obj.paginator.count }}</span>
+            {% for page_num in page_obj.paginator.page_range %}
+              {% if page_num == page_obj.number %}
+                <span class="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold">{{ page_num }}</span>
+              {% elif page_num >= page_obj.number|add:-2 and page_num <= page_obj.number|add:2 %}
+                <a href="?{% if selected_list %}list_id={{ selected_list.id }}&{% endif %}{% if selected_tag %}tag_id={{ selected_tag.id }}&{% endif %}{% if search %}q={{ search }}&{% endif %}page={{ page_num }}" class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-slate-600 hover:bg-gray-50 text-xs font-semibold transition-colors">{{ page_num }}</a>
+              {% endif %}
+            {% endfor %}
             {% if page_obj.has_next %}
               <a href="?{% if selected_list %}list_id={{ selected_list.id }}&{% endif %}{% if selected_tag %}tag_id={{ selected_tag.id }}&{% endif %}{% if search %}q={{ search }}&{% endif %}page={{ page_obj.next_page_number }}" class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-slate-600 hover:bg-gray-50 text-xs font-semibold transition-colors">Next →</a>
-              <a href="?{% if selected_list %}list_id={{ selected_list.id }}&{% endif %}{% if selected_tag %}tag_id={{ selected_tag.id }}&{% endif %}{% if search %}q={{ search }}&{% endif %}page={{ page_obj.paginator.num_pages }}" class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-slate-600 hover:bg-gray-50 text-xs font-semibold transition-colors">Last</a>
+            {% else %}
+              <span class="px-3 py-1.5 rounded-lg border border-gray-100 bg-gray-50 text-gray-300 text-xs font-semibold cursor-not-allowed">Next →</span>
             {% endif %}
           </div>
         </div>
@@ -743,6 +739,25 @@
   </div>
 </div>
 
+<!-- Confirmation Overlay -->
+<div id="confirm-overlay" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm" onclick="closeConfirmOverlay()">
+  <div class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6" onclick="event.stopPropagation()">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+        <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      </div>
+      <div>
+        <h3 class="text-base font-bold text-slate-900" id="confirm-title">Confirm Action</h3>
+        <p class="text-sm text-slate-500" id="confirm-message">Are you sure?</p>
+      </div>
+    </div>
+    <div class="flex gap-3">
+      <button type="button" class="btn-action btn-action-secondary flex-1" onclick="closeConfirmOverlay()">Cancel</button>
+      <button type="button" class="btn-action btn-action-danger flex-1" id="confirm-proceed-btn" onclick="proceedConfirm()">Proceed</button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_scripts %}
@@ -771,6 +786,7 @@ document.addEventListener('keydown', function (event) {
     if (event.key === 'Escape') {
       closeAddContactModal();
       closeNewListModal();
+      closeConfirmOverlay();
     }
   });
 
@@ -974,10 +990,95 @@ document.addEventListener('keydown', function (event) {
     });
   }
 
+  // List delete confirmation
+  function confirmDeleteList(listName, btn) {
+    var deleteUrl = btn.getAttribute('data-delete-url');
+    showConfirm('Delete List', 'Delete list "' + listName + '" and all its contacts? This cannot be undone.', function() {
+      var form = document.createElement('form');
+      form.method = 'post';
+      form.action = deleteUrl;
+      var csrf = document.createElement('input');
+      csrf.type = 'hidden';
+      csrf.name = 'csrfmiddlewaretoken';
+      csrf.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+      form.appendChild(csrf);
+      document.body.appendChild(form);
+      form.submit();
+    });
+  }
+
+  // List selection
+  var selectAllLists = document.getElementById('select-all-lists');
+  var listSelectors = document.querySelectorAll('.list-selector');
+  var bulkDeleteListsBtn = document.getElementById('bulk-delete-lists-btn');
+  var selectedListsCount = document.getElementById('selected-lists-count');
+
+  if (selectAllLists) {
+    selectAllLists.addEventListener('change', function() {
+      listSelectors.forEach(function(cb) { cb.checked = selectAllLists.checked; });
+      refreshSelectedLists();
+    });
+  }
+
+  listSelectors.forEach(function(cb) {
+    cb.addEventListener('change', refreshSelectedLists);
+  });
+
+  function refreshSelectedLists() {
+    var selected = Array.from(listSelectors).filter(function(cb) { return cb.checked; });
+    if (selectedListsCount) selectedListsCount.textContent = selected.length > 0 ? selected.length + ' selected' : '';
+    if (bulkDeleteListsBtn) {
+      if (selected.length > 0) { bulkDeleteListsBtn.classList.remove('hidden'); }
+      else { bulkDeleteListsBtn.classList.add('hidden'); }
+    }
+    var selectedListIds = selected.map(function(cb) { return cb.value; });
+    var visibleCount = 0;
+    document.querySelectorAll('#contacts-tbody tr').forEach(function(row) {
+      var listId = row.getAttribute('data-list-id');
+      if (selectedListIds.length === 0 || selectedListIds.indexOf(listId) !== -1) {
+        row.style.display = '';
+        if (listId !== null) visibleCount++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+    var showingEl = document.getElementById('showing-count');
+    if (showingEl) showingEl.textContent = visibleCount;
+  }
+
+  function getSelectedListIds() {
+    return Array.from(listSelectors).filter(function(cb) { return cb.checked; }).map(function(cb) { return cb.value; });
+  }
+
+  function confirmBulkDeleteLists() {
+    var ids = getSelectedListIds();
+    if (ids.length === 0) { alert('Please select at least one list.'); return; }
+    showConfirm('Delete Lists', 'Delete ' + ids.length + ' list(s) and all their contacts? This cannot be undone.', function() {
+      var form = document.createElement('form');
+      form.method = 'post';
+      form.action = '{% url "contacts:bulk_delete_lists" %}';
+      var csrf = document.createElement('input');
+      csrf.type = 'hidden';
+      csrf.name = 'csrfmiddlewaretoken';
+      csrf.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+      form.appendChild(csrf);
+      ids.forEach(function(id) {
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'list_ids';
+        input.value = id;
+        form.appendChild(input);
+      });
+      document.body.appendChild(form);
+      form.submit();
+    });
+  }
+
   if (new URLSearchParams(window.location.search).get('open_add_contact') === '1') {
     document.getElementById('add-contact-modal')?.classList.remove('hidden');
   }
 
   refreshSelectedContacts();
+  refreshSelectedLists();
 </script>
 {% endblock %}
