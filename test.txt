@@ -147,3 +147,67 @@ JobAxle helps job seekers discover meaningful career opportunities while enablin
 ## Expected Outcome
 
 Position JobAxle as a trusted recruitment platform that connects the right talent with the right opportunities while growing its community of job seekers and employers.
+
+
+
+Strategy Breakdown
+1. Full Campaign Strategy → full_campaign
+Role: Master Campaign Architect
+Logic: Generates a comprehensive omnichannel campaign — Big Idea, SMART objectives, customer journey mapping across Email/Social/Paid/Content, budget allocation %, KPIs, 30-60-90 day timeline, risk mitigation
+Output: Sections-based (heading + body + items)
+
+
+2. Marketing Campaign Ideas → campaign_idea
+Role: Head of Creative Strategy
+Logic: Identifies a "Cultural Tension" the brand uniquely solves → campaign theme with viral potential → narrative arc (beginning→tension→climax→resolution) → 3-5 emotional messaging pillars → 2-3 radical activation/stunt ideas → 30-60-90 rollout
+Output: Sections-based
+
+
+3. Brand Storytelling Concepts → brand_story
+Role: Chief Brand Storyteller
+Logic: Identifies a Brand Archetype (Hero, Magician, Outlaw, Sage...) → defines "Enemy" the brand fights against → writes origin story (struggle→revelation→triumph) → composes brand manifesto (100-150 word rallying cry) → maps 3-5 emotional hooks tied to audience fears/desires
+Output: Sections-based
+
+
+4. Social Media Content Strategy → social_strategy
+Role: Social Media Creative Director & Algorithm Hacker
+Logic: Defines 4-5 hyper-specific content pillars → builds Hero-Hub-Hygiene content pyramid → algorithm-hacking playbook per platform (Saves/Shares on IG, Watch Time on TikTok) → real-time engagement tactics → aggressive 30/60/90 growth targets
+Output: Sections-based
+
+
+5. Ad Copy Variations → ad_copy
+Role: Elite Direct-Response Copywriter
+Logic: Uses AIDA or PAS framework → 5 pattern-interrupting headline options → 3 body copy variants (Awareness/Consideration/Conversion funnel stages) → 3 CTAs using FOMO/curiosity triggers → 2-3 aggressive hooks → A/B testing hypotheses grounded in behavioral psychology
+Output: Rich JSON — headlines[], body_copy[{variant, copy}], ctas[], hooks[], ab_testing_hypotheses[]
+6. Product Launch Ideas → product_launch
+Role: Launch Strategist & Hype Architect
+Logic: Defines "North Star" positioning → builds FOMO mechanics sequence → "Velvet Rope" exclusivity tactics (gamified waitlists, VIP early access) → radical PR angles → influencer/ambassador activation → timeline with psychological urgency triggers
+Output: Sections-based
+7. Taglines & Slogans → tagline
+Role: Naming & Tagline Maestro
+Logic: Generates 12-15 tagline options (phonetic flow, double meanings, rhythmic symmetry) → grouped by angles (Emotional, Functional, Challenger, Poetic) → top 3 get rationale explaining the psychological trigger → max 7 words (target 3-4)
+Output: Rich JSON — taglines[{tagline, angle, rationale}], top_picks[{tagline, rationale}]
+8. Creative Angles → creative_angles
+Role: Creative Angle Futurist & Concept Disruptor
+Logic: Generates 5-7 radically different creative angles → forces at least one polarizing/counter-intuitive ("zag" when others "zig") → each stems from an unspoken human truth → details execution, differentiation, and best channel
+Output: Rich JSON — angles[{name, insight, execution, differentiation, best_channel}]
+9. Image Generation Prompt → image_prompt
+Role: Visual Creative Director & AI Prompt Engineer
+Logic: Generates a hyper-detailed master prompt for Midjourney v6 / DALL-E 3 with extreme technical jargon (camera lenses like 35mm f/1.4, film stock like Kodak Portra 400, lighting like chiaroscuro/volumetric, render engines like Unreal Engine 5) → 3 style variations with different art directions → negative prompts for purity
+Output: Rich JSON — master_prompt, style_variations[{name, prompt, negative_prompt}], aspect_ratio
+10. Logo Design Brief → logo_design
+Role: Elite Brand Identity Designer
+Logic: Rooted in Semiotics (study of signs/symbols) and Color Psychology → style recommendation → color palette with subconscious communication rationale → typography pairings with psychological weight → visual metaphors encapsulating the brand's "Why" → 3 distinct logo concepts with vivid descriptions
+Output: Rich JSON — sections[] (Style, Color, Typography, Metaphors, Variations, Mood Board), logo_concepts[{name, description, style, color_palette}]
+11. Social Media Post → post_content / social_post
+Role: Elite Social Content Specialist & Algorithm Hacker
+Logic: Generates platform-native posts — per-platform rules (Facebook: storytelling, LinkedIn: contrarian, TikTok: Gen-Z raw, Twitter: zero fluff, YouTube: SEO curiosity gap) → pattern-interrupting hook → frictionless CTA → algorithmic hacks → no emoji spam
+Output: Rich JSON — platforms[{platform, hook, body, cta, hashtags[], visual_description, best_time, engagement_tactic}]
+12. Brand Identity Guide → brand_identity
+Role: Master Brand Identity Architect
+Logic: Defines Brand Essence + 3-5 uncompromising Core Values → creates "Anti-Persona" section (who the brand is NOT, what it stands AGAINST) → brand personality traits → sensory branding (how it sounds/feels) → visual identity rules → Tone of Voice with "Do This, Not That" examples
+Output: Sections-based
+13. Content Calendar → content_calendar
+Role: Elite Editorial Strategist
+Logic: Structures 4 weekly macro-themes → Content Repurposing Funnel (1 Hero piece → 10+ micro-pieces) → daily breakdown balancing value/entertainment/conversion → engagement tactics and cross-platform synergy → cultural moments/trend-jacking opportunities → production deadlines
+Output: Rich JSON — weekly_themes[{week, theme, focus}], daily_breakdown[{day, platform, post_type, topic, engagement_tactic}], special_dates[], content_format_mix{percentages}, repurposing_suggestions[], production_deadlines[]
