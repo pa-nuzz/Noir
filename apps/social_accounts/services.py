@@ -17,7 +17,7 @@ class SocialService:
     def get_available_platforms(self):
         return [{'key': k, 'name': v.label if hasattr(v, 'label') else k.title()} for k, v in PLATFORM_REGISTRY.items()]
 
-    def connect_account(self, platform, access_token, account_data, workspace=None):
+    def connect_account(self, platform, access_token, account_data, refresh_token='', token_expires_at=None, workspace=None):
         account, created = SocialAccount.objects.update_or_create(
             user=self.user,
             platform=platform,
@@ -27,6 +27,8 @@ class SocialService:
                 'avatar_url': account_data.get('avatar_url', ''),
                 'profile_url': account_data.get('profile_url', ''),
                 'access_token': access_token,
+                'refresh_token': refresh_token,
+                'token_expires_at': token_expires_at,
                 'is_active': True,
             },
         )
