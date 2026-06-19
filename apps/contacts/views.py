@@ -446,6 +446,26 @@ def delete_contact(request, contact_id):
 
 @login_required
 @require_workspace_permission('contacts', 'delete')
+def bulk_delete_lists(request):
+    if request.method != 'POST':
+        return redirect('contacts:list')
+
+    raw_ids = request.POST.getlist('list_ids')
+    selected_ids = [int(x) for x in raw_ids if x and x.strip().isdigit()]
+
+    if not selected_ids:
+        messages.error(request, 'Select at least one list.')
+        return redirect('contacts:list')
+
+    lists = filter_by_context(request, ContactList.objects.all()).filter(id__in=selected_ids)
+    deleted_count = lists.count()
+    lists.delete()
+    messages.success(request, f'Deleted {deleted_count} list(s) and their contacts.')
+    return redirect('contacts:list')
+
+
+@login_required
+@require_workspace_permission('contacts', 'delete')
 def delete_list(request, list_id):
     contact_list = get_object_or_404(filter_by_context(request, ContactList.objects.all()), id=list_id)
     if request.method == 'POST':

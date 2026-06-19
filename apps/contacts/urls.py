@@ -8,6 +8,7 @@ urlpatterns = [
     path('tags/', views.tags_manager, name='tags_manager'),
     path('tags/bulk-update/', views.bulk_update_contact_tags, name='bulk_update_contact_tags'),
     path('bulk-delete/', views.bulk_delete_contacts, name='bulk_delete_contacts'),
+    path('bulk-delete-lists/', views.bulk_delete_lists, name='bulk_delete_lists'),
     path('import-csv/', views.import_csv, name='import_csv'),
     path('add/', views.add_contact, name='add_contact'),
     path('delete/<int:contact_id>/', views.delete_contact, name='delete_contact'),

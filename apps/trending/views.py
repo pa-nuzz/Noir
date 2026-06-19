@@ -1,6 +1,9 @@
 import json
+import logging
 import re as _re
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import F, Q
@@ -587,8 +590,20 @@ def currents_data(request):
                                     'body': info.get('body', ''),
                                     'hashtags': info.get('hashtags', ''),
                                 }
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("LLM generation failed for cold-start currents: %s", e, exc_info=True)
+
+    # Fallback: populate any items without generated content from feed data
+    for d in data:
+        if not d.get('generated_content'):
+            active = d.get('active_platforms', all_active_platforms)
+            fallback_body = d.get('summary', '') or ''
+            d['generated_content'] = {}
+            for p in active:
+                d['generated_content'][p] = {
+                    'body': fallback_body,
+                    'hashtags': '',
+                }
 
     # Persist as inline batch so subsequent loads read from cache
     batch_id = 'inline_' + uuid.uuid4().hex[:25]
@@ -622,7 +637,7 @@ def currents_data(request):
 @require_POST
 def currents_batch_action(request):
     import json
-    from .models import CurrentsSnapshot
+    from .models import CurrentsSnapshot, TrendingAutomationRule
     from apps.content_studio.models import ContentItem
     from core.tenant import get_current_tenant
 
@@ -653,12 +668,31 @@ def currents_batch_action(request):
     for snap in snapshots:
         feed = snap.feed_item
         platforms_data = snap.platforms_data or {}
+
+        # Fallback when LLM content is missing — use feed data
+        if not platforms_data:
+            rules = TrendingAutomationRule.objects.filter(
+                user=request.user, is_active=True,
+            ).exclude(platforms=[])
+            for r in rules:
+                if r.topic_id == snap.topic_id:
+                    for p in r.platforms:
+                        if p not in platforms_data:
+                            platforms_data[p] = {}
+            if not platforms_data:
+                for r in rules:
+                    for p in r.platforms:
+                        if p not in platforms_data:
+                            platforms_data[p] = {}
+
         for platform, content in platforms_data.items():
             if not isinstance(content, dict):
-                continue
-
+                content = {}
             body_text = content.get('body', '') or feed.ai_summary or feed.content_cleaned or feed.content_raw or ''
             hashtags = content.get('hashtags', '')
+
+            if not body_text:
+                continue
 
             try:
                 existing = ContentItem.objects.filter(
