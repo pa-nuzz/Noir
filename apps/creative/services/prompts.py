@@ -9,7 +9,8 @@ from typing import Callable, Dict
 
 
 def _build_company_context_block(company_context: dict) -> str:
-    """Return a formatted block of base company context, including target platforms."""
+    """Return a formatted block of base company context, including target platforms
+    and any extra strategy-specific fields."""
     name = company_context.get("name", "the brand")
     industry = company_context.get("industry", "their industry")
     product = company_context.get("product", "their product/service")
@@ -38,6 +39,18 @@ def _build_company_context_block(company_context: dict) -> str:
         }
         label_list = ", ".join(platform_labels.get(p, p.title()) for p in platforms)
         parts.append(f"- Target Platforms: {label_list}")
+
+    # Include any extra strategy-specific context fields
+    EXTRA_KEYS = {"subject", "environment", "lighting", "camera", "art_style",
+                  "aspect_ratio", "style_preference", "color_preference",
+                  "special_dates", "essence", "brand_essence", "goals",
+                  "custom_prompt", "extra_instructions"}
+    for key in EXTRA_KEYS:
+        val = company_context.get(key)
+        if val:
+            label = key.replace("_", " ").title()
+            parts.append(f"- {label}: {val}")
+
     return "\n".join(parts)
 
 

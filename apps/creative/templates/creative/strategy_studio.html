@@ -251,47 +251,50 @@
 
 <script>
 // ──────────────────────────────────────────────
-// Chatbot State Machine
+// Chatbot State Machine — Dynamic Steps via API
 // ──────────────────────────────────────────────
-var chatState = { step: 0, data: {} };
-var steps = [
-  { key: 'strategy_type', label: 'Strategy Type', type: 'option', options: {{ strategy_types_json|safe }} },
-  { key: 'title', label: 'Title', type: 'input', placeholder: 'e.g., Dashain 2082 Campaign' },
-  { key: 'description', label: 'Campaign Goals', type: 'textarea', placeholder: 'Describe your campaign goals, objectives, and any specific requirements...' },
-  { key: 'target_audience', label: 'Target Audience', type: 'input', placeholder: 'e.g., Urban millennials, SME owners, Gen Z in Kathmandu' },
-  { key: 'tone', label: 'Tone', type: 'option', options: [['professional','Professional'], ['casual','Casual'], ['creative','Creative'], ['urgent','Urgent']] },
-  { key: 'platforms', label: 'Platforms', type: 'multi', options: [['facebook','Facebook'],['instagram','Instagram'],['linkedin','LinkedIn'],['twitter','X (Twitter)'],['tiktok','TikTok'],['youtube','YouTube']] },
-  { key: 'scheduled_at', label: 'Schedule', type: 'datetime', placeholder: 'Optional — pick a publish date' },
-];
+var chatState = { step: 0, data: {}, steps: [], coreSteps: [], extraSteps: [] };
+var strategyTypeOptions = {{ strategy_types_json|safe }};
 
-function getStepLabel(s, stepIdx, val) {
-  if (s.type === 'option') {
-    var found = (s.options || []).find(function(o) { return (Array.isArray(o) ? o[0] : o) === val; });
-    return found ? (Array.isArray(found) ? found[1] : found) : val;
+var iconMap = {
+  strategy_type: '🎯', title: '📝', goals: '📋', description: '📋',
+  target_audience: '👥', audience: '👥', tone: '🎨', platforms: '📱',
+  scheduled_at: '📅', subject: '🧑', environment: '🌄', lighting: '💡',
+  camera: '📷', art_style: '🎨', aspect_ratio: '🔲', style_preference: '✒️',
+  color_preference: '🎨', special_dates: '📆', brand_essence: '💎', custom_prompt: '✏️', extra_instructions: '✏️'
+};
+
+function getStepLabel(s, val) {
+  if (s.type === 'option' || s.type === 'multi') {
+    var opts = s.options || [];
+    if (!Array.isArray(val)) {
+      var f = opts.find(function(o) { return (Array.isArray(o) ? o[0] : o) === val; });
+      return f ? (Array.isArray(f) ? f[1] : f) : val;
+    }
+    return val.map(function(v) {
+      var f = opts.find(function(o) { return (Array.isArray(o) ? o[0] : o) === v; });
+      return f ? (Array.isArray(f) ? f[1] : f) : v;
+    }).join(', ');
   }
-  if (Array.isArray(val)) return val.join(', ');
   return val;
 }
 
 function openChatbot() {
-  chatState = { step: 0, data: {} };
+  chatState = { step: 0, data: {}, steps: [], coreSteps: [], extraSteps: [] };
   var modal = document.getElementById('chatbotModal');
   var inner = document.getElementById('chatbotModalInner');
   modal.classList.remove('hidden');
-  
-  // Trigger animations
   setTimeout(function() {
     modal.classList.remove('opacity-0');
     inner.classList.remove('scale-95');
     inner.classList.add('scale-100');
   }, 10);
-  
   document.getElementById('chatbot-messages').innerHTML = '';
   document.getElementById('chatbot-loading').classList.add('hidden');
   document.getElementById('chatbot-input').classList.add('hidden');
   document.getElementById('chatbot-input-btn').classList.add('hidden');
   document.getElementById('chatbot-input-area').classList.remove('hidden');
-  document.getElementById('chatbot-step-label').textContent = "Step 1 of " + steps.length;
+  document.getElementById('chatbot-step-label').textContent = 'Step 1 of ?';
   chatAsk(0);
 }
 
@@ -301,57 +304,131 @@ function closeChatbot() {
   modal.classList.add('opacity-0');
   inner.classList.remove('scale-100');
   inner.classList.add('scale-95');
-  setTimeout(function() {
-    modal.classList.add('hidden');
-  }, 300);
+  setTimeout(function() { modal.classList.add('hidden'); }, 300);
 }
 
 document.getElementById('chatbotModal').addEventListener('click', closeChatbot);
 
+// ── Strategy type selection (step 0) ──────────────────────────
+
 function chatAsk(stepIdx) {
-  if (stepIdx >= steps.length) {
+  if (chatState.steps.length === 0) {
+    renderStrategyTypeStep(stepIdx);
+    return;
+  }
+  if (stepIdx === -2) {
+    // After extra inputs section — proceed to review
     showReview();
     return;
   }
-  var s = steps[stepIdx];
-  document.getElementById('chatbot-step-label').textContent = 'Step ' + (stepIdx+1) + ' of ' + steps.length;
-  var msg = document.getElementById('chatbot-messages');
-  var div = document.createElement('div');
-  div.className = 'flex gap-4 message-bot items-start opacity-0 translate-y-4 transition-all duration-500 ease-out';
-  div.innerHTML = '<div class="w-10 h-10 rounded-2xl bg-indigo-100 flex items-center justify-center flex-shrink-0 border border-indigo-200 shadow-sm"><svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div><div class="flex-1 min-w-0 bg-white p-5 rounded-2xl rounded-tl-sm shadow-sm border border-slate-100"></div>';
-  msg.appendChild(div);
-  
-  // Trigger animation
-  setTimeout(function() {
-    div.classList.remove('opacity-0', 'translate-y-4');
-  }, 50);
+  if (stepIdx >= chatState.coreSteps.length) {
+    if (chatState.extraSteps.length > 0) {
+      renderExtraInputsStep();
+    } else {
+      showReview();
+    }
+    return;
+  }
+  renderStep(stepIdx);
+}
 
-  var msgBody = div.lastChild;
+function renderStrategyTypeStep() {
+  document.getElementById('chatbot-step-label').textContent = 'Step 1 of ?';
+  var msg = document.getElementById('chatbot-messages');
+  var div = createBotMessage();
+  msg.appendChild(div);
+  animateIn(div);
+  var body = div.lastChild;
+  var p = document.createElement('p');
+  p.className = 'text-base text-slate-800 font-medium mb-4';
+  p.textContent = 'What type of strategy do you need to generate?';
+  body.appendChild(p);
+  var grid = document.createElement('div');
+  grid.className = 'grid grid-cols-2 gap-2.5';
+  strategyTypeOptions.forEach(function(o) {
+    var key = Array.isArray(o) ? o[0] : o;
+    var label = Array.isArray(o) ? o[1] : o;
+    var btn = document.createElement('button');
+    btn.textContent = label;
+    btn.dataset.value = key;
+    btn.className = 'px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border border-slate-200 bg-white hover:border-indigo-500 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 text-left shadow-sm hover:shadow';
+    btn.onclick = function() { selectStrategyType(key, label); };
+    grid.appendChild(btn);
+  });
+  body.appendChild(grid);
+  scrollToBottom();
+}
+
+function selectStrategyType(key, label) {
+  var msg = document.getElementById('chatbot-messages');
+  var udiv = document.createElement('div');
+  udiv.className = 'flex flex-col items-end message-user opacity-0 translate-y-4 transition-all duration-500 ease-out';
+  udiv.innerHTML = '<div class="bg-indigo-600 rounded-2xl rounded-tr-sm px-5 py-3 max-w-[85%] inline-block shadow-md shadow-indigo-200"><p class="text-sm text-white font-medium">' + label + '</p></div>';
+  msg.appendChild(udiv);
+  animateIn(udiv);
+  chatState.data.strategy_type = key;
+  chatState.step = 1;
+
+  var ld = document.createElement('div');
+  ld.className = 'flex gap-4 message-bot items-start';
+  ld.innerHTML = '<div class="w-10 h-10 rounded-2xl bg-indigo-100 flex items-center justify-center flex-shrink-0 border border-indigo-200 shadow-sm"><svg class="w-5 h-5 text-indigo-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg></div><div class="flex-1 min-w-0 bg-white p-5 rounded-2xl rounded-tl-sm shadow-sm border border-slate-100"><p class="text-sm text-slate-500">Loading inputs for ' + label + '...</p></div>';
+  msg.appendChild(ld);
+  scrollToBottom();
+
+  fetch('/creative/api/strategy-inputs/' + key + '/')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      msg.removeChild(ld);
+      if (d.schema && d.schema.steps) {
+        chatState.steps = d.schema.steps;
+        chatState.coreSteps = d.schema.steps.filter(function(s) { return !s.extra; });
+        chatState.extraSteps = d.schema.steps.filter(function(s) { return s.extra; });
+        var total = chatState.coreSteps.length + (chatState.extraSteps.length > 0 ? 0 : 0) + 1;
+        document.getElementById('chatbot-step-label').textContent = 'Step 2 of ' + total;
+        chatAsk(1);
+      } else {
+        showChatError('No input schema found for this strategy type.');
+      }
+    })
+    .catch(function(e) {
+      msg.removeChild(ld);
+      showChatError('Failed to load inputs: ' + e.message);
+    });
+}
+
+// ── Core steps rendered one-by-one ────────────────────────────
+
+function renderStep(stepIdx) {
+  var s = chatState.coreSteps[stepIdx];
+  var total = chatState.coreSteps.length + 1;
+  document.getElementById('chatbot-step-label').textContent = 'Step ' + (stepIdx + 2) + ' of ' + total;
+  var msg = document.getElementById('chatbot-messages');
+  var div = createBotMessage();
+  msg.appendChild(div);
+  animateIn(div);
+  var body = div.lastChild;
 
   if (s.type === 'option' || s.type === 'multi') {
     var p = document.createElement('p');
     p.className = 'text-base text-slate-800 font-medium mb-4';
-    p.textContent = s.type === 'multi' ? 'Select platforms:' : (stepIdx === 0 ? 'What type of strategy do you need to generate?' : 'Choose ' + s.label + ':');
-    msgBody.appendChild(p);
-    
+    p.textContent = 'Choose ' + s.label + ':';
+    body.appendChild(p);
     var grid = document.createElement('div');
     grid.className = s.type === 'multi' ? 'flex flex-wrap gap-2.5' : 'grid grid-cols-2 gap-2.5';
-    
-    s.options.forEach(function(o) {
-      var key = Array.isArray(o) ? o[0] : o[0];
-      var label = Array.isArray(o) ? o[1] : o[1];
+    (s.options || []).forEach(function(o) {
+      var k = Array.isArray(o) ? o[0] : o;
+      var l = Array.isArray(o) ? o[1] : o;
       var btn = document.createElement('button');
-      btn.textContent = label;
-      btn.dataset.value = key;
+      btn.textContent = l;
+      btn.dataset.value = k;
       btn.className = 'px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border ';
       if (s.type === 'multi') {
         btn.className += 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 shadow-sm hover:shadow';
-        if (chatState.data[s.key] && chatState.data[s.key].indexOf(key) !== -1) {
+        if (chatState.data[s.key] && chatState.data[s.key].indexOf(k) !== -1) {
           btn.className = btn.className.replace('border-slate-200 bg-white text-slate-700', 'border-indigo-600 bg-indigo-600 text-white shadow-indigo-200');
         }
         btn.onclick = function() {
-          var isSelected = this.classList.contains('bg-indigo-600');
-          if (isSelected) {
+          if (this.classList.contains('bg-indigo-600')) {
             this.classList.remove('border-indigo-600', 'bg-indigo-600', 'text-white', 'shadow-indigo-200');
             this.classList.add('border-slate-200', 'bg-white', 'text-slate-700');
           } else {
@@ -361,14 +438,13 @@ function chatAsk(stepIdx) {
         };
       } else {
         btn.className += 'border-slate-200 bg-white hover:border-indigo-500 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 text-left shadow-sm hover:shadow';
-        if (chatState.data[s.key] === key) {
+        if (chatState.data[s.key] === k) {
           btn.className = btn.className.replace('border-slate-200 bg-white text-slate-700', 'border-indigo-600 bg-indigo-600 text-white');
         }
-        btn.onclick = function() { chatAnswer(stepIdx, key); };
+        btn.onclick = function() { chatAnswer(stepIdx, this.dataset.value); };
       }
       grid.appendChild(btn);
     });
-    
     if (s.type === 'multi') {
       var okBtn = document.createElement('button');
       okBtn.textContent = 'Continue →';
@@ -381,44 +457,27 @@ function chatAsk(stepIdx) {
       var wrap = document.createElement('div');
       wrap.appendChild(grid);
       wrap.appendChild(okBtn);
-      msgBody.appendChild(wrap);
+      body.appendChild(wrap);
     } else {
-      msgBody.appendChild(grid);
+      body.appendChild(grid);
     }
   } else if (s.type === 'input') {
     var p = document.createElement('p');
     p.className = 'text-base text-slate-800 font-medium mb-2';
     p.textContent = 'Give it a ' + s.label + ':';
-    msgBody.appendChild(p);
-    
-    var inp = document.getElementById('chatbot-input');
-    var btn = document.getElementById('chatbot-input-btn');
-    inp.classList.remove('hidden');
-    btn.classList.remove('hidden');
-    inp.placeholder = s.placeholder || 'Type your answer...';
-    inp.value = chatState.data[s.key] || '';
-    inp.dataset.step = stepIdx;
-    inp.focus();
+    body.appendChild(p);
+    showInput(stepIdx, s);
   } else if (s.type === 'textarea') {
     var p = document.createElement('p');
     p.className = 'text-base text-slate-800 font-medium mb-2';
     p.textContent = 'Tell me about your ' + s.label + ':';
-    msgBody.appendChild(p);
-    
-    var inp = document.getElementById('chatbot-input');
-    var btn = document.getElementById('chatbot-input-btn');
-    inp.classList.remove('hidden');
-    btn.classList.remove('hidden');
-    inp.placeholder = s.placeholder || 'Type your answer...';
-    inp.value = chatState.data[s.key] || '';
-    inp.dataset.step = stepIdx;
-    inp.focus();
+    body.appendChild(p);
+    showInput(stepIdx, s);
   } else if (s.type === 'datetime') {
     var p = document.createElement('p');
     p.className = 'text-base text-slate-800 font-medium mb-4';
-    p.textContent = 'Would you like to schedule publishing?';
-    msgBody.appendChild(p);
-    
+    p.textContent = s.label + ':';
+    body.appendChild(p);
     var wrap = document.createElement('div');
     wrap.className = 'flex flex-col sm:flex-row gap-3';
     var inp = document.createElement('input');
@@ -426,7 +485,6 @@ function chatAsk(stepIdx) {
     inp.id = 'chat-datetime';
     inp.className = 'px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all flex-1';
     inp.value = chatState.data[s.key] || '';
-    
     var btnWrap = document.createElement('div');
     btnWrap.className = 'flex gap-2';
     var skip = document.createElement('button');
@@ -437,26 +495,235 @@ function chatAsk(stepIdx) {
     ok.textContent = 'Next →';
     ok.className = 'px-6 py-3 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200 hover:shadow-lg';
     ok.onclick = function() { chatAnswer(stepIdx, document.getElementById('chat-datetime').value); };
-    
     btnWrap.appendChild(skip);
     btnWrap.appendChild(ok);
     wrap.appendChild(inp);
     wrap.appendChild(btnWrap);
-    msgBody.appendChild(wrap);
+    body.appendChild(wrap);
   }
 
-  // Back link at bottom of bot message
   if (stepIdx > 0) {
-    var backWrap = document.createElement('div');
-    backWrap.className = 'mt-4 border-t border-slate-100 pt-3';
-    var backBtn = document.createElement('button');
-    backBtn.innerHTML = '← Go Back';
-    backBtn.className = 'text-xs font-semibold text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1';
-    backBtn.onclick = function() { chatEdit(stepIdx - 1); };
-    backWrap.appendChild(backBtn);
-    msgBody.appendChild(backWrap);
+    addBackLink(body, stepIdx - 1, div);
+  } else {
+    addBackLink(body, -1, div);
   }
-  setTimeout(function() { msg.scrollTop = msg.scrollHeight; }, 60);
+  scrollToBottom();
+}
+
+// ── Extra inputs: collapsible section ─────────────────────────
+
+function renderExtraInputsStep() {
+  document.getElementById('chatbot-step-label').textContent = 'Additional Details (Optional)';
+  document.getElementById('chatbot-input').classList.add('hidden');
+  document.getElementById('chatbot-input-btn').classList.add('hidden');
+  var msg = document.getElementById('chatbot-messages');
+  var div = createBotMessage();
+  msg.appendChild(div);
+  animateIn(div);
+  var body = div.lastChild;
+
+  var p = document.createElement('p');
+  p.className = 'text-base text-slate-800 font-bold mb-1';
+  p.textContent = 'Want to add any extra details?';
+  body.appendChild(p);
+  var p2 = document.createElement('p');
+  p2.className = 'text-sm text-slate-500 mb-4';
+  p2.textContent = 'These optional inputs help refine the output further.';
+  body.appendChild(p2);
+
+  // Toggle button
+  var toggle = document.createElement('button');
+  toggle.className = 'flex items-center gap-2 w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 transition-all text-sm font-semibold text-slate-600 hover:text-indigo-700';
+  toggle.innerHTML = '<svg class="w-4 h-4 transition-transform duration-300" id="extra-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6"/></svg> Add extra inputs <span class="ml-auto text-xs text-slate-400 font-normal" id="extra-count">(' + chatState.extraSteps.length + ' available)</span>';
+  body.appendChild(toggle);
+
+  // Container
+  var extraContainer = document.createElement('div');
+  extraContainer.className = 'hidden mt-4 space-y-4 p-4 rounded-xl bg-slate-50 border border-slate-200';
+  extraContainer.id = 'extra-inputs-container';
+  body.appendChild(extraContainer);
+
+  var extraFilledCount = { value: 0 };
+
+  chatState.extraSteps.forEach(function(es, ei) {
+    var row = document.createElement('div');
+    row.className = 'space-y-2';
+    var label = document.createElement('label');
+    label.className = 'text-xs font-bold text-slate-500 uppercase tracking-wider block';
+    label.textContent = es.label;
+    row.appendChild(label);
+
+    if (es.type === 'option') {
+      var btnGroup = document.createElement('div');
+      btnGroup.className = 'flex flex-wrap gap-2';
+      (es.options || []).forEach(function(o) {
+        var k = Array.isArray(o) ? o[0] : o;
+        var l = Array.isArray(o) ? o[1] : o;
+        var b = document.createElement('button');
+        b.textContent = l;
+        b.dataset.value = k;
+        b.className = 'px-3 py-2 rounded-lg text-xs font-semibold border border-slate-200 bg-white hover:border-indigo-400 hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 transition-all';
+        b.onclick = function() {
+          btnGroup.querySelectorAll('.bg-indigo-600').forEach(function(bb) {
+            bb.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-600');
+            bb.classList.add('bg-white', 'text-slate-600', 'border-slate-200');
+          });
+          this.classList.remove('bg-white', 'text-slate-600', 'border-slate-200');
+          this.classList.add('bg-indigo-600', 'text-white', 'border-indigo-600');
+          chatState.data[es.key] = k;
+          extraFilledCount.value = chatState.extraSteps.filter(function(s) { return chatState.data[s.key]; }).length;
+          updateExtraLabel();
+        };
+        btnGroup.appendChild(b);
+      });
+      row.appendChild(btnGroup);
+    } else if (es.type === 'multi') {
+      var mg = document.createElement('div');
+      mg.className = 'flex flex-wrap gap-2';
+      (es.options || []).forEach(function(o) {
+        var k = Array.isArray(o) ? o[0] : o;
+        var l = Array.isArray(o) ? o[1] : o;
+        var b = document.createElement('button');
+        b.textContent = l;
+        b.dataset.value = k;
+        b.className = 'px-3 py-2 rounded-lg text-xs font-semibold border border-slate-200 bg-white hover:border-indigo-400 hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 transition-all';
+        b.onclick = function() {
+          if (this.classList.contains('bg-indigo-600')) {
+            this.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-600');
+            this.classList.add('bg-white', 'text-slate-600', 'border-slate-200');
+          } else {
+            this.classList.remove('bg-white', 'text-slate-600', 'border-slate-200');
+            this.classList.add('bg-indigo-600', 'text-white', 'border-indigo-600');
+          }
+          var sel = [];
+          mg.querySelectorAll('.bg-indigo-600').forEach(function(bb) { sel.push(bb.dataset.value); });
+          chatState.data[es.key] = sel;
+          extraFilledCount.value = chatState.extraSteps.filter(function(s) { return chatState.data[s.key] && !(Array.isArray(chatState.data[s.key]) && chatState.data[s.key].length === 0); }).length;
+          updateExtraLabel();
+        };
+        mg.appendChild(b);
+      });
+      row.appendChild(mg);
+    } else if (es.type === 'input' || es.type === 'textarea') {
+      var inp = document.createElement(es.type === 'textarea' ? 'textarea' : 'input');
+      inp.className = 'w-full px-3 py-2.5 rounded-lg text-sm border border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all';
+      inp.placeholder = es.placeholder || '';
+      inp.value = chatState.data[es.key] || '';
+      inp.oninput = function() {
+        chatState.data[es.key] = inp.value.trim();
+        extraFilledCount.value = chatState.extraSteps.filter(function(s) {
+          var v = chatState.data[s.key];
+          return v && !(Array.isArray(v) && v.length === 0);
+        }).length;
+        updateExtraLabel();
+      };
+      if (es.type === 'textarea') {
+        inp.rows = 2;
+        inp.className += ' resize-none';
+      } else {
+        inp.type = 'text';
+      }
+      row.appendChild(inp);
+    } else if (es.type === 'datetime') {
+      var inp = document.createElement('input');
+      inp.type = 'datetime-local';
+      inp.className = 'w-full px-3 py-2.5 rounded-lg text-sm border border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all';
+      inp.value = chatState.data[es.key] || '';
+      inp.onchange = function() {
+        chatState.data[es.key] = inp.value;
+        extraFilledCount.value = chatState.extraSteps.filter(function(s) { return chatState.data[s.key]; }).length;
+        updateExtraLabel();
+      };
+      row.appendChild(inp);
+    }
+
+    extraContainer.appendChild(row);
+  });
+
+  function updateExtraLabel() {
+    var ct = document.getElementById('extra-count');
+    if (ct) {
+      if (extraFilledCount.value > 0) {
+        ct.textContent = '(' + extraFilledCount.value + '/' + chatState.extraSteps.length + ' filled)';
+      } else {
+        ct.textContent = '(' + chatState.extraSteps.length + ' available)';
+      }
+    }
+  }
+
+  // Collapse/expand toggle
+  var expanded = false;
+  toggle.onclick = function() {
+    expanded = !expanded;
+    extraContainer.classList.toggle('hidden', !expanded);
+    var chevron = document.getElementById('extra-chevron');
+    if (chevron) {
+      if (expanded) {
+        chevron.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 12H6"/>';
+      } else {
+        chevron.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6"/>';
+      }
+    }
+    if (expanded) scrollToBottom();
+  };
+
+  // Continue / Skip buttons
+  var btnRow = document.createElement('div');
+  btnRow.className = 'mt-5 pt-4 border-t border-slate-200 flex gap-3';
+  var skipBtn = document.createElement('button');
+  skipBtn.textContent = 'Skip & Review';
+  skipBtn.className = 'px-5 py-3 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors border border-slate-200 flex-1';
+  skipBtn.onclick = function() { chatAnswerExtra(); };
+  var contBtn = document.createElement('button');
+  contBtn.textContent = 'Review Strategy →';
+  contBtn.className = 'px-5 py-3 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200 hover:shadow-lg flex-1';
+  contBtn.onclick = function() { chatAnswerExtra(); };
+  btnRow.appendChild(skipBtn);
+  btnRow.appendChild(contBtn);
+  body.appendChild(btnRow);
+
+  addBackLink(body, chatState.coreSteps.length - 1, div);
+  scrollToBottom();
+}
+
+function chatAnswerExtra() {
+  chatState.step = -2;
+  showReview();
+}
+
+// ── Input helpers ─────────────────────────────────────────────
+
+function createBotMessage() {
+  var div = document.createElement('div');
+  div.className = 'flex gap-4 message-bot items-start opacity-0 translate-y-4 transition-all duration-500 ease-out';
+  div.innerHTML = '<div class="w-10 h-10 rounded-2xl bg-indigo-100 flex items-center justify-center flex-shrink-0 border border-indigo-200 shadow-sm"><svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div><div class="flex-1 min-w-0 bg-white p-5 rounded-2xl rounded-tl-sm shadow-sm border border-slate-100"></div>';
+  return div;
+}
+
+function animateIn(el) {
+  setTimeout(function() { el.classList.remove('opacity-0', 'translate-y-4'); }, 50);
+}
+
+function addBackLink(msgBody, targetStep, botDiv) {
+  var w = document.createElement('div');
+  w.className = 'mt-4 border-t border-slate-100 pt-3';
+  var b = document.createElement('button');
+  b.innerHTML = '← Go Back';
+  b.className = 'text-xs font-semibold text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1';
+  b.onclick = function() { chatEdit(targetStep); };
+  w.appendChild(b);
+  msgBody.appendChild(w);
+}
+
+function showInput(stepIdx, s) {
+  var inp = document.getElementById('chatbot-input');
+  var btn = document.getElementById('chatbot-input-btn');
+  inp.classList.remove('hidden');
+  btn.classList.remove('hidden');
+  inp.placeholder = s.placeholder || 'Type your answer...';
+  inp.value = chatState.data[s.key] || '';
+  inp.dataset.step = stepIdx;
+  inp.focus();
 }
 
 function chatInputSubmit() {
@@ -471,149 +738,168 @@ function chatInputSubmit() {
 }
 
 function chatAnswer(stepIdx, val) {
-  var s = steps[stepIdx];
+  var s = chatState.coreSteps[stepIdx];
   var msg = document.getElementById('chatbot-messages');
-
-  // Show user's answer
   var udiv = document.createElement('div');
   udiv.className = 'flex flex-col items-end message-user opacity-0 translate-y-4 transition-all duration-500 ease-out';
-  var label = getStepLabel(s, stepIdx, val);
+  var label = getStepLabel(s, val);
   udiv.innerHTML = '<div class="bg-indigo-600 rounded-2xl rounded-tr-sm px-5 py-3 max-w-[85%] inline-block shadow-md shadow-indigo-200"><p class="text-sm text-white font-medium">' + label + '</p></div>';
-  
-  var editWrap = document.createElement('div');
-  editWrap.className = 'flex items-center gap-2 mt-1.5 mr-1';
-  var editLink = document.createElement('button');
-  editLink.textContent = 'Edit Answer';
-  editLink.className = 'text-[11px] font-medium text-slate-400 hover:text-indigo-600 transition-colors';
-  editLink.onclick = function() { chatEdit(stepIdx); };
-  
-  editWrap.appendChild(editLink);
-  udiv.appendChild(editWrap);
+  var ew = document.createElement('div');
+  ew.className = 'flex items-center gap-2 mt-1.5 mr-1';
+  var el = document.createElement('button');
+  el.textContent = 'Edit Answer';
+  el.className = 'text-[11px] font-medium text-slate-400 hover:text-indigo-600 transition-colors';
+  el.onclick = function() { chatEdit(stepIdx); };
+  ew.appendChild(el);
+  udiv.appendChild(ew);
   msg.appendChild(udiv);
-
-  setTimeout(function() {
-    udiv.classList.remove('opacity-0', 'translate-y-4');
-  }, 50);
-
-  // Store
+  animateIn(udiv);
   chatState.data[s.key] = val;
   chatState.step = stepIdx + 1;
-
-  // Next
-  setTimeout(function() { msg.scrollTop = msg.scrollHeight; }, 60);
+  scrollToBottom();
   setTimeout(function() { chatAsk(stepIdx + 1); }, 400);
 }
 
 function chatEdit(stepIdx) {
   var msg = document.getElementById('chatbot-messages');
+  if (stepIdx === -1) {
+    msg.innerHTML = '';
+    chatState = { step: 0, data: {}, steps: [], coreSteps: [], extraSteps: [] };
+    document.getElementById('chatbot-input').classList.add('hidden');
+    document.getElementById('chatbot-input-btn').classList.add('hidden');
+    document.getElementById('chatbot-input-area').classList.remove('hidden');
+    setTimeout(function() { chatAsk(0); }, 200);
+    return;
+  }
   var userCount = 0;
   var removeFrom = null;
   for (var i = 0; i < msg.children.length; i++) {
     if (msg.children[i].classList.contains('message-user')) {
-      if (userCount === stepIdx) {
-        removeFrom = msg.children[i];
-        break;
-      }
+      if (userCount === stepIdx) { removeFrom = msg.children[i]; break; }
       userCount++;
     }
   }
   if (removeFrom) {
-    while (removeFrom.nextSibling) {
-      msg.removeChild(removeFrom.nextSibling);
-    }
+    while (removeFrom.nextSibling) msg.removeChild(removeFrom.nextSibling);
     msg.removeChild(removeFrom);
   }
-
-  // Reset data for this and future steps
-  for (var i = stepIdx; i < steps.length; i++) {
-    delete chatState.data[steps[i].key];
+  for (var i = stepIdx; i < chatState.coreSteps.length; i++) {
+    delete chatState.data[chatState.coreSteps[i].key];
   }
   chatState.step = stepIdx;
-
-  // Hide input
   document.getElementById('chatbot-input').classList.add('hidden');
   document.getElementById('chatbot-input-btn').classList.add('hidden');
   document.getElementById('chatbot-input-area').classList.remove('hidden');
-
-  // Re-ask this step
   setTimeout(function() { chatAsk(stepIdx); }, 200);
 }
+
+// ── Review ────────────────────────────────────────────────────
 
 function showReview() {
   document.getElementById('chatbot-step-label').textContent = 'Review & Finalize';
   document.getElementById('chatbot-input').classList.add('hidden');
   document.getElementById('chatbot-input-btn').classList.add('hidden');
   document.getElementById('chatbot-input-area').classList.add('hidden');
-
   var msg = document.getElementById('chatbot-messages');
-  var div = document.createElement('div');
-  div.className = 'flex gap-4 message-bot items-start opacity-0 translate-y-4 transition-all duration-500 ease-out';
+  var div = createBotMessage();
   div.innerHTML = '<div class="w-10 h-10 rounded-2xl bg-indigo-100 flex items-center justify-center flex-shrink-0 border border-indigo-200 shadow-sm"><svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div><div class="flex-1 min-w-0 bg-white p-6 rounded-2xl rounded-tl-sm shadow-sm border border-slate-100"><p class="text-lg text-slate-800 font-bold mb-1">Ready to Architect?</p><p class="text-sm text-slate-500 mb-5">Review your inputs before we deploy the AI agents.</p></div>';
   msg.appendChild(div);
+  animateIn(div);
+  var body = div.lastChild;
+  var sd = document.createElement('div');
+  sd.className = 'space-y-3';
 
-  setTimeout(function() {
-    div.classList.remove('opacity-0', 'translate-y-4');
-  }, 50);
+  // Strategy type
+  var tv = getStepLabel({ type: 'option', options: strategyTypeOptions }, chatState.data.strategy_type);
+  sd.appendChild(makeRow('Strategy Type', tv, -1, div, msg));
 
-  var msgBody = div.lastChild;
-  var icons = { strategy_type: '🎯', title: '📝', description: '📋', target_audience: '👥', tone: '🎨', platforms: '📱', scheduled_at: '📅' };
-  var summaryDiv = document.createElement('div');
-  summaryDiv.className = 'space-y-3';
-
-  steps.forEach(function(s, idx) {
-    var val = chatState.data[s.key];
-    if (!val || (Array.isArray(val) && val.length === 0)) val = '(not set)';
-    var label = getStepLabel(s, idx, val);
-
-    var row = document.createElement('div');
-    row.className = 'flex items-start gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/30 transition-colors group';
-    row.innerHTML = '<div class="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-sm flex-shrink-0 border border-slate-100">' + (icons[s.key] || '•') + '</div>' +
-      '<div class="flex-1 min-w-0 pt-0.5"><p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">' + s.label + '</p><p class="text-sm text-slate-800 font-medium break-words">' + label + '</p></div>' +
-      '<button class="text-xs text-indigo-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity hover:underline flex-shrink-0 pt-1 px-2">Edit</button>';
-    row.lastChild.onclick = function() {
-      var reviewBot = div;
-      if (reviewBot && reviewBot.nextSibling) msg.removeChild(reviewBot.nextSibling);
-      msg.removeChild(reviewBot);
-      document.getElementById('chatbot-input-area').classList.remove('hidden');
-      chatEdit(idx);
-    };
-    summaryDiv.appendChild(row);
+  // Core steps
+  chatState.coreSteps.forEach(function(s, idx) {
+    var v = chatState.data[s.key];
+    if (!v || (Array.isArray(v) && v.length === 0)) v = '(not set)';
+    sd.appendChild(makeRow(s.label, getStepLabel(s, v), idx, div, msg));
   });
-  msgBody.appendChild(summaryDiv);
 
-  var actionRow = document.createElement('div');
-  actionRow.className = 'mt-6 pt-5 border-t border-slate-100';
-  var genBtn = document.createElement('button');
-  genBtn.innerHTML = '<span class="flex items-center justify-center gap-2">Execute Strategy Generation <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></span>';
-  genBtn.className = 'w-full px-6 py-4 rounded-xl text-base font-bold text-white transition-all shadow-xl shadow-purple-500/30 hover:shadow-cyan-500/40 hover:-translate-y-0.5';
-  genBtn.style.background = 'linear-gradient(135deg, #6D28D9 0%, #06B6D4 100%)';
-  genBtn.onclick = function() {
-    genBtn.disabled = true;
-    genBtn.innerHTML = 'Deploying AI Agents...';
-    genBtn.classList.add('opacity-80', 'cursor-not-allowed');
+  // Extra steps (collapsible)
+  var extraVal = chatState.extraSteps.filter(function(s) {
+    var v = chatState.data[s.key];
+    return v && !(Array.isArray(v) && v.length === 0);
+  }).length;
+  if (chatState.extraSteps.length > 0) {
+    var sep = document.createElement('div');
+    sep.className = 'border-t border-dashed border-slate-200 pt-3 mt-4';
+    var extraHeader = document.createElement('button');
+    extraHeader.className = 'flex items-center gap-2 w-full text-left text-xs font-bold text-slate-400 uppercase tracking-wider hover:text-indigo-600 transition-colors py-2';
+    extraHeader.innerHTML = '<svg class="w-3 h-3 transition-transform" id="review-extra-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6"/></svg> Extra inputs <span class="ml-auto text-xs font-normal normal-case">(' + extraVal + '/' + chatState.extraSteps.length + ')</span>';
+    sep.appendChild(extraHeader);
+    var extraBody = document.createElement('div');
+    extraBody.className = 'hidden space-y-3 mt-2';
+    chatState.extraSteps.forEach(function(s, ei) {
+      var v = chatState.data[s.key];
+      if (!v || (Array.isArray(v) && v.length === 0)) v = '(not set)';
+      extraBody.appendChild(makeRow(s.label, getStepLabel(s, v), chatState.coreSteps.length + ei, div, msg));
+    });
+    sep.appendChild(extraBody);
+    var extraExpanded = false;
+    extraHeader.onclick = function() {
+      extraExpanded = !extraExpanded;
+      extraBody.classList.toggle('hidden', !extraExpanded);
+      var ch = document.getElementById('review-extra-chevron');
+      if (ch) {
+        ch.innerHTML = extraExpanded
+          ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 12H6"/>'
+          : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6"/>';
+      }
+    };
+    sd.appendChild(sep);
+  }
+
+  body.appendChild(sd);
+
+  var ar = document.createElement('div');
+  ar.className = 'mt-6 pt-5 border-t border-slate-100';
+  var gb = document.createElement('button');
+  gb.innerHTML = '<span class="flex items-center justify-center gap-2">Execute Strategy Generation <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></span>';
+  gb.className = 'w-full px-6 py-4 rounded-xl text-base font-bold text-white transition-all shadow-xl shadow-purple-500/30 hover:shadow-cyan-500/40 hover:-translate-y-0.5';
+  gb.style.background = 'linear-gradient(135deg, #6D28D9 0%, #06B6D4 100%)';
+  gb.onclick = function() {
+    gb.disabled = true;
+    gb.innerHTML = 'Deploying AI Agents...';
+    gb.classList.add('opacity-80', 'cursor-not-allowed');
     chatGenerate();
   };
-  actionRow.appendChild(genBtn);
-  msgBody.appendChild(actionRow);
+  ar.appendChild(gb);
+  body.appendChild(ar);
 
-  setTimeout(function() { msg.scrollTop = msg.scrollHeight; }, 60);
+  scrollToBottom();
 }
+
+function makeRow(label, value, editIdx, reviewBotDiv, msgC) {
+  var r = document.createElement('div');
+  r.className = 'flex items-start gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/30 transition-colors group';
+  var ic = iconMap[label.toLowerCase().replace(/\s+/g, '_')] || iconMap[label.toLowerCase()] || '•';
+  r.innerHTML = '<div class="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-sm flex-shrink-0 border border-slate-100">' + ic + '</div>' +
+    '<div class="flex-1 min-w-0 pt-0.5"><p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">' + label + '</p><p class="text-sm text-slate-800 font-medium break-words">' + value + '</p></div>' +
+    '<button class="text-xs text-indigo-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity hover:underline flex-shrink-0 pt-1 px-2">Edit</button>';
+  r.lastChild.onclick = function() {
+    if (reviewBotDiv && reviewBotDiv.nextSibling) msgC.removeChild(reviewBotDiv.nextSibling);
+    msgC.removeChild(reviewBotDiv);
+    document.getElementById('chatbot-input-area').classList.remove('hidden');
+    if (editIdx === -1) { chatEdit(-1); }
+    else { chatEdit(editIdx); }
+  };
+  return r;
+}
+
+// ── Generation & utilities ────────────────────────────────────
 
 function chatGenerate() {
   document.getElementById('chatbot-loading').classList.remove('hidden');
   document.getElementById('chatbot-step-label').textContent = 'Processing...';
-
-  var statusText = document.getElementById('agent-status-text');
-  statusText.textContent = 'Ideator Agent drafting initial strategy...';
-  
-  var agentTimer1 = setTimeout(function() {
-    statusText.textContent = 'CMO Critic Agent evaluating constraints...';
-  }, 12000);
-  
-  var agentTimer2 = setTimeout(function() {
-    statusText.textContent = 'Refiner Agent polishing final output...';
-  }, 25000);
-
+  var st = document.getElementById('agent-status-text');
+  st.textContent = 'Ideator Agent drafting initial strategy...';
+  var t1 = setTimeout(function() { st.textContent = 'CMO Critic Agent evaluating constraints...'; }, 12000);
+  var t2 = setTimeout(function() { st.textContent = 'Refiner Agent polishing final output...'; }, 25000);
   fetch('{% url "creative:api_chat_generate" %}', {
     method: 'POST',
     headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
@@ -621,12 +907,9 @@ function chatGenerate() {
   })
   .then(function(r) { return r.json(); })
   .then(function(d) {
-    clearTimeout(agentTimer1);
-    clearTimeout(agentTimer2);
-    if (d.success) {
-      // Reload page immediately as requested
-      window.location.reload();
-    } else {
+    clearTimeout(t1); clearTimeout(t2);
+    if (d.success) { window.location.reload(); }
+    else {
       document.getElementById('chatbot-loading').classList.add('hidden');
       showChatError(d.error || 'Generation failed');
     }
@@ -637,18 +920,21 @@ function chatGenerate() {
   });
 }
 
-function showChatError(msg) {
-  var msgDiv = document.getElementById('chatbot-messages');
-  var div = document.createElement('div');
-  div.className = 'flex gap-4 message-bot items-start opacity-0 translate-y-4 transition-all duration-500 ease-out';
-  div.innerHTML = '<div class="w-10 h-10 rounded-2xl bg-red-100 flex items-center justify-center flex-shrink-0 border border-red-200"><svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div class="flex-1 min-w-0 bg-white p-5 rounded-2xl rounded-tl-sm shadow-sm border border-red-100"><p class="text-base text-red-700 font-bold mb-1">System Error</p><p class="text-sm text-red-600 mb-4">' + msg + '</p><button onclick="openChatbot()" class="px-5 py-2.5 rounded-xl text-sm font-semibold bg-red-50 hover:bg-red-100 text-red-700 transition-colors border border-red-200">Restart Initialization</button></div>';
-  msgDiv.appendChild(div);
-  
+function scrollToBottom() {
   setTimeout(function() {
-    div.classList.remove('opacity-0', 'translate-y-4');
-    msgDiv.scrollTop = msgDiv.scrollHeight;
+    document.getElementById('chatbot-messages').scrollTop = document.getElementById('chatbot-messages').scrollHeight;
+  }, 60);
+}
+
+function showChatError(msg) {
+  var md = document.getElementById('chatbot-messages');
+  var d = createBotMessage();
+  d.innerHTML = '<div class="w-10 h-10 rounded-2xl bg-red-100 flex items-center justify-center flex-shrink-0 border border-red-200"><svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div class="flex-1 min-w-0 bg-white p-5 rounded-2xl rounded-tl-sm shadow-sm border border-red-100"><p class="text-base text-red-700 font-bold mb-1">System Error</p><p class="text-sm text-red-600 mb-4">' + msg + '</p><button onclick="openChatbot()" class="px-5 py-2.5 rounded-xl text-sm font-semibold bg-red-50 hover:bg-red-100 text-red-700 transition-colors border border-red-200">Restart Initialization</button></div>';
+  md.appendChild(d);
+  setTimeout(function() {
+    d.classList.remove('opacity-0', 'translate-y-4');
+    md.scrollTop = md.scrollHeight;
   }, 50);
-  
   document.getElementById('chatbot-step-label').textContent = 'Error Encountered';
 }
 </script>

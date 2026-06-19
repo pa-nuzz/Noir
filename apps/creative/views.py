@@ -14,6 +14,7 @@ from apps.media_assets.models import MediaAsset, MediaFolder
 from apps.media_assets.services import MediaService
 
 from .services.creative_service import CreativeServiceError, generate_creative_content
+from .services.schemas import get_strategy_schema, get_all_strategy_schemas
 
 from .models import CreativeContext, CreativeStrategy, CreativeStrategyAsset
 
@@ -549,7 +550,11 @@ def api_strategy_status(request):
 @csrf_exempt
 @login_required
 def api_chat_generate(request):
-    """Accepts collected chat data, generates strategy via LLM, saves as draft."""
+    """Accepts collected chat data, generates strategy via LLM, saves as draft.
+    
+    Handles dynamic input fields based on the strategy type's schema.
+    Maps known fields to model columns; stores extras in metadata JSONField.
+    """
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=400)
     try:
@@ -561,16 +566,45 @@ def api_chat_generate(request):
     ws_id = request.session.get('active_workspace_id')
     strategy_type = data.get('strategy_type', 'full_campaign')
     title = data.get('title', '').strip()
-    description = data.get('description', '').strip()
-    target_audience = data.get('target_audience', '').strip()
-    tone = data.get('tone', 'professional').strip()
-    platforms = data.get('platforms', [])
     scheduled_raw = data.get('scheduled_at', '').strip()
 
     if not title:
         return JsonResponse({'error': 'Title is required'}, status=400)
 
     context_obj = _get_workspace_context(request)
+
+    # ── Load schema for this strategy type ─────────────────────────────────
+    schema = get_strategy_schema(strategy_type)
+
+    # ── Extract common fields from dynamic payload ──────────────────────────
+    # Map known field keys to model/context fields
+    FIELD_MAP = {
+        'title': 'title',
+        'goals': 'campaign_goal',
+        'description': 'campaign_goal',
+        'target_audience': 'target_audience',
+        'audience': 'target_audience',
+        'tone': 'tone_of_voice',
+        'platforms': 'scheduled_platforms',
+    }
+
+    # Extract mapped fields
+    mapped = {}
+    for data_key, model_field in FIELD_MAP.items():
+        if data_key in data:
+            mapped[model_field] = data[data_key]
+
+    campaign_goal = mapped.get('campaign_goal', title)
+    target_audience = mapped.get('target_audience', '')
+    tone = mapped.get('tone_of_voice', 'professional')
+    platforms = mapped.get('scheduled_platforms', [])
+
+    if isinstance(tone, list):
+        tone = tone[0] if tone else 'professional'
+    if isinstance(platforms, str):
+        platforms = [p.strip() for p in platforms.split(',') if p.strip()]
+
+    # ── Build company_context ──────────────────────────────────────────────
     company_context = {
         "name": context_obj.company_name if context_obj else title,
         "industry": context_obj.industry if context_obj else "",
@@ -582,18 +616,51 @@ def api_chat_generate(request):
         "platforms": platforms,
     }
 
+    # Include extra strategy-specific fields in company context
+    if schema:
+        schema_keys = {step['key'] for step in schema.get('steps', [])}
+        STANDARD_CTX_KEYS = {'title', 'goals', 'description', 'target_audience',
+                             'audience', 'tone', 'platforms', 'scheduled_at',
+                             'strategy_type'}
+        extra_keys = schema_keys - STANDARD_CTX_KEYS
+        for key in extra_keys:
+            val = data.get(key)
+            if val:
+                company_context[key] = val
+
+    # ── Build user_input dynamically from schema ──────────────────────────
+    prompt_lines = [
+        f"STRATEGY TYPE: {dict(CreativeStrategy.STRATEGY_TYPES).get(strategy_type, 'Full Campaign')}",
+        f"Title: {title}",
+    ]
+
+    if schema:
+        for step in schema.get('steps', []):
+            key = step['key']
+            if key in ('title', 'scheduled_at', 'strategy_type'):
+                continue
+            val = data.get(key, '')
+            if isinstance(val, list):
+                val = ', '.join(v for v in val if v)
+            if val:
+                prompt_lines.append(f"{step['label']}: {val}")
+    else:
+        # Fallback for unknown types
+        for k, v in data.items():
+            if k not in ('strategy_type', 'title', 'csrfmiddlewaretoken', 'scheduled_at'):
+                if isinstance(v, list):
+                    v = ', '.join(str(x) for x in v if x)
+                if v:
+                    prompt_lines.append(f"{k.replace('_', ' ').title()}: {v}")
+
+    # Add the static prompt template section
     template_key = strategy_type if strategy_type in _PROMPT_TEMPLATES else 'full_campaign'
     strategy_prompt_section = _PROMPT_TEMPLATES[template_key]
+    prompt_lines.append("")
+    prompt_lines.append("BRIEF:")
+    prompt_lines.append(strategy_prompt_section)
 
-    user_input = (
-        f"STRATEGY TYPE: {dict(CreativeStrategy.STRATEGY_TYPES).get(strategy_type, 'Full Campaign')}\n"
-        f"Title: {title}\n"
-        f"Description / Brief: {description}\n"
-        f"Target Audience: {target_audience}\n"
-        f"Tone: {tone}\n"
-        f"Target Platforms: {', '.join(platforms) if platforms else 'All relevant'}\n\n"
-        f"BRIEF:\n{strategy_prompt_section}"
-    )
+    user_input = "\n".join(prompt_lines)
 
     # For platform-specific categories, emphasize which platforms to target
     if strategy_type in ('post_content', 'social_post') and platforms:
@@ -622,6 +689,7 @@ def api_chat_generate(request):
     if not generated:
         return JsonResponse({'error': 'Creative generation returned empty output. Check API keys.'}, status=502)
 
+    # ── Parse scheduled_at ─────────────────────────────────────────────────
     scheduled_at = None
     if scheduled_raw:
         try:
@@ -632,17 +700,28 @@ def api_chat_generate(request):
         except (ValueError, TypeError):
             pass
 
+    # ── Build metadata from fields not mapped to model columns ─────────────
+    mapped_data_keys = set(FIELD_MAP.keys()) | {'strategy_type', 'scheduled_at', 'csrfmiddlewaretoken'}
+    metadata = {}
+    for k, v in data.items():
+        if k not in mapped_data_keys:
+            if isinstance(v, list):
+                v = [x for x in v if x]
+            if v:
+                metadata[k] = v
+
     strategy = CreativeStrategy.objects.create(
         user=user,
         workspace_id=ws_id,
         strategy_type=strategy_type,
         title=full_title,
-        campaign_goal=description or full_title,
-        target_audience=target_audience,
-        tone_of_voice=tone,
+        campaign_goal=campaign_goal if isinstance(campaign_goal, str) else full_title,
+        target_audience=target_audience if isinstance(target_audience, str) else '',
+        tone_of_voice=tone if isinstance(tone, str) else 'professional',
         generated_output=generated,
-        scheduled_platforms=platforms,
+        scheduled_platforms=platforms if isinstance(platforms, list) else [],
         scheduled_at=scheduled_at,
+        metadata=metadata,
         llm_mode=llm_mode,
         status='draft',
     )
@@ -688,3 +767,15 @@ def api_strategy_update(request):
     strategy.save()
 
     return JsonResponse({'success': True, 'title': strategy.title})
+
+
+@login_required
+def api_strategy_inputs(request, strategy_type=None):
+    """Return the input schema for a strategy type, or all schemas if no type given."""
+    if strategy_type:
+        schema = get_strategy_schema(strategy_type)
+        if not schema:
+            return JsonResponse({'error': f'Unknown strategy type: {strategy_type}'}, status=404)
+        return JsonResponse({'schema': schema, 'strategy_type': strategy_type})
+    schemas = get_all_strategy_schemas()
+    return JsonResponse({'schemas': schemas})

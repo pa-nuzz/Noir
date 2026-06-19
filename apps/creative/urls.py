@@ -15,4 +15,6 @@ urlpatterns = [
     path('api/strategy-status/', views.api_strategy_status, name='api_strategy_status'),
     path('api/chat-generate/', views.api_chat_generate, name='api_chat_generate'),
     path('api/strategy-update/', views.api_strategy_update, name='api_strategy_update'),
+    path('api/strategy-inputs/', views.api_strategy_inputs, name='api_strategy_inputs'),
+    path('api/strategy-inputs/<str:strategy_type>/', views.api_strategy_inputs, name='api_strategy_inputs_detail'),
 ]
