@@ -1,3 +1,4 @@
+import ssl
 import os
 import sys
 import base64
@@ -274,6 +275,11 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_TASK_ALWAYS_EAGER = config('CELERY_TASK_ALWAYS_EAGER', default=False, cast=bool)
 CELERY_TASK_EAGER_PROPAGATES = True
+
+# "connect to Redis over TLS but don't validate the SSL certificate" 
+# (CERT_NONE = don't verify certificate chain or hostname)
+CELERY_BROKER_USE_SSL = {"ssl_cert_reqs": "none"}
+CELERY_REDIS_BACKEND_USE_SSL = {"ssl_cert_reqs": "none"}
 
 # Queue separation — prevents slow tasks from blocking critical ones
 CELERY_TASK_DEFAULT_QUEUE = 'default'
