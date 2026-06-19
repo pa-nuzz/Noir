@@ -9,7 +9,7 @@ from core.models import AuditMixin
 from core.tenant import TenantManager
 
 
-class ContactList(AuditMixin):
+class ContactList(models.Model):
     objects = TenantManager()
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='contact_lists')
     workspace = models.ForeignKey('workspaces.Workspace', on_delete=models.CASCADE, null=True, blank=True, related_name='contact_lists')
@@ -28,7 +28,7 @@ class ContactList(AuditMixin):
         return list(self.contacts.filter(is_active=True, unsubscribed=False).values_list('email', flat=True))
 
 
-class ContactTag(AuditMixin):
+class ContactTag(models.Model):
     objects = TenantManager()
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='contact_tags')
     workspace = models.ForeignKey('workspaces.Workspace', on_delete=models.CASCADE, null=True, blank=True, related_name='contact_tags')
@@ -47,7 +47,7 @@ class ContactTag(AuditMixin):
         return self.name
 
 
-class ContactCustomField(AuditMixin):
+class ContactCustomField(models.Model):
     objects = TenantManager()
     FIELD_TYPE_CHOICES = [
         ('text', 'Text'),
@@ -76,7 +76,7 @@ class ContactCustomField(AuditMixin):
         return self.name
 
 
-class ContactSegment(AuditMixin):
+class ContactSegment(models.Model):
     objects = TenantManager()
     MATCH_CHOICES = [
         ('all', 'Match ALL conditions'),
