@@ -4,6 +4,15 @@
 {% block content %}
 
 <div class="page-shell max-w-none">
+
+  <!-- Page Header -->
+  <div class="premium-surface card-elevate rounded-2xl p-6 lg:p-7 flex flex-col lg:flex-row lg:items-center gap-5 lg:gap-8">
+    <div class="flex-1 min-w-0">
+      <h1 class="text-2xl lg:text-[1.7rem] font-extrabold tracking-tight text-slate-900">My Profile</h1>
+      <p class="text-sm text-slate-500 mt-1.5">Manage your account details and security settings</p>
+    </div>
+  </div>
+
 <div class="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
   
   <!-- General Information -->
@@ -14,15 +23,15 @@
         <p class="section-subtitle">Update your account details</p>
       </div>
 
-      <form method="post" enctype="multipart/form-data" class="space-y-6">
+      <form method="post" enctype="multipart/form-data" class="space-y-4">
         {% csrf_token %}
         {% load widget_tweaks %}
         <input type="hidden" name="action" value="update_profile">
 
-        <div class="flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-6 mb-8">
-          <div class="relative group">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mb-4">
+          <div class="relative group w-24 sm:w-28">
             <label for="id_avatar" class="block cursor-pointer">
-            <div id="avatar-preview-frame" class="w-28 h-28 rounded-2xl bg-primary-light flex items-center justify-center text-primary text-3xl font-bold border-4 border-white shadow-lg overflow-hidden ring-2 ring-indigo-100 group-hover:ring-4 group-hover:ring-primary/20 transition-all">
+            <div id="avatar-preview-frame" class="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-primary-light flex items-center justify-center text-primary text-3xl font-bold border-4 border-white shadow-lg overflow-hidden ring-2 ring-indigo-100 group-hover:ring-4 group-hover:ring-primary/20 transition-all">
               {% if user.avatar %}
               <img id="avatar-preview-image" src="{{ user.avatar.url }}" alt="" class="w-full h-full object-cover">
               {% else %}
@@ -36,9 +45,9 @@
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h4l2-2h6l2 2h4v12H3V7zm9 10a4 4 0 100-8 4 4 0 000 8z"/></svg>
             </div>
             </label>
-            {{ profile_form.avatar }}
+            <div class="hidden">{{ profile_form.avatar }}</div>
           </div>
-          <div class="text-center sm:text-left">
+          <div class="text-left">
             <h3 class="font-bold text-slate-900">Profile Picture</h3>
             <p class="text-xs text-gray-400 font-medium">Click the avatar frame to upload • PNG/JPG • Max 2MB</p>
             <p id="avatar-file-name" class="mt-1 text-xs text-indigo-600 font-semibold hidden"></p>
@@ -49,34 +58,34 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label class="block text-sm font-bold text-gray-700 mb-2">First Name</label>
+            <label class="block text-sm font-bold text-gray-700 mb-1.5">First Name</label>
             {{ profile_form.first_name|add_class:"auth-input" }}
           </div>
           <div>
-            <label class="block text-sm font-bold text-gray-700 mb-2">Last Name</label>
+            <label class="block text-sm font-bold text-gray-700 mb-1.5">Last Name</label>
             {{ profile_form.last_name|add_class:"auth-input" }}
           </div>
-          <div class="sm:col-span-2 border-t border-gray-100 pt-6 mt-1"></div>
+          <div class="sm:col-span-2 border-t border-gray-100 pt-3 mt-1"></div>
           <div class="sm:col-span-2">
-            <label class="block text-sm font-bold text-gray-700 mb-2">Email Address</label>
+            <label class="block text-sm font-bold text-gray-700 mb-1.5">Email Address</label>
             {{ profile_form.email|add_class:"auth-input" }}
           </div>
-          <div class="sm:col-span-2 border-t border-gray-100 pt-6 mt-1"></div>
+          <div class="sm:col-span-2 border-t border-gray-100 pt-3 mt-1"></div>
           <div class="sm:col-span-2">
-            <label class="block text-sm font-bold text-gray-700 mb-2">Company Name</label>
+            <label class="block text-sm font-bold text-gray-700 mb-1.5">Company Name</label>
             {{ profile_form.company|add_class:"auth-input"|attr:"placeholder:IDA Inc" }}
           </div>
-          <div class="sm:col-span-2 border-t border-gray-100 pt-6 mt-1"></div>
+          <div class="sm:col-span-2 border-t border-gray-100 pt-3 mt-1"></div>
           <div class="sm:col-span-2">
-            <label class="block text-sm font-bold text-gray-700 mb-2">Bio / Description</label>
+            <label class="block text-sm font-bold text-gray-700 mb-1.5">Bio / Description</label>
             {{ profile_form.bio|add_class:"auth-input h-32 resize-none"|attr:"placeholder:Briefly describe yourself..." }}
           </div>
         </div>
 
         <div class="pt-4">
-          <button type="submit" class="btn-primary w-full sm:w-auto justify-center px-8 shadow-lg shadow-indigo-500/20">
+          <button type="submit" class="btn-action btn-action-primary w-full sm:w-auto">
             Save Profile Changes
           </button>
         </div>
@@ -105,7 +114,7 @@
         </div>
         {% endfor %}
 
-        <button type="submit" class="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-primary text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-500/20 hover:bg-primary-hover transition-all">
+        <button type="submit" class="btn-action btn-action-primary w-full">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
           Update Password
         </button>
@@ -113,7 +122,7 @@
     </div>
 
     <!-- Account Summary -->
-    <div class="premium-surface card-elevate surface-hover-clean section-card p-6">
+    <div class="premium-surface card-elevate surface-hover-clean section-card">
       <div class="flex items-center gap-2 mb-4">
         <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
         <h4 class="text-sm font-bold text-slate-900">Account Secured</h4>
