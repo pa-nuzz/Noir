@@ -1,10 +1,12 @@
 import logging
 import mimetypes
+from datetime import timedelta
 from urllib.parse import urljoin, urlparse
 
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.urls import resolve
+from django.utils import timezone
 import requests
 
 from .base import BaseSocialPlatform
@@ -277,4 +279,30 @@ class LinkedInPlatform(BaseSocialPlatform):
         return {}
 
     def refresh_token(self):
+        if not self.account or not self.account.refresh_token:
+            return None
+
+        client_id = getattr(settings, 'LINKEDIN_CLIENT_ID', '')
+        client_secret = getattr(settings, 'LINKEDIN_CLIENT_SECRET', '')
+        if not client_id:
+            client_id = getattr(settings, 'SOCIAL_OAUTH_CLIENT_IDS', {}).get('linkedin', '')
+            client_secret = getattr(settings, 'SOCIAL_OAUTH_CLIENT_SECRETS', {}).get('linkedin', '')
+
+        resp = requests.post('https://www.linkedin.com/oauth/v2/accessToken', data={
+            'grant_type': 'refresh_token',
+            'refresh_token': self.account.refresh_token,
+            'client_id': client_id,
+            'client_secret': client_secret,
+        })
+        if resp.status_code == 200:
+            data = resp.json()
+            self.account.access_token = data['access_token']
+            if data.get('refresh_token'):
+                self.account.refresh_token = data['refresh_token']
+            if data.get('expires_in'):
+                self.account.token_expires_at = timezone.now() + timedelta(seconds=data['expires_in'])
+            self.account.save(update_fields=['access_token', 'refresh_token', 'token_expires_at'])
+            self.access_token = data['access_token']
+            return data['access_token']
+        logger.error("LinkedIn token refresh failed: %s", resp.text)
         return None
