@@ -593,6 +593,131 @@ def post_detail(request, post_id):
 
 
 @login_required
+def post_edit(request, post_id):
+    post = get_object_or_404(SocialPost, id=post_id, user=request.user)
+    if post.status not in ('draft', 'scheduled'):
+        messages.error(request, 'Only draft or scheduled posts can be edited.')
+        return redirect('social_accounts:post_detail', post_id=post.id)
+
+    service = SocialService(request.user)
+    accounts = service.get_accounts()
+    grouped_accounts = _group_accounts_by_platform(accounts)
+
+    active_workspace = None
+    ws_id = request.session.get('active_workspace_id')
+    if ws_id:
+        from apps.workspaces.models import WorkspaceMembership
+        m = WorkspaceMembership.objects.filter(workspace_id=ws_id, user=request.user).select_related('workspace').first()
+        if m:
+            active_workspace = m.workspace
+
+    form_data = {}
+    initial_selected_assets = []
+
+    if request.method == 'GET':
+        hashtags_str = ', '.join(post.hashtags) if post.hashtags else ''
+        scheduled_value = post.scheduled_at.strftime('%Y-%m-%dT%H:%M') if post.scheduled_at else ''
+        form_data = {
+            'account_ids': [str(post.account_id)],
+            'content': post.content or '',
+            'hashtags': hashtags_str,
+            'link_url': post.link_url or '',
+            'scheduled_at': scheduled_value,
+            'media_urls': post.media_urls or [],
+            'media_asset_ids': [],
+        }
+        for url in (post.media_urls or []):
+            initial_selected_assets.append({
+                'id': '',
+                'url': url,
+                'thumbnail_url': url,
+                'title': url.rsplit('/', 1)[-1] if '/' in url else url,
+                'file_type': 'image',
+            })
+
+    if request.method == 'POST':
+        content = request.POST.get('content', '').strip()
+        scheduled_at = request.POST.get('scheduled_at') or None
+        link_url = request.POST.get('link_url', '').strip()
+        hashtags_raw = request.POST.get('hashtags', '').strip()
+        hashtags = [h.strip().lstrip('#').strip() for h in hashtags_raw.split(',') if h.strip()] if hashtags_raw else []
+        media_urls = [url.strip() for url in request.POST.getlist('media_urls') if url.strip()]
+
+        media_asset_ids = [aid for aid in request.POST.getlist('media_asset_ids') if aid and aid.isdigit()]
+        if media_asset_ids:
+            from apps.media_assets.models import MediaAsset
+            from apps.media_assets.services import MediaService
+            media_service = MediaService(request.user)
+            selected_assets = MediaAsset.objects.filter(id__in=media_asset_ids, user=request.user)
+            if active_workspace:
+                from django.db.models import Q
+                selected_assets = selected_assets.filter(Q(workspace=active_workspace) | Q(workspace__isnull=True))
+            selected_by_id = {str(a.id): a for a in selected_assets}
+            for aid in media_asset_ids:
+                asset = selected_by_id.get(aid)
+                if not asset:
+                    continue
+                asset_url = media_service.get_asset_url(asset)
+                if asset_url:
+                    media_urls.append(asset_url)
+                initial_selected_assets.append({
+                    'id': asset.id, 'url': asset_url, 'thumbnail_url': media_service.get_thumbnail_url(asset) or asset_url,
+                    'title': asset.title or asset.original_filename, 'file_type': asset.file_type,
+                })
+
+        uploaded_files = request.FILES.getlist('media_files')
+        if uploaded_files:
+            for f in uploaded_files:
+                try:
+                    upload = _save_social_post_media(f)
+                    media_urls.append(upload['url'])
+                except Exception as e:
+                    logger.error('Media upload via form failed: %s', e)
+
+        media_urls = list(dict.fromkeys(media_urls))
+
+        if not content and not media_urls:
+            messages.error(request, 'Please provide content or media.')
+        else:
+            try:
+                service.update_post(post.id, content, media_urls=media_urls, link_url=link_url, hashtags=hashtags, scheduled_at=scheduled_at)
+                if request.POST.get('publish_now'):
+                    service.publish_post(post.id)
+                    messages.success(request, 'Post published!')
+                elif scheduled_at:
+                    messages.success(request, 'Post updated and scheduled.')
+                else:
+                    messages.success(request, 'Post updated.')
+                return redirect('social_accounts:post_detail', post_id=post.id)
+            except ValueError as e:
+                messages.error(request, str(e))
+                return redirect('social_accounts:post_detail', post_id=post.id)
+
+        form_data = {
+            'account_ids': [str(post.account_id)],
+            'content': content,
+            'hashtags': request.POST.get('hashtags', ''),
+            'link_url': link_url,
+            'scheduled_at': request.POST.get('scheduled_at', ''),
+            'media_urls': media_urls,
+            'media_asset_ids': media_asset_ids,
+        }
+
+    form_data_json = json.dumps(form_data)
+    initial_selected_assets_json = json.dumps(initial_selected_assets)
+
+    return render(request, 'social_accounts/post_form.html', {
+        'post': post,
+        'accounts': accounts,
+        'grouped_accounts': grouped_accounts,
+        'form_data': form_data,
+        'form_data_json': form_data_json,
+        'initial_selected_assets_json': initial_selected_assets_json,
+        'edit_mode': True,
+    })
+
+
+@login_required
 def post_delete(request, post_id):
     post = get_object_or_404(SocialPost, id=post_id, user=request.user)
     if request.method == 'POST':

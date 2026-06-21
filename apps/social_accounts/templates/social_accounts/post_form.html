@@ -1,6 +1,6 @@
 {% extends 'base_dashboard.html' %}
-{% block title %}New Post — Social Media{% endblock %}
-{% block page_title %}New Post{% endblock %}
+{% block title %}{% if edit_mode %}Edit Post{% else %}New Post{% endif %} — Social Media{% endblock %}
+{% block page_title %}{% if edit_mode %}Edit Post{% else %}New Post{% endif %}{% endblock %}
 
 {% block content %}
 <style>
@@ -46,10 +46,10 @@
     </a>
     <div>
       <div class="flex items-center gap-3">
-        <h1 class="text-2xl font-bold text-slate-900">Create Post</h1>
+        <h1 class="text-2xl font-bold text-slate-900">{% if edit_mode %}Edit Post{% else %}Create Post{% endif %}</h1>
         {% include "components/badge.html" with label="Multi-Platform" variant="blue" %}
       </div>
-      <p class="text-sm text-slate-500 mt-0.5">Write once, publish to multiple platforms at once</p>
+      <p class="text-sm text-slate-500 mt-0.5">{% if edit_mode %}Edit your draft or scheduled post{% else %}Write once, publish to multiple platforms at once{% endif %}</p>
     </div>
     <div id="autosaveIndicator" class="hidden ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200">
       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>

@@ -304,6 +304,7 @@
                     <div class="flex items-center justify-end gap-2">
                       <a href="{% url 'social_accounts:post_detail' post.id %}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors">View</a>
                       {% if post.status == 'draft' or post.status == 'scheduled' %}
+                      <a href="{% url 'social_accounts:post_edit' post.id %}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors">Edit</a>
                       <a href="{% url 'social_accounts:publish_post' post.id %}" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors" onclick="return confirm('Publish this post now?')">Publish</a>
                       {% endif %}
                       {% if can_delete_social %}

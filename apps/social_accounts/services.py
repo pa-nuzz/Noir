@@ -207,6 +207,22 @@ class SocialService:
             results.append({'post_id': post_id, 'success': result is not None})
         return results
 
+    def update_post(self, post_id, content, media_urls=None, link_url=None, hashtags=None, scheduled_at=None):
+        post = SocialPost.objects.get(id=post_id, user=self.user)
+        if post.status not in ('draft', 'scheduled'):
+            raise ValueError('Only draft or scheduled posts can be edited.')
+        post.content = content
+        post.media_urls = media_urls or []
+        post.link_url = link_url or ''
+        post.hashtags = hashtags or []
+        post.scheduled_at = scheduled_at
+        if scheduled_at and post.status == 'draft':
+            post.status = 'scheduled'
+        elif not scheduled_at and post.status == 'scheduled':
+            post.status = 'draft'
+        post.save(update_fields=['content', 'media_urls', 'link_url', 'hashtags', 'scheduled_at', 'status'])
+        return post
+
     def schedule_post(self, post_id, scheduled_at):
         post = SocialPost.objects.get(id=post_id, user=self.user)
         post.scheduled_at = scheduled_at
