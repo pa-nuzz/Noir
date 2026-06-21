@@ -15,6 +15,7 @@ urlpatterns = [
     path('posts/create/', views_api.post_create, name='post_create'),
     path('posts/upload-media/', views_api.post_media_upload, name='post_media_upload'),
     path('posts/<int:post_id>/', views_api.post_detail, name='post_detail'),
+    path('posts/<int:post_id>/edit/', views_api.post_edit, name='post_edit'),
     path('posts/<int:post_id>/delete/', views_api.post_delete, name='post_delete'),
     path('posts/<int:post_id>/publish/', views_api.publish_post, name='publish_post'),
     path('analytics/', views_api.analytics_view, name='analytics_overview'),
