@@ -74,11 +74,11 @@
 
   <!-- Arc text: INTELLIGENCE -->
   <text font-family="'Helvetica Neue', 'Arial', sans-serif"
-        font-size="44"
+        font-size="47"
         font-weight="600"
         fill="#6D28D9"
-        letter-spacing="12">
-    <textPath href="#rightArc" startOffset="50%" text-anchor="middle">INTELLIGENCE</textPath>
+        letter-spacing="11">
+    <textPath href="#rightArc" startOffset="50%" text-anchor="middle">INTELLIGENT</textPath>
   </text>
 
   <!-- Bottom text: DIGITAL AUTOMATION -->
