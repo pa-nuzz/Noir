@@ -9,7 +9,7 @@ from django.core.cache import cache
 logger = logging.getLogger(__name__)
 
 CIRCUIT_KEY = 'llm_fast:circuit_open'
-CIRCUIT_TTL = 3600
+CIRCUIT_TTL = 300
 
 
 class DeepSeekClient:

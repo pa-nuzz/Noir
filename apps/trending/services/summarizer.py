@@ -10,6 +10,9 @@ logger = logging.getLogger(__name__)
 
 class Summarizer:
     def summarize(self, item: FeedItem) -> FeedItem:
+        if item.ai_summary:
+            return item
+
         text = item.content_cleaned or item.content_raw or ''
         text = text[:4000]
 

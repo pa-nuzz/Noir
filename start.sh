@@ -21,7 +21,7 @@ pkill -f "celery -A core" 2>/dev/null || true
 
 # 3. Start Celery worker (consumes both default and low queues for trending tasks)
 echo "Starting Celery worker..."
-cd "$PROJECT_DIR" && nohup $CELERY -A core worker -l INFO --concurrency=2 -Q default,low > /tmp/celery_worker.log 2>&1 &
+cd "$PROJECT_DIR" && nohup $CELERY -A core worker -l INFO --concurrency=2 --pool threads -Q default,low -n worker@%h > /tmp/celery_worker.log 2>&1 &
 WPID=$!
 disown
 echo "  Celery worker PID: $WPID"
@@ -33,8 +33,17 @@ BPID=$!
 disown
 echo "  Celery beat PID: $BPID"
 
+# 5. Start critical queue worker (campaign sends, OAuth refresh)
+echo "Starting Celery critical worker..."
+cd "$PROJECT_DIR" && nohup $CELERY -A core worker -Q critical --concurrency=1 --pool threads -l INFO -n critical@%h > /tmp/celery_critical.log 2>&1 &
+CPID=$!
+disown
+echo "  Celery critical worker PID: $CPID"
+
 echo ""
 echo "=== All services started ==="
 echo "Run Django:  $PYTHON manage.py runserver 0.0.0.0:8080"
 echo "View logs:   tail -f /tmp/celery_worker.log"
+echo "             tail -f /tmp/celery_critical.log"
+echo "             tail -f /tmp/celery_beat.log"
 echo ""

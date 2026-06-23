@@ -77,45 +77,45 @@
     </div>
   </div>
 
-  <!-- KPI Cards -->
+  <!-- KPI Cards — now clickable -->
   <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-    <div class="premium-surface rounded-2xl p-5">
+    <a href="?tab=history" class="premium-surface rounded-2xl p-5 hover:ring-2 hover:ring-cyan-400 transition-all block">
       <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Total Items</p>
       <p class="text-2xl font-bold text-slate-900 mt-1">{{ stats.total }}</p>
-    </div>
-    <div class="premium-surface rounded-2xl p-5">
+    </a>
+    <a href="?tab=history&status=draft" class="premium-surface rounded-2xl p-5 hover:ring-2 hover:ring-cyan-400 transition-all block">
       <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Drafts</p>
       <p class="text-2xl font-bold text-slate-900 mt-1">{{ stats.drafts }}</p>
-    </div>
-    <div class="premium-surface rounded-2xl p-5">
+    </a>
+    <a href="?tab=history&status=approved" class="premium-surface rounded-2xl p-5 hover:ring-2 hover:ring-cyan-400 transition-all block">
       <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Approved</p>
       <p class="text-2xl font-bold text-slate-900 mt-1">{{ stats.approved }}</p>
-    </div>
-    <div class="premium-surface rounded-2xl p-5">
+    </a>
+    <a href="?tab=history&status=published" class="premium-surface rounded-2xl p-5 hover:ring-2 hover:ring-cyan-400 transition-all block">
       <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Published</p>
       <p class="text-2xl font-bold text-slate-900 mt-1">{{ stats.published }}</p>
-    </div>
+    </a>
   </div>
 
   <!-- Tab Navigation -->
   <div>
     <div class="sch-tabs" role="tablist">
-      <button class="sch-tab active" role="tab" aria-selected="true" onclick="switchTab('overview')" id="tab-overview">
+      <button class="sch-tab {% if active_tab == 'overview' %}active{% endif %}" role="tab" aria-selected="{% if active_tab == 'overview' %}true{% else %}false{% endif %}" onclick="switchTab('overview')" id="tab-overview">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
         Overview
       </button>
-      <button class="sch-tab" role="tab" aria-selected="false" onclick="switchTab('generate')" id="tab-generate">
+      <button class="sch-tab {% if active_tab == 'generate' %}active{% endif %}" role="tab" aria-selected="{% if active_tab == 'generate' %}true{% else %}false{% endif %}" onclick="switchTab('generate')" id="tab-generate">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
         Generate
       </button>
-      <button class="sch-tab" role="tab" aria-selected="false" onclick="switchTab('history')" id="tab-history">
+      <button class="sch-tab {% if active_tab == 'history' %}active{% endif %}" role="tab" aria-selected="{% if active_tab == 'history' %}true{% else %}false{% endif %}" onclick="switchTab('history')" id="tab-history">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         History
       </button>
     </div>
 
     <!-- Panel: Overview -->
-    <div class="sch-tab-panel active" id="panel-overview">
+    <div class="sch-tab-panel {% if active_tab == 'overview' %}active{% endif %}" id="panel-overview">
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
         <!-- Recent Content -->
         <div class="lg:col-span-2 premium-surface rounded-2xl overflow-hidden">
@@ -175,7 +175,7 @@
     </div>
 
     <!-- Panel: Generate -->
-    <div class="sch-tab-panel" id="panel-generate">
+    <div class="sch-tab-panel {% if active_tab == 'generate' %}active{% endif %}" id="panel-generate">
       <div class="mt-6">
         <form method="post" action="{% url 'content_studio:generate' %}" class="space-y-6">
           {% csrf_token %}
@@ -329,14 +329,35 @@
     </div>
 
     <!-- Panel: History -->
-    <div class="sch-tab-panel" id="panel-history">
-      <div class="mt-6">
+    <div class="sch-tab-panel {% if active_tab == 'history' %}active{% endif %}" id="panel-history">
+      <div class="mt-6 space-y-4">
+        <!-- Filter Bar -->
+        <form method="get" class="flex gap-3">
+          <input type="hidden" name="tab" value="history">
+          <input type="text" name="q" value="{{ search_query }}"
+                 placeholder="Search title or body…" class="input-field flex-1">
+          <select name="status" class="input-field w-40" onchange="this.form.submit()">
+            <option value="">All Statuses</option>
+            {% for val, label in status_choices %}
+            <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn-action btn-action-primary">Filter</button>
+        </form>
+
         <div class="premium-surface rounded-2xl overflow-hidden">
-          {% if all_items %}
+          {% if page_obj.object_list %}
+          <div id="bulk-bar" class="hidden flex items-center justify-between px-6 py-3 bg-slate-50 border-b border-slate-200">
+            <span class="text-sm text-slate-600"><span id="selected-count">0</span> selected</span>
+            <button id="bulk-delete-btn" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors">Delete Selected</button>
+          </div>
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
               <thead>
                 <tr class="border-b border-slate-100 bg-slate-50/50">
+                  <th class="px-6 py-3 w-10">
+                    <input type="checkbox" id="select-all" class="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                  </th>
                   <th class="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Title</th>
                   <th class="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Type</th>
                   <th class="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Platform</th>
@@ -346,8 +367,11 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-50">
-                {% for item in all_items %}
+                {% for item in page_obj.object_list %}
                 <tr class="hover:bg-slate-50/50 transition-colors">
+                  <td class="px-6 py-4">
+                    <input type="checkbox" class="item-checkbox w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" value="{{ item.id }}">
+                  </td>
                   <td class="px-6 py-4">
                     <a href="{% url 'content_studio:detail' item.id %}" class="font-semibold text-slate-900 hover:text-primary transition-colors truncate block max-w-[240px]">{{ item.title|default:'Untitled' }}</a>
                   </td>
@@ -369,13 +393,41 @@
                   </td>
                   <td class="px-6 py-4 text-slate-600">{{ item.created_at|date:'M d, Y' }}</td>
                   <td class="px-6 py-4 text-right">
-                    <a href="{% url 'content_studio:detail' item.id %}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors">View</a>
+                    <form method="POST" action="{% url 'content_studio:delete' item.id %}" onsubmit="return confirm('Delete this content?')" style="display:inline">
+                      {% csrf_token %}
+                      <button type="submit" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors">Delete</button>
+                    </form>
                   </td>
                 </tr>
                 {% endfor %}
               </tbody>
             </table>
           </div>
+
+          <!-- Pagination -->
+          {% if page_obj.has_other_pages %}
+          <div class="flex items-center justify-between px-6 py-4 border-t border-slate-100 gap-4">
+            <p class="text-sm text-slate-500">
+              Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+            </p>
+            <div class="flex items-center gap-2">
+              {% if page_obj.has_previous %}
+              <a href="?tab=history&page={{ page_obj.previous_page_number }}&status={{ status_filter }}&q={{ search_query }}"
+                 class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100">← Prev</a>
+              {% endif %}
+              <span class="text-sm text-slate-500">Page</span>
+              <input type="number" min="1" max="{{ page_obj.paginator.num_pages }}" value="{{ page_obj.number }}"
+                      class="w-24 input-field text-center py-1 page-input"
+                      onkeydown="if(event.key==='Enter')goToPage(this)">
+              <span class="text-sm text-slate-500">of {{ page_obj.paginator.num_pages }}</span>
+              {% if page_obj.has_next %}
+              <a href="?tab=history&page={{ page_obj.next_page_number }}&status={{ status_filter }}&q={{ search_query }}"
+                 class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100">Next →</a>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+
           {% else %}
           {% include "components/empty_state.html" with title="No content history" description="Generated content will appear here." %}
           {% endif %}
@@ -419,6 +471,65 @@ function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
 {% block extra_scripts %}
 <script>
+// Bulk selection
+const selectAll = document.getElementById('select-all');
+const checkboxes = document.querySelectorAll('.item-checkbox');
+const bulkBar = document.getElementById('bulk-bar');
+const selectedCount = document.getElementById('selected-count');
+const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+
+function updateBulkBar() {
+  const checked = document.querySelectorAll('.item-checkbox:checked');
+  selectedCount.textContent = checked.length;
+  bulkBar.classList.toggle('hidden', checked.length === 0);
+}
+
+function goToPage(el) {
+  var u = new URL(window.location);
+  u.searchParams.set('page', el.value);
+  window.location = u;
+}
+
+(function() {
+  var pageInput = document.querySelector('.page-input');
+  if (pageInput) {
+    var u = new URL(window.location);
+    var pageParam = u.searchParams.get('page');
+    if (pageParam) pageInput.value = pageParam;
+  }
+})();
+
+if (selectAll) {
+  selectAll.addEventListener('change', function() {
+    checkboxes.forEach(cb => cb.checked = this.checked);
+    updateBulkBar();
+  });
+}
+
+checkboxes.forEach(cb => {
+  cb.addEventListener('change', function() {
+    if (!this.checked && selectAll) selectAll.checked = false;
+    updateBulkBar();
+  });
+});
+
+if (bulkDeleteBtn) {
+  bulkDeleteBtn.addEventListener('click', function() {
+    const checked = document.querySelectorAll('.item-checkbox:checked');
+    if (checked.length === 0) return;
+    if (!confirm('Delete ' + checked.length + ' selected item(s)?')) return;
+    const ids = Array.from(checked).map(cb => parseInt(cb.value));
+    fetch('{% url "content_studio:bulk_delete" %}', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+      body: JSON.stringify({ids: ids}),
+    }).then(r => r.json()).then(data => {
+      if (data.deleted > 0) location.reload();
+    });
+  });
+}
+</script>
+<script>
 function switchTab(tabId) {
   document.querySelectorAll('.sch-tab').forEach(function(t) {
     t.classList.remove('active');
@@ -430,6 +541,10 @@ function switchTab(tabId) {
   document.getElementById('tab-' + tabId).classList.add('active');
   document.getElementById('tab-' + tabId).setAttribute('aria-selected', 'true');
   document.getElementById('panel-' + tabId).classList.add('active');
+
+  var url = new URL(window.location);
+  url.searchParams.set('tab', tabId);
+  history.replaceState(null, '', url);
 }
 
 function toggleFields() {
@@ -580,6 +695,9 @@ function fetchAssets() {
 
 document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('openMediaPicker').addEventListener('click', openMediaPicker);
+  var params = new URLSearchParams(window.location.search);
+  var tab = params.get('tab');
+  if (tab) switchTab(tab);
 });
 </script>
 {% endblock %}

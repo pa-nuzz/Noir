@@ -1609,7 +1609,7 @@ def social_content_hub(request):
         }
         from apps.content_studio.models import ContentItem
         content_items = _safe_list(
-            ContentItem.objects.filter(user=user).order_by('-created_at')[:20]
+            filter_by_context(request, ContentItem.objects.all()).order_by('-created_at')[:20]
         )
     except Exception:
         pass

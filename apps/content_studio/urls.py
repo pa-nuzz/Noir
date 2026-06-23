@@ -16,6 +16,7 @@ urlpatterns = [
     path('<int:item_id>/delete/', views_api.delete, name='delete'),
     path('<int:item_id>/save-draft/', views_api.save_as_draft, name='save_draft'),
     path('history/', views_api.history, name='history'),
+    path('bulk-delete/', views_api.bulk_delete, name='bulk_delete'),
     path('excel-sheets/', views_api.excel_sheets, name='excel_sheets'),
     path('excel-sheets/add/', views_api.excel_sheets_add, name='excel_sheets_add'),
     path('excel-sheets/<int:sheet_id>/sync/', views_api.excel_sheets_sync, name='excel_sheets_sync'),

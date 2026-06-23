@@ -16,26 +16,25 @@ class Personalizer:
         prefs = list(UserTopicPreference.objects.filter(user=user).select_related('topic'))
         topic_ids = [p.topic_id for p in prefs]
 
-        if not topic_ids:
-            ranked = sorted(feed_items, key=lambda x: x.trending_score, reverse=True)
-            return ranked[:20]
-
-        topic_items = [f for f in feed_items if f.topic_id in topic_ids]
-        other_items = [f for f in feed_items if f.topic_id not in topic_ids]
-
-        topic_items.sort(key=lambda x: x.trending_score, reverse=True)
-        other_items.sort(key=lambda x: x.trending_score, reverse=True)
-
-        saved_urls = set(
+        dismissed_urls = set(
             UserFeedInteraction.objects.filter(
                 user=user, interaction_type='dismissed'
             ).values_list('feed_item__url', flat=True)
         )
-        topic_items = [f for f in topic_items if f.url not in saved_urls]
-        other_items = [f for f in other_items if f.url not in saved_urls]
+        feed_items = [f for f in feed_items if f.url not in dismissed_urls]
 
-        ranked = topic_items[:15] + other_items[:10]
-        return ranked[:20]
+        if not topic_ids:
+            return sorted(feed_items, key=lambda x: x.trending_score, reverse=True)[:50]
+
+        topic_items = sorted(
+            [f for f in feed_items if f.topic_id in topic_ids],
+            key=lambda x: x.trending_score, reverse=True
+        )
+        other_items = sorted(
+            [f for f in feed_items if f.topic_id not in topic_ids],
+            key=lambda x: x.trending_score, reverse=True
+        )
+        return (topic_items[:40] + other_items[:10])[:50]
 
     def _llm_rank(self, user, feed_items) -> list:
         client = get_deepseek_client()

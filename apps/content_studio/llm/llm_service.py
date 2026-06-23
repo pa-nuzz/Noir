@@ -12,6 +12,15 @@ LLM_MODEL = getattr(settings, 'LLM_MODEL', 'gpt-4o')
 LLM_BASE_URL = getattr(settings, 'LLM_BASE_URL', 'https://api.openai.com/v1').rstrip('/')
 LLM_API_KEY = getattr(settings, 'LLM_API_KEY', None) or os.environ.get('LLM_API_KEY')
 
+
+class LLMPipelineError(Exception):
+    def __init__(self, agent, error_code, message):
+        self.agent = agent
+        self.error_code = error_code
+        self.message = message
+        super().__init__(f"[{agent.upper()}] {error_code}: {message}")
+
+
 SYSTEM_PROMPTS = {
     'caption': (
         "You are an expert social media copywriter specializing in scroll-stopping hooks.\n\n"
@@ -248,22 +257,14 @@ def _call_llm(system_prompt, user_prompt, api_key=None):
         "Content-Type": "application/json",
     }
 
-    max_retries = 3
-    retry_delay = 1.5
+    max_retries = 5
+    base_delay = 1.5
+    retryable_statuses = {429, 500, 502, 503}
 
     for attempt in range(max_retries):
+        timeout = 30.0 + (attempt * 15.0)
         try:
-            response = httpx.post(url, json=payload, headers=headers, timeout=30.0)
-
-            if response.status_code == 503:
-                if attempt < max_retries - 1:
-                    logger.warning(f"LLM API 503 service unavailable. Retrying in {retry_delay}s... (Attempt {attempt + 1}/{max_retries})")
-                    time.sleep(retry_delay)
-                    retry_delay *= 2
-                    continue
-                else:
-                    logger.error("LLM API 503 retry quota exhausted.")
-                    return {"success": False, "error": "server_overloaded", "message": "AI service is momentarily busy. Please try again in a few seconds.", "content": None}
+            response = httpx.post(url, json=payload, headers=headers, timeout=timeout)
 
             if response.status_code == 401:
                 logger.error("LLM API returned 401 — invalid API key.")
@@ -273,14 +274,33 @@ def _call_llm(system_prompt, user_prompt, api_key=None):
                 logger.error("LLM API returned 403 — forbidden.")
                 return {"success": False, "error": "forbidden", "message": "Access forbidden. Check your LLM_API_KEY and permissions.", "content": None}
 
-            if response.status_code == 429:
-                logger.error("LLM API returned 429 — rate limited.")
-                return {"success": False, "error": "rate_limited", "message": "AI rate limit exceeded. Please wait a moment and try again.", "content": None}
-
             if response.status_code == 400:
                 body = response.text[:500]
                 logger.error(f"LLM API returned 400 — bad request: {body}")
                 return {"success": False, "error": "bad_request", "message": f"AI request was invalid: {body}", "content": None}
+
+            if response.status_code in retryable_statuses:
+                if attempt < max_retries - 1:
+                    if response.status_code == 429:
+                        retry_after = response.headers.get('Retry-After')
+                        delay = float(retry_after) if retry_after else (base_delay * (2 ** attempt))
+                    else:
+                        delay = base_delay * (2 ** attempt)
+                    logger.warning(
+                        f"LLM API {response.status_code}, retrying in {delay:.1f}s "
+                        f"(attempt {attempt + 1}/{max_retries})"
+                    )
+                    time.sleep(delay)
+                    continue
+                logger.error(f"LLM API {response.status_code} retry quota exhausted.")
+                status_map = {
+                    429: ("rate_limited", "AI rate limit exceeded. Please wait and try again."),
+                    500: ("server_error", "AI service encountered an internal error."),
+                    502: ("bad_gateway", "AI service is temporarily unavailable."),
+                    503: ("server_overloaded", "AI service is momentarily busy."),
+                }
+                code, msg = status_map[response.status_code]
+                return {"success": False, "error": code, "message": msg, "content": None}
 
             response.raise_for_status()
             result = response.json()
@@ -288,41 +308,117 @@ def _call_llm(system_prompt, user_prompt, api_key=None):
             try:
                 text = result["choices"][0]["message"]["content"].strip()
             except (KeyError, IndexError, AttributeError):
+                if attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)
+                    logger.warning(
+                        f"LLM returned unexpected response format, retrying in {delay:.1f}s "
+                        f"(attempt {attempt + 1}/{max_retries})"
+                    )
+                    time.sleep(delay)
+                    continue
                 return {"success": False, "error": "unexpected_response", "message": "Received an unexpected response format from the AI API.", "content": None}
+
+            if not text:
+                if attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)
+                    logger.warning(
+                        f"LLM returned empty content, retrying in {delay:.1f}s "
+                        f"(attempt {attempt + 1}/{max_retries})"
+                    )
+                    time.sleep(delay)
+                    continue
+                return {"success": False, "error": "empty_response", "message": "AI returned empty content after all retries.", "content": None}
 
             return {"success": True, "error": None, "message": None, "content": text}
 
+        except httpx.TimeoutException:
+            if attempt < max_retries - 1:
+                delay = base_delay * (2 ** attempt)
+                logger.warning(
+                    f"LLM request timed out ({timeout:.0f}s), retrying in {delay:.1f}s "
+                    f"(attempt {attempt + 1}/{max_retries})"
+                )
+                time.sleep(delay)
+                continue
+            return {"success": False, "error": "timeout", "message": "AI request timed out after all retries. Please try again.", "content": None}
+
         except httpx.HTTPStatusError as e:
-            if e.response.status_code == 503 and attempt < max_retries - 1:
-                time.sleep(retry_delay)
-                retry_delay *= 2
+            status = e.response.status_code
+            if status in retryable_statuses and attempt < max_retries - 1:
+                delay = base_delay * (2 ** attempt)
+                logger.warning(
+                    f"LLM HTTP {status}, retrying in {delay:.1f}s "
+                    f"(attempt {attempt + 1}/{max_retries})"
+                )
+                time.sleep(delay)
                 continue
             logger.exception(f"LLM HTTP status exception caught: {e}")
             return {"success": False, "error": "http_error", "message": "A connection status error occurred with the AI service.", "content": None}
-            
-        except httpx.TimeoutException:
-            logger.error("LLM API request timed out.")
-            return {"success": False, "error": "timeout", "message": "AI request timed out. Please try again.", "content": None}
-            
+
+        except httpx.RequestError as e:
+            if attempt < max_retries - 1:
+                delay = base_delay * (2 ** attempt)
+                logger.warning(
+                    f"LLM request failed: {e}, retrying in {delay:.1f}s "
+                    f"(attempt {attempt + 1}/{max_retries})"
+                )
+                time.sleep(delay)
+                continue
+            logger.error(f"LLM request failed after {max_retries} attempts: {e}")
+            return {"success": False, "error": "network_error", "message": f"Failed to reach AI service after {max_retries} attempts.", "content": None}
+
         except Exception as e:
             logger.exception(f"LLM API request failed: {e}")
             return {"success": False, "error": "unknown", "message": f"An error occurred while contacting the AI API: {str(e)}", "content": None}
 
 
-def generate_llm(content_type, prompt, platform=None, tone='professional', **kwargs):
-    api_key = LLM_API_KEY
+def _call_llm_fatal(agent, system_prompt, user_prompt, api_key=None):
+    result = _call_llm(system_prompt, user_prompt, api_key)
+    if not result['success']:
+        raise LLMPipelineError(agent, result['error'], result['message'])
+    if not result['content'] or not result['content'].strip():
+        raise LLMPipelineError(agent, 'empty_response', f'{agent} returned empty content')
+    return result['content']
 
-    if not api_key:
-        logger.warning("LLM_API_KEY is not configured.")
-        return {
-            "success": False,
-            "error": "api_key_missing",
-            "message": "LLM API key is not configured. Please set LLM_API_KEY in your .env file.",
-            "content": None,
-        }
+
+def generate_llm_with_refinement(content_type, prompt, platform=None, tone='professional', **kwargs):
+    from .critique_prompts import build_critic_prompt
 
     system_prompt = _build_system_prompt(content_type, platform, tone, **kwargs)
-    return _call_llm(system_prompt, prompt, api_key)
+
+    initial = _call_llm_fatal('ideator', system_prompt, prompt, LLM_API_KEY)
+
+    critic_system = build_critic_prompt(content_type, platform, tone)
+    critic_user = f"USER BRIEF:\n{prompt}\n\nINITIAL DRAFT:\n{initial}"
+    critique = _call_llm_fatal('critic', critic_system, critic_user, LLM_API_KEY)
+
+    refiner_system = (
+        f"You are a Master Creative Copywriter and Refiner specializing in {content_type} content.\n\n"
+        f"You will be provided with an INITIAL DRAFT and an EDITOR CRITIQUE.\n"
+        f"Your job is to completely REWRITE the draft, fixing ALL issues raised in the critique, "
+        f"and elevating it to the highest quality level.\n\n"
+        f"Below are the original requirements and format constraints the draft was created from. "
+        f"Make sure your rewrite fully satisfies them:\n\n"
+        f"{system_prompt}\n\n"
+        f"Return ONLY the rewritten {content_type}. No commentary, no explanations, no markdown formatting."
+    )
+    refiner_user = (
+        f"USER BRIEF:\n{prompt}\n\n"
+        f"INITIAL DRAFT:\n{initial}\n\n"
+        f"EDITOR CRITIQUE:\n{critique}\n\n"
+        f"Please completely rewrite the draft, fixing all issues raised in the critique."
+    )
+    final = _call_llm_fatal('refiner', refiner_system, refiner_user, LLM_API_KEY)
+    return final
+
+
+def generate_llm(content_type, prompt, platform=None, tone='professional', **kwargs):
+    try:
+        content = generate_llm_with_refinement(content_type, prompt, platform, tone, **kwargs)
+        return {"success": True, "error": None, "message": None, "content": content}
+    except LLMPipelineError as e:
+        logger.error(f"Content generation pipeline failed at {e.agent}: {e}")
+        return {"success": False, "error": e.error_code, "message": e.message, "content": None}
 
 
 def refine_llm(content_type, content, feedback, platform=None, tone='professional', **kwargs):
@@ -382,6 +478,8 @@ def _extract_json(text):
 
 
 def generate_llm_multi(content_type, prompt, tone='professional', **kwargs):
+    from .critique_prompts import build_batch_critic_prompt, build_batch_refiner_prompt
+
     api_key = LLM_API_KEY
 
     try:
@@ -403,27 +501,47 @@ def generate_llm_multi(content_type, prompt, tone='professional', **kwargs):
         + "Plain text only. Do NOT use markdown, bold (**), italic (*), headers, or any formatting markup in the content values."
     )
 
+    try:
+        initial = _call_llm_fatal('ideator', system_prompt, prompt, api_key)
+    except LLMPipelineError as e:
+        return {"success": False, "error": e.error_code, "message": e.message, "content": None, "platform_data": None}
+
+    critic_system = build_batch_critic_prompt()
+    critic_user = f"USER BRIEF:\n{system_prompt}\n\nJSON DRAFT:\n{initial}"
+    try:
+        critique = _call_llm_fatal('critic', critic_system, critic_user, api_key)
+    except LLMPipelineError as e:
+        return {"success": False, "error": e.error_code, "message": e.message, "content": None, "platform_data": None}
+
+    refiner_system = build_batch_refiner_prompt()
+    refiner_user = (
+        f"USER BRIEF:\n{system_prompt}\n\n"
+        f"JSON DRAFT:\n{initial}\n\n"
+        f"EDITOR CRITIQUE:\n{critique}\n\n"
+        f"Please completely rewrite the entire JSON array, fixing all issues raised in the critique."
+    )
+    try:
+        refined = _call_llm_fatal('refiner', refiner_system, refiner_user, api_key)
+    except LLMPipelineError as e:
+        return {"success": False, "error": e.error_code, "message": e.message, "content": None, "platform_data": None}
+
+    raw = refined
+    json_str = _extract_json(raw)
+    if not json_str:
+        logger.error("No JSON found in refined multi-platform response")
+        return {"success": False, "error": "parse_error", "message": "Could not parse refined multi-platform response.", "content": None, "platform_data": None}
+
+    try:
+        parsed = json.loads(json_str)
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse refined multi-platform JSON: {e}")
+        return {"success": False, "error": "parse_error", "message": f"Invalid JSON in refined response: {e}", "content": None, "platform_data": None}
+
     # Fixed dynamic import lookup to avoid reloader scope leakage drops
     try:
         from apps.content_studio.models import ALL_PLATFORMS
     except ImportError:
         from ..models import ALL_PLATFORMS
-
-    result = _call_llm(system_prompt, prompt, api_key)
-    if not result['success']:
-        return {"success": False, "error": result['error'], "message": result['message'], "content": None, "platform_data": None}
-
-    raw = result['content']
-    json_str = _extract_json(raw)
-    if not json_str:
-        logger.error("No JSON found in multi-platform response")
-        return {"success": False, "error": "parse_error", "message": "Could not parse multi-platform response.", "content": None, "platform_data": None}
-
-    try:
-        parsed = json.loads(json_str)
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse multi-platform JSON: {e}")
-        return {"success": False, "error": "parse_error", "message": f"Invalid JSON in response: {e}", "content": None, "platform_data": None}
 
     platform_data = {}
     first_active = None

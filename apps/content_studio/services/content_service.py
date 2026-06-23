@@ -3,6 +3,7 @@ import logging
 from django.utils import timezone
 
 from apps.social_accounts.services import SocialService
+from core.tenant import get_current_tenant
 
 from ..generators import get_generator
 from ..models import ContentApproval, ContentItem, ContentVersion
@@ -36,6 +37,7 @@ class ContentService:
 
         item = ContentItem.objects.create(
             user=self.user,
+            workspace=get_current_tenant(),
             title=title,
             content_type=content_type,
             body=body,
@@ -101,8 +103,11 @@ class ContentService:
         type_map = dict(ContentItem.CONTENT_TYPES)
         return [{'key': k, 'name': type_map.get(k, k.replace('_', ' ').title())} for k in GENERATOR_REGISTRY]
 
-    def list_content(self, content_type=None, status=None):
-        qs = ContentItem.objects.filter(user=self.user)
+    def list_content(self, content_type=None, status=None, workspace=None):
+        if workspace:
+            qs = ContentItem.objects.filter(workspace=workspace)
+        else:
+            qs = ContentItem.objects.filter(user=self.user)
         if content_type:
             qs = qs.filter(content_type=content_type)
         if status:
