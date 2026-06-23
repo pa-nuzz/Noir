@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import models
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -14,6 +15,7 @@ from .services import ContentService
 from apps.social_accounts.models import SocialPost
 from apps.workspaces.query_helpers import filter_by_context
 from apps.workspaces.decorators import require_workspace_permission
+from core.tenant import get_current_tenant
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +23,7 @@ logger = logging.getLogger(__name__)
 @login_required
 def dashboard(request):
     service = ContentService(request.user)
-    items = service.list_content()[:20]
+    items = service.list_content(workspace=get_current_tenant())[:20]
     generators = service.get_available_generators()
     stats = {
         'total': filter_by_context(request, ContentItem.objects.all()).count(),
@@ -266,6 +268,26 @@ def delete(request, item_id):
 
 
 @login_required
+@require_workspace_permission('content_studio', 'delete')
+def bulk_delete(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    import json
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    ids = body.get('ids', [])
+    if not ids:
+        return JsonResponse({'deleted': 0})
+    qs = filter_by_context(request, ContentItem.objects.filter(id__in=ids))
+    count = qs.count()
+    qs.delete()
+    messages.success(request, f'{count} item(s) deleted.')
+    return JsonResponse({'deleted': count})
+
+
+@login_required
 @require_workspace_permission('content_studio', 'create')
 def save_as_draft(request, item_id):
     item = get_object_or_404(filter_by_context(request, ContentItem.objects.all()), id=item_id)
@@ -291,9 +313,33 @@ def save_as_draft(request, item_id):
 
 @login_required
 def history(request):
-    items = filter_by_context(request, ContentItem.objects.all()).order_by('-created_at')
+    status_filter = request.GET.get('status', '')
+    search_query = request.GET.get('q', '').strip()
+    from django.core.paginator import Paginator
+
+    all_items_qs = filter_by_context(request, ContentItem.objects.all()).order_by('-created_at')
+    if status_filter:
+        all_items_qs = all_items_qs.filter(status=status_filter)
+    if search_query:
+        all_items_qs = all_items_qs.filter(
+            models.Q(title__icontains=search_query) | models.Q(body__icontains=search_query)
+        )
+    paginator = Paginator(all_items_qs, 50)
+    try:
+        page_number = int(request.GET.get('page', 1))
+    except (ValueError, TypeError):
+        page_number = 1
+    if page_number > paginator.num_pages and paginator.num_pages > 0:
+        params = request.GET.copy()
+        params['page'] = paginator.num_pages
+        return redirect(request.path + '?' + params.urlencode())
+    page_obj = paginator.page(page_number)
+
     return render(request, 'content_studio/history.html', {
-        'items': items,
+        'page_obj': page_obj,
+        'status_filter': status_filter,
+        'search_query': search_query,
+        'status_choices': ContentItem.STATUS_CHOICES,
     })
 
 
@@ -303,7 +349,7 @@ def content_hub(request):
     service = ContentService(request.user)
 
     # Overview tab data
-    items = service.list_content()[:20]
+    items = service.list_content(workspace=get_current_tenant())[:20]
     generators = service.get_available_generators()
     stats = {
         'total': filter_by_context(request, ContentItem.objects.all()).count(),
@@ -312,14 +358,40 @@ def content_hub(request):
         'published': filter_by_context(request, ContentItem.objects.all()).filter(status='published').count(),
     }
 
-    # History tab data
-    all_items = filter_by_context(request, ContentItem.objects.all()).order_by('-created_at')[:50]
+    # History tab: filterable + paginated
+    status_filter = request.GET.get('status', '')
+    search_query = request.GET.get('q', '').strip()
+    active_tab = request.GET.get('tab', 'overview')
+
+    from django.core.paginator import Paginator
+
+    all_items_qs = filter_by_context(request, ContentItem.objects.all()).order_by('-created_at')
+    if status_filter:
+        all_items_qs = all_items_qs.filter(status=status_filter)
+    if search_query:
+        all_items_qs = all_items_qs.filter(
+            models.Q(title__icontains=search_query) | models.Q(body__icontains=search_query)
+        )
+    paginator = Paginator(all_items_qs, 50)
+    try:
+        page_number = int(request.GET.get('page', 1))
+    except (ValueError, TypeError):
+        page_number = 1
+    if page_number > paginator.num_pages and paginator.num_pages > 0:
+        params = request.GET.copy()
+        params['page'] = paginator.num_pages
+        return redirect(request.path + '?' + params.urlencode())
+    page_obj = paginator.page(page_number)
 
     return render(request, 'content_studio/content_hub.html', {
         'items': items,
-        'all_items': all_items,
+        'page_obj': page_obj,
         'generators': generators,
         'stats': stats,
+        'status_filter': status_filter,
+        'search_query': search_query,
+        'active_tab': active_tab,
+        'status_choices': ContentItem.STATUS_CHOICES,
     })
 
 

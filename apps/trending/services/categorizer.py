@@ -10,6 +10,9 @@ logger = logging.getLogger(__name__)
 
 class Categorizer:
     def categorize(self, item: FeedItem) -> FeedItem:
+        if item.ai_categories:
+            return item
+
         text = (item.title + ' ' + (item.content_cleaned or item.content_raw or ''))[:3000]
 
         if not text:

@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import httpx
 
@@ -13,10 +13,15 @@ class GitHubCollector:
 
     def collect(self, source: ContentSource) -> int:
         config = source.config_json or {}
-        query = config.get('query', 'stars:>100')
-        sort = config.get('sort', 'stars')
-        order = config.get('order', 'desc')
-        per_page = config.get('per_page', 30)
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=1)).strftime('%Y-%m-%d')
+        config.setdefault('query', f'pushed:>{cutoff} stars:>10')
+        config.setdefault('sort', 'updated')
+        config.setdefault('order', 'desc')
+        config.setdefault('per_page', 30)
+        query = config['query']
+        sort = config['sort']
+        order = config['order']
+        per_page = config['per_page']
 
         logger.info("Fetching GitHub trending: q=%s sort=%s order=%s", query, sort, order)
 
@@ -53,7 +58,7 @@ class GitHubCollector:
 
             raw_content = f"Repository: {name}\nDescription: {description}\nLanguage: {language}\nStars: {stars}\nTopics: {', '.join(topics)}"
 
-            published = item.get('created_at')
+            published = item.get('pushed_at')
             pub_dt = None
             if published:
                 try:

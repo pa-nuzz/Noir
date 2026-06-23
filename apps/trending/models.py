@@ -143,6 +143,7 @@ class TrendingAutomationRule(models.Model):
     platforms = models.JSONField(default=list, blank=True, help_text='List of platform strings to publish to')
     schedule_interval = models.CharField(max_length=20, choices=SCHEDULE_INTERVALS, default='daily')
     auto_publish = models.BooleanField(default=False, help_text='Auto-publish to social media without review')
+    last_run_at = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

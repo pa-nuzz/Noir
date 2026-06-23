@@ -1,19 +1,35 @@
 import logging
+from datetime import timedelta
 from datetime import datetime, timezone
 
 from celery import shared_task
+from django.utils import timezone as tz
 
 logger = logging.getLogger(__name__)
 
 
 @shared_task(queue='low')
 def collect_all_sources():
+    from django.db import close_old_connections
+    close_old_connections()
+
     from .models import ContentSource
     from .services.github_collector import GitHubCollector
     from .services.rss_collector import RSSCollector
     from .services.web_scraper import WebScraper
 
     sources = ContentSource.objects.filter(is_active=True)
+
+    now = tz.now()
+    due_sources = []
+    for source in sources:
+        if source.last_fetched is None:
+            due_sources.append(source)
+        else:
+            elapsed = (now - source.last_fetched).total_seconds() / 3600
+            if elapsed >= source.poll_interval_hours:
+                due_sources.append(source)
+
     collectors = {
         'rss': RSSCollector(),
         'api': GitHubCollector(),
@@ -22,7 +38,7 @@ def collect_all_sources():
 
     total_created = 0
 
-    for source in sources:
+    for source in due_sources:
         collector = collectors.get(source.source_type)
         if not collector:
             logger.warning("No collector for source type: %s", source.source_type)
@@ -48,6 +64,9 @@ def collect_all_sources():
 
 @shared_task(queue='low')
 def recalculate_trending_scores():
+    from django.db import close_old_connections
+    close_old_connections()
+
     from .models import FeedItem
     from .services.categorizer import Categorizer
     from .services.content_cleaner import ContentCleaner
@@ -59,19 +78,27 @@ def recalculate_trending_scores():
     summarizer = Summarizer()
     scorer = Scorer()
 
-    items = FeedItem.objects.filter(is_duplicate=False, trending_score=0)[:200]
+    cutoff = tz.now() - timedelta(hours=72)
+    items = FeedItem.objects.filter(
+        is_duplicate=False,
+        published_at__gte=cutoff,
+    ).order_by('-fetched_at')[:200]
 
     updated = 0
     for item in items:
+        close_old_connections()
         try:
             item = cleaner.clean(item)
+            item_before_topic = item.topic
             item = categorizer.categorize(item)
+            if item.topic is None:
+                item.topic = item_before_topic
             item = summarizer.summarize(item)
             item.trending_score = scorer.score(item)
-            item.save(update_fields=[
-                'content_cleaned', 'topic', 'trending_score', 'language',
-                'ai_summary', 'ai_categories',
-            ])
+            save_fields = ['content_cleaned', 'trending_score', 'language', 'ai_summary', 'ai_categories']
+            if item.topic is not None:
+                save_fields.append('topic')
+            item.save(update_fields=save_fields)
             updated += 1
         except Exception as e:
             logger.exception("Failed to score item %d: %s", item.id, e)
@@ -82,15 +109,19 @@ def recalculate_trending_scores():
 
 @shared_task(queue='low')
 def deduplicate_content():
+    from django.db import close_old_connections
+    close_old_connections()
+
     from .models import FeedItem
 
-    items = FeedItem.objects.filter(is_duplicate=False).order_by('-fetched_at')
+    items = FeedItem.objects.filter(is_duplicate=False).order_by('fetched_at')
     from .services.content_cleaner import ContentCleaner
 
     cleaner = ContentCleaner()
     marked = 0
 
     for item in items:
+        close_old_connections()
         try:
             if cleaner.detect_duplicate(item):
                 item.is_duplicate = True
@@ -105,6 +136,9 @@ def deduplicate_content():
 
 @shared_task(queue='low')
 def analyze_user_profiles():
+    from django.db import close_old_connections
+    close_old_connections()
+
     from django.contrib.auth import get_user_model
     from .services.user_profiler import UserProfiler
 
@@ -113,6 +147,7 @@ def analyze_user_profiles():
     processed = 0
 
     for user in User.objects.filter(is_active=True):
+        close_old_connections()
         try:
             profiler.analyze(user)
             processed += 1
@@ -126,14 +161,18 @@ def analyze_user_profiles():
 @shared_task(queue='low')
 def run_automation():
     from datetime import timedelta
+    from django.db import close_old_connections
     from django.utils import timezone
     from .models import TrendingAutomationRule, FeedItem
-    from .views import _generate_llm_content
+    from .services.content_generator import generate_llm_content
+
+    close_old_connections()
 
     rules = TrendingAutomationRule.objects.filter(is_active=True).select_related('user', 'topic')
     processed = 0
 
     for rule in rules:
+        close_old_connections()
         try:
             interval_hours = {
                 'hourly': 1,
@@ -141,6 +180,11 @@ def run_automation():
                 'daily': 24,
                 'weekly': 168,
             }.get(rule.schedule_interval, 24)
+
+            if rule.last_run_at:
+                elapsed = (timezone.now() - rule.last_run_at).total_seconds() / 3600
+                if elapsed < interval_hours:
+                    continue
 
             cutoff = timezone.now() - timedelta(hours=interval_hours)
             items = list(FeedItem.objects.filter(
@@ -156,7 +200,7 @@ def run_automation():
             if not platforms:
                 continue
 
-            content_items = _generate_llm_content(rule.user, rule.topic, platforms, items, rule.id)
+            content_items = generate_llm_content(rule.user, rule.topic, platforms, items, rule.id)
 
             if rule.auto_publish:
                 for ci in content_items:
@@ -185,6 +229,9 @@ def run_automation():
 
             processed += len(content_items)
 
+            rule.last_run_at = timezone.now()
+            rule.save(update_fields=['last_run_at'])
+
         except Exception as e:
             logger.exception(
                 "Automation rule failed for user %s topic %s: %s",
@@ -197,12 +244,15 @@ def run_automation():
 
 @shared_task(queue='low')
 def generate_currents_snapshots():
+    import json
     import re
     import uuid
+    from django.db import close_old_connections
     from django.contrib.auth import get_user_model
     from django.utils import timezone
     from .models import TrendingAutomationRule, FeedItem, CurrentsSnapshot
 
+    close_old_connections()
     User = get_user_model()
     user_ids = set(
         TrendingAutomationRule.objects.filter(is_active=True)
@@ -247,7 +297,8 @@ def generate_currents_snapshots():
                 continue
 
             # Batched LLM call
-            from apps.content_studio.llm.llm_service import _call_llm
+            from apps.content_studio.llm.llm_service import _call_llm_fatal, LLMPipelineError
+            from apps.content_studio.llm.critique_prompts import build_batch_critic_prompt, build_batch_refiner_prompt
 
             prompt_parts = []
             for item in items:
@@ -292,15 +343,34 @@ def generate_currents_snapshots():
             )
 
             user_prompt = "\n---\n".join(prompt_parts)
-            result = _call_llm(system_prompt, user_prompt)
+
+            try:
+                initial = _call_llm_fatal('ideator', system_prompt, user_prompt)
+                critic_sys = build_batch_critic_prompt()
+                critic_user = f"USER BRIEF:\n{system_prompt}\n\nJSON DRAFT:\n{initial}"
+                critique = _call_llm_fatal('critic', critic_sys, critic_user)
+                refiner_sys = build_batch_refiner_prompt()
+                refiner_user = (
+                    f"USER BRIEF:\n{system_prompt}\n\n"
+                    f"JSON DRAFT:\n{initial}\n\n"
+                    f"EDITOR CRITIQUE:\n{critique}\n\n"
+                    f"Please completely rewrite the entire JSON array, fixing all issues raised."
+                )
+                refined = _call_llm_fatal('refiner', refiner_sys, refiner_user)
+                result_content = refined
+            except LLMPipelineError as e:
+                logger.error("3-agent pipeline failed for user %s: %s", uid, e)
+                raise
 
             gen_map = {}
-            if result['success'] and result['content']:
-                text = result['content'].strip()
+            if result_content:
+                text = result_content.strip()
                 json_match = re.search(r'\[.*\]', text, re.DOTALL)
                 if json_match:
                     parsed = json.loads(json_match.group())
                     gen_map = {entry['id']: entry for entry in parsed if 'id' in entry}
+
+            close_old_connections()
 
             snapshots = []
             for item in items:
@@ -325,7 +395,21 @@ def generate_currents_snapshots():
                 ))
 
             if snapshots:
+                close_old_connections()
                 CurrentsSnapshot.objects.bulk_create(snapshots)
+
+                # Prune old batches — keep only the 2 most recent per user
+                from django.db.models import Max
+                stale = CurrentsSnapshot.objects.filter(
+                    user=user
+                ).values('batch_id').annotate(
+                    last_created=Max('created_at')
+                ).order_by('-last_created')[2:]
+                stale_ids = [b['batch_id'] for b in stale]
+                if stale_ids:
+                    CurrentsSnapshot.objects.filter(
+                        user=user, batch_id__in=stale_ids
+                    ).delete()
 
             users_processed += 1
 

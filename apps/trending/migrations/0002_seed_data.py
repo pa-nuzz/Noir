@@ -17,7 +17,7 @@ TOPICS = [
 SOURCES = [
     {'name': 'Hacker News', 'source_type': 'rss', 'url': 'https://hnrss.org/frontpage', 'poll_interval_hours': 6},
     {'name': 'Dev.to', 'source_type': 'rss', 'url': 'https://dev.to/feed', 'poll_interval_hours': 6},
-    {'name': 'GitHub Trending', 'source_type': 'api', 'url': 'https://api.github.com/search/repositories', 'poll_interval_hours': 6, 'config_json': {'query': 'stars:>100', 'sort': 'stars', 'order': 'desc', 'per_page': 30}},
+    {'name': 'GitHub Trending', 'source_type': 'api', 'url': 'https://api.github.com/search/repositories', 'poll_interval_hours': 6, 'config_json': {'query': 'pushed:>YESTERDAY stars:>10', 'sort': 'updated', 'order': 'desc', 'per_page': 30}},
     {'name': 'TechCrunch', 'source_type': 'rss', 'url': 'https://techcrunch.com/feed/', 'poll_interval_hours': 6},
 ]
 

@@ -1,7 +1,7 @@
 import json
 import logging
 import re as _re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -11,100 +11,12 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_GET, require_POST
 
+from core.tenant import get_current_tenant
+
 from .models import ContentSource, FeedItem, CurrentItem, Topic, UserActivityProfile, UserFeedInteraction, UserTopicPreference
 from .services.personalizer import Personalizer
 from .services.user_profiler import UserProfiler
-
-
-def _generate_llm_content(user, topic, platforms, items, rule_id=None):
-    """Shared helper: calls LLM to generate platform-optimized content
-    for given items, creates ContentItem records, returns the list."""
-    from apps.content_studio.llm.llm_service import _call_llm
-    from apps.content_studio.models import ContentItem
-
-    platform_reqs = {
-        'linkedin': 'linkedin: Professional, thought-leadership, 1300-2000 chars, 3-5 hashtags',
-        'twitter': 'twitter: Concise, under 280 chars, 1-2 hashtags',
-        'instagram': 'instagram: Visual-first, 150-220 chars, 5-8 hashtags',
-        'facebook': 'facebook: Conversational, 150-500 chars, 2-4 hashtags',
-        'tiktok': 'tiktok: Casual and punchy, under 100 chars, 1-3 hashtags',
-        'youtube': 'youtube: Engaging, 200-500 chars, 2-4 hashtags',
-    }
-
-    req_strs = [platform_reqs.get(p, f'{p}: Standard social media post') for p in platforms if p in platform_reqs]
-    if not req_strs:
-        req_strs = [f'{p}: Standard social media post' for p in platforms]
-
-    prompt_parts = []
-    for item in items:
-        part = f"ITEM {item.id}:\nTitle: {item.title or ''}\nSummary: {(item.ai_summary or item.content_cleaned or '')[:500]}\n"
-        prompt_parts.append(part)
-
-    system_prompt = (
-        "You are a social media content strategist. For each item below, generate "
-        "a platform-optimized post with relevant hashtags for each requested platform.\n\n"
-        "Platform requirements:\n" + "\n".join(req_strs) + "\n\n"
-        "For each item, return ONLY a valid JSON array:\n"
-        "[\n  {\n"
-        '    "id": <item_id>,\n'
-        '    "platforms": {\n'
-    )
-    for p in platforms:
-        system_prompt += f'      "{p}": {{"body": "...", "hashtags": "#tag1 #tag2"}},\n'
-    system_prompt += (
-        "    }\n  }\n]\n"
-        "Do NOT include markdown code fences, backticks, or text outside the JSON."
-    )
-
-    user_prompt = "\n---\n".join(prompt_parts)
-    result = _call_llm(system_prompt, user_prompt)
-
-    gen_map = {}
-    if result['success'] and result['content']:
-        text = result['content'].strip()
-        json_match = _re.search(r'\[.*\]', text, _re.DOTALL)
-        if json_match:
-            parsed = json.loads(json_match.group())
-            gen_map = {entry['id']: entry for entry in parsed if 'id' in entry}
-
-    created = []
-    for item in items:
-        entry = gen_map.get(item.id, {})
-        entry_platforms = entry.get('platforms', {}) if isinstance(entry, dict) else {}
-
-        for platform in platforms:
-            pdata = entry_platforms.get(platform, {}) if isinstance(entry_platforms, dict) else {}
-            post_body = pdata.get('body', '') if isinstance(pdata, dict) else ''
-            hashtags = pdata.get('hashtags', '') if isinstance(pdata, dict) else ''
-
-            if not post_body:
-                post_body = item.ai_summary or item.content_cleaned or item.content_raw or ''
-
-            ci = ContentItem.objects.create(
-                user=user,
-                title=item.title[:255],
-                content_type='full_post',
-                body=post_body,
-                platform=platform,
-                status='draft',
-                is_auto_generated=True,
-                source_prompt=f'Generated from trending: {item.url}',
-                tags=[hashtags] if hashtags else (item.ai_categories or []),
-            )
-            ci.metadata.update({
-                'source': 'trending_automation',
-                'feed_item_id': item.id,
-                'source_url': item.url,
-                'topic_id': topic.id if hasattr(topic, 'id') else None,
-                'topic_name': topic.name if hasattr(topic, 'name') else '',
-                'platform': platform,
-            })
-            if rule_id:
-                ci.metadata['automation_rule_id'] = rule_id
-            ci.save(update_fields=['metadata'])
-
-            created.append(ci)
-    return created
+from .services.content_generator import generate_llm_content
 
 
 @login_required
@@ -258,6 +170,7 @@ def save_as_draft(request, item_id):
 
         item = ContentItem.objects.create(
             user=request.user,
+            workspace=get_current_tenant(),
             title=feed_item.title[:255],
             content_type='full_post',
             body=post_body,
@@ -469,13 +382,16 @@ def currents_data(request):
             'batch_id': batch_id,
         })
 
-    # Cache hit
+    # Cache hit — check staleness
     if latest:
-        snapshots = CurrentsSnapshot.objects.filter(
-            user=request.user,
-            batch_id=latest['batch_id'],
-        ).select_related('feed_item__topic', 'feed_item__source')
-        return _snapshot_response(snapshots, latest['created_at'], latest['batch_id'])
+        from django.utils import timezone
+        batch_age = timezone.now() - latest['created_at']
+        if batch_age <= timedelta(minutes=15):
+            snapshots = CurrentsSnapshot.objects.filter(
+                user=request.user,
+                batch_id=latest['batch_id'],
+            ).select_related('feed_item__topic', 'feed_item__source')
+            return _snapshot_response(snapshots, latest['created_at'], latest['batch_id'])
 
     # ─── Cold start: generate inline ──────────────────────────────────
     import uuid
@@ -526,7 +442,8 @@ def currents_data(request):
 
     # Inline LLM generation
     try:
-        from apps.content_studio.llm.llm_service import _call_llm
+        from apps.content_studio.llm.llm_service import _call_llm_fatal, LLMPipelineError
+        from apps.content_studio.llm.critique_prompts import build_batch_critic_prompt, build_batch_refiner_prompt
 
         prompt_parts = []
         for item in items:
@@ -571,7 +488,24 @@ def currents_data(request):
         )
 
         user_prompt = "\n---\n".join(prompt_parts)
-        result = _call_llm(system_prompt, user_prompt)
+
+        try:
+            initial = _call_llm_fatal('ideator', system_prompt, user_prompt)
+            critic_sys = build_batch_critic_prompt()
+            critic_user = f"USER BRIEF:\n{system_prompt}\n\nJSON DRAFT:\n{initial}"
+            critique = _call_llm_fatal('critic', critic_sys, critic_user)
+            refiner_sys = build_batch_refiner_prompt()
+            refiner_user = (
+                f"USER BRIEF:\n{system_prompt}\n\n"
+                f"JSON DRAFT:\n{initial}\n\n"
+                f"EDITOR CRITIQUE:\n{critique}\n\n"
+                f"Please completely rewrite the entire JSON array, fixing all issues raised."
+            )
+            refined = _call_llm_fatal('refiner', refiner_sys, refiner_user)
+            result = {"success": True, "error": None, "message": None, "content": refined}
+        except LLMPipelineError as e:
+            logger.error("3-agent pipeline failed for cold-start currents: %s", e)
+            result = {"success": False, "error": e.error_code, "message": e.message, "content": None}
 
         if result['success'] and result['content']:
             text = result['content'].strip()
@@ -895,6 +829,7 @@ def publish_currents(request, item_id):
 
         item = ContentItem.objects.create(
             user=request.user,
+            workspace=get_current_tenant(),
             title=feed_item.title[:255],
             content_type='full_post',
             body=post_body,
@@ -1079,7 +1014,7 @@ def generate_automation_content(request):
     if not items:
         return JsonResponse({'items': [], 'count': 0})
 
-    content_items = _generate_llm_content(request.user, topic, platforms, items)
+    content_items = generate_llm_content(request.user, topic, platforms, items)
     created = []
     for ci in content_items:
         created.append({

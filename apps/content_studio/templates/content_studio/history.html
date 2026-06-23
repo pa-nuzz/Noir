@@ -16,12 +16,32 @@
     {% endif %}
   </div>
 
+  <!-- Filter Bar -->
+  <form method="get" class="flex gap-3">
+    <input type="text" name="q" value="{{ search_query }}"
+           placeholder="Search title or body…" class="input-field flex-1">
+    <select name="status" class="input-field w-40" onchange="this.form.submit()">
+      <option value="">All Statuses</option>
+      {% for val, label in status_choices %}
+      <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn-action btn-action-primary">Filter</button>
+  </form>
+
   <div class="premium-surface rounded-2xl overflow-hidden">
-    {% if items %}
+    {% if page_obj.object_list %}
+    <div id="bulk-bar" class="hidden flex items-center justify-between px-6 py-3 bg-slate-50 border-b border-slate-200">
+      <span class="text-sm text-slate-600"><span id="selected-count">0</span> selected</span>
+      <button id="bulk-delete-btn" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors">Delete Selected</button>
+    </div>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-slate-100 bg-slate-50/50">
+            <th class="px-6 py-3 w-10">
+              <input type="checkbox" id="select-all" class="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+            </th>
             <th class="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Title</th>
             <th class="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Type</th>
             <th class="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Platform</th>
@@ -31,8 +51,11 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-50">
-          {% for item in items %}
+          {% for item in page_obj.object_list %}
           <tr class="hover:bg-slate-50/50 transition-colors">
+            <td class="px-6 py-4">
+              <input type="checkbox" class="item-checkbox w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" value="{{ item.id }}">
+            </td>
             <td class="px-6 py-4">
               <a href="{% url 'content_studio:detail' item.id %}" class="font-semibold text-slate-900 hover:text-primary transition-colors truncate block max-w-[240px]">{{ item.title|default:'Untitled' }}</a>
             </td>
@@ -59,19 +82,41 @@
             </td>
             <td class="px-6 py-4 text-slate-600">{{ item.created_at|date:'M d, Y' }}</td>
             <td class="px-6 py-4 text-right">
-              <div class="flex items-center justify-end gap-2">
-                <a href="{% url 'content_studio:detail' item.id %}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors">View</a>
-                <form method="POST" action="{% url 'content_studio:delete' item.id %}" onsubmit="return confirm('Delete this content?')" style="display:inline">
-                  {% csrf_token %}
-                  <button type="submit" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors">Delete</button>
-                </form>
-              </div>
+              <form method="POST" action="{% url 'content_studio:delete' item.id %}" onsubmit="return confirm('Delete this content?')" style="display:inline">
+                {% csrf_token %}
+                <button type="submit" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors">Delete</button>
+              </form>
             </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="flex items-center justify-between px-6 py-4 border-t border-slate-100 gap-4">
+      <p class="text-sm text-slate-500">
+        Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+      </p>
+      <div class="flex items-center gap-2">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}&q={{ search_query }}"
+           class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100">← Prev</a>
+        {% endif %}
+        <span class="text-sm text-slate-500">Page</span>
+        <input type="number" min="1" max="{{ page_obj.paginator.num_pages }}" value="{{ page_obj.number }}"
+               class="w-24 input-field text-center py-1 page-input"
+               onkeydown="if(event.key==='Enter')goToPage(this)">
+        <span class="text-sm text-slate-500">of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}&q={{ search_query }}"
+           class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100">Next →</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
     {% else %}
     <div class="px-6 py-16 text-center">
       <div class="w-14 h-14 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
@@ -90,4 +135,65 @@
     {% endif %}
   </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const selectAll = document.getElementById('select-all');
+const checkboxes = document.querySelectorAll('.item-checkbox');
+const bulkBar = document.getElementById('bulk-bar');
+const selectedCount = document.getElementById('selected-count');
+const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+
+function updateBulkBar() {
+  const checked = document.querySelectorAll('.item-checkbox:checked');
+  selectedCount.textContent = checked.length;
+  if (bulkBar) bulkBar.classList.toggle('hidden', checked.length === 0);
+}
+
+function goToPage(el) {
+  var u = new URL(window.location);
+  u.searchParams.set('page', el.value);
+  window.location = u;
+}
+
+(function() {
+  var pageInput = document.querySelector('.page-input');
+  if (pageInput) {
+    var u = new URL(window.location);
+    var pageParam = u.searchParams.get('page');
+    if (pageParam) pageInput.value = pageParam;
+  }
+})();
+
+if (selectAll) {
+  selectAll.addEventListener('change', function() {
+    checkboxes.forEach(cb => cb.checked = this.checked);
+    updateBulkBar();
+  });
+}
+
+checkboxes.forEach(cb => {
+  cb.addEventListener('change', function() {
+    if (!this.checked && selectAll) selectAll.checked = false;
+    updateBulkBar();
+  });
+});
+
+if (bulkDeleteBtn) {
+  bulkDeleteBtn.addEventListener('click', function() {
+    const checked = document.querySelectorAll('.item-checkbox:checked');
+    if (checked.length === 0) return;
+    if (!confirm('Delete ' + checked.length + ' selected item(s)?')) return;
+    const ids = Array.from(checked).map(cb => parseInt(cb.value));
+    fetch('{% url "content_studio:bulk_delete" %}', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+      body: JSON.stringify({ids: ids}),
+    }).then(r => r.json()).then(data => {
+      if (data.deleted > 0) location.reload();
+    });
+  });
+}
+</script>
 {% endblock %}

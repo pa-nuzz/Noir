@@ -278,13 +278,20 @@ CELERY_TASK_EAGER_PROPAGATES = True
 
 # "connect to Redis over TLS but don't validate the SSL certificate" 
 # (CERT_NONE = don't verify certificate chain or hostname)
-CELERY_BROKER_USE_SSL = {"ssl_cert_reqs": "none"}
-CELERY_REDIS_BACKEND_USE_SSL = {"ssl_cert_reqs": "none"}
+CELERY_BROKER_USE_SSL = {"ssl_cert_reqs": ssl.CERT_NONE}
+CELERY_REDIS_BACKEND_USE_SSL = {"ssl_cert_reqs": ssl.CERT_NONE}
 
 # Queue separation — prevents slow tasks from blocking critical ones
 CELERY_TASK_DEFAULT_QUEUE = 'default'
 CELERY_TASK_QUEUE_HA_POLICY = 'all'
 CELERY_WORKER_CONCURRENCY = 4
+
+# Resilience — prevent crashes on Redis connection loss (Upstash SaaS drops idle connections)
+CELERY_BROKER_HEARTBEAT = 30
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_BROKER_POOL_LIMIT = 20
+CELERY_WORKER_CANCEL_LONG_RUNNING_TASKS_ON_CONNECTION_LOSS = True
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 50
 
 CELERY_TASK_ROUTES = {
     # queue_critical — campaign sends, OAuth token refresh

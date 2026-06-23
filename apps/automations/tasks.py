@@ -15,6 +15,7 @@ def process_workflows_task():
     """
     from .engine import process_workflow_enrollments
 
+    processed = 0
     for workspace in Workspace.objects.all():
         with tenant_context(workspace):
             processed = process_workflow_enrollments()
