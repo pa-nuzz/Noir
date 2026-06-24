@@ -63,20 +63,19 @@
 <div class="flex items-center justify-between mb-2">
   <div>
     <h3 class="text-base font-bold text-slate-900">Select Categories</h3>
-    <p class="text-sm text-slate-500 mt-0.5">Choose the topics you want trending content about. Select as many as you like.</p>
+    <p class="text-sm text-slate-500 mt-0.5">Choose up to <strong>5</strong> topics you want trending content about.</p>
   </div>
 </div>
 
 <div class="flex items-center gap-2 mb-4">
-  <button onclick="selectAllCategories(true)" class="tr-feed-btn" style="padding:6px 14px;font-size:0.75rem">
-    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
-    Select All
-  </button>
   <button onclick="selectAllCategories(false)" class="tr-feed-btn" style="padding:6px 14px;font-size:0.75rem">
     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
     Deselect All
   </button>
-  <span class="sc-count" id="sc-count"><strong id="sc-selected-count">{{ subscribed_topic_ids|length }}</strong> of <strong>{{ trending_topics|length }}</strong> selected</span>
+  <span class="sc-count" id="sc-count">
+    <strong id="sc-selected-count">{{ subscribed_topic_ids|length }}</strong> / <strong>5</strong> selected
+  </span>
+  <span id="sc-max-warning" class="text-xs text-amber-600 font-semibold hidden">Maximum 5 reached</span>
 </div>
 
 <div class="sc-grid" id="sc-grid">
@@ -106,6 +105,17 @@
 </div>
 
 <script>
+function getCSRFToken() {
+  var match = document.cookie.match(new RegExp('(^| )csrftoken=([^;]+)'));
+  if (match) return match[2];
+  var el = document.querySelector('[data-csrf-token]');
+  if (el) return el.dataset.csrfToken;
+  el = document.querySelector('[name=csrfmiddlewaretoken]');
+  if (el) return el.value;
+  return '';
+}
+
+var MAX_TOPICS = 5;
 var selectedTopics = new Set();
 
 function initSelectedTopics() {
@@ -121,6 +131,13 @@ function toggleCategory(card) {
     selectedTopics.delete(id);
     card.classList.remove('selected');
   } else {
+    if (selectedTopics.size >= MAX_TOPICS) {
+      document.getElementById('sc-max-warning').classList.remove('hidden');
+      setTimeout(function() {
+        document.getElementById('sc-max-warning').classList.add('hidden');
+      }, 2500);
+      return;
+    }
     selectedTopics.add(id);
     card.classList.add('selected');
   }
@@ -131,8 +148,10 @@ function selectAllCategories(select) {
   document.querySelectorAll('#sc-grid .sc-card').forEach(function(card) {
     var id = parseInt(card.dataset.topicId);
     if (select) {
-      selectedTopics.add(id);
-      card.classList.add('selected');
+      if (selectedTopics.size < MAX_TOPICS) {
+        selectedTopics.add(id);
+        card.classList.add('selected');
+      }
     } else {
       selectedTopics.delete(id);
       card.classList.remove('selected');
@@ -143,6 +162,12 @@ function selectAllCategories(select) {
 
 function updateCount() {
   document.getElementById('sc-selected-count').textContent = selectedTopics.size;
+  var warn = document.getElementById('sc-max-warning');
+  if (selectedTopics.size >= MAX_TOPICS) {
+    warn.classList.remove('hidden');
+  } else {
+    warn.classList.add('hidden');
+  }
 }
 
 function saveCategorySelections() {
@@ -157,11 +182,18 @@ function saveCategorySelections() {
     },
     body: JSON.stringify({topic_ids: Array.from(selectedTopics)}),
   })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
+  .then(function(r) {
+    return r.json().then(function(data) { return {ok: r.ok, data: data}; });
+  })
+  .then(function(result) {
     statusEl.classList.remove('hidden');
-    statusEl.textContent = 'Saved! ' + data.subscribed_ids.length + ' categories selected.';
-    statusEl.className = 'text-sm text-emerald-600 font-semibold';
+    if (result.ok) {
+      statusEl.textContent = 'Saved! ' + result.data.subscribed_ids.length + ' categories selected.';
+      statusEl.className = 'text-sm text-emerald-600 font-semibold';
+    } else {
+      statusEl.textContent = result.data.message || 'Failed to save. Please try again.';
+      statusEl.className = 'text-sm text-red-600 font-semibold';
+    }
     setTimeout(function() { statusEl.classList.add('hidden'); }, 3000);
   })
   .catch(function() {

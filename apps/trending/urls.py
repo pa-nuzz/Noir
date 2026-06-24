@@ -24,5 +24,6 @@ urlpatterns = [
     path('api/automation/publish/<int:content_item_id>/', views.publish_automation_item, name='publish_automation_item'),
     path('api/automation/schedule/<int:content_item_id>/', views.schedule_automation_item, name='schedule_automation_item'),
     path('categories/', views.manage_categories, name='manage_categories'),
+    path('api/feed/refresh/', views.refresh_feed, name='refresh_feed'),
     path('api/profile/refresh/', views.refresh_profile, name='refresh_profile'),
 ]

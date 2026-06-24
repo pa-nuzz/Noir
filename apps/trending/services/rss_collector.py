@@ -73,9 +73,9 @@ class RSSCollector:
 
             FeedItem.objects.create(
                 source=source,
-                title=title,
+                title=title[:500],
                 url=link,
-                author=author,
+                author=author[:255],
                 content_raw=raw_content,
                 published_at=pub_dt,
                 image_url=image_url,

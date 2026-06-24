@@ -1,5 +1,6 @@
 import json
 import logging
+import math
 import re as _re
 from datetime import datetime, timedelta
 
@@ -14,7 +15,6 @@ from django.views.decorators.http import require_GET, require_POST
 from core.tenant import get_current_tenant
 
 from .models import ContentSource, FeedItem, CurrentItem, Topic, UserActivityProfile, UserFeedInteraction, UserTopicPreference
-from .services.personalizer import Personalizer
 from .services.user_profiler import UserProfiler
 from .services.content_generator import generate_llm_content
 
@@ -22,45 +22,58 @@ from .services.content_generator import generate_llm_content
 @login_required
 @require_GET
 def feed_data(request):
+    PAGE_SIZE = 40
+    page = max(1, int(request.GET.get('page', 1) or 1))
+    offset = (page - 1) * PAGE_SIZE
+
     topic_id = request.GET.get('topic_id')
+    want_subscribed = bool(request.GET.get('subscribed'))
 
-    items = FeedItem.objects.filter(
+    qs = FeedItem.objects.filter(
         is_duplicate=False,
-    ).select_related('topic', 'source').order_by('-trending_score')
+    ).select_related('topic', 'source').order_by('-trending_score', '-published_at')
 
-    if topic_id:
-        items = items.filter(topic_id=topic_id)
-
-    if request.GET.get('subscribed'):
+    if want_subscribed:
         subscribed_ids = list(
-            UserTopicPreference.objects.filter(
-                user=request.user
-            ).values_list('topic_id', flat=True)
+            UserTopicPreference.objects.filter(user=request.user)
+            .values_list('topic_id', flat=True)
         )
         if subscribed_ids:
-            items = items.filter(topic_id__in=subscribed_ids)
+            qs = qs.filter(topic_id__in=subscribed_ids)
+    elif topic_id:
+        qs = qs.filter(topic_id=topic_id)
 
-    items = items[:100]
+    dismissed_ids = set(
+        UserFeedInteraction.objects.filter(
+            user=request.user, interaction_type='dismissed',
+        ).values_list('feed_item_id', flat=True)
+    )
+    if dismissed_ids:
+        qs = qs.exclude(id__in=dismissed_ids)
 
-    personalizer = Personalizer()
-    ranked = personalizer.personalize(request.user, list(items))
+    total = qs.count()
+    total_pages = max(1, math.ceil(total / PAGE_SIZE))
+    page = min(page, total_pages)
+    offset = (page - 1) * PAGE_SIZE
+
+    items = list(qs[offset:offset + PAGE_SIZE])
 
     bookmarked_ids = set(
         UserFeedInteraction.objects.filter(
             user=request.user,
             interaction_type='bookmarked',
-            feed_item_id__in=[f.id for f in ranked],
+            feed_item_id__in=[i.id for i in items],
         ).values_list('feed_item_id', flat=True)
     )
 
     data = []
-    for item in ranked:
+    for item in items:
         data.append({
             'id': item.id,
             'title': item.title,
             'url': item.url,
             'author': item.author,
-            'summary': item.ai_summary or (item.content_cleaned or '')[:300],
+            'summary': (item.content_cleaned or item.content_raw or '')[:300],
             'topic': {
                 'id': item.topic.id if item.topic else None,
                 'name': item.topic.name if item.topic else 'Uncategorized',
@@ -74,7 +87,14 @@ def feed_data(request):
             'image_url': item.image_url or '',
         })
 
-    return JsonResponse({'items': data, 'total': len(data)})
+    return JsonResponse({
+        'items': data,
+        'total': total,
+        'page': page,
+        'total_pages': total_pages,
+        'has_next': page < total_pages,
+        'has_prev': page > 1,
+    })
 
 
 @login_required
@@ -121,6 +141,12 @@ def toggle_subscription(request):
     topic = get_object_or_404(Topic, id=topic_id, is_active=True)
 
     if subscribe:
+        current_count = UserTopicPreference.objects.filter(user=request.user).count()
+        if current_count >= 5:
+            return JsonResponse(
+                {'error': 'max_reached', 'message': 'Maximum 5 categories allowed. Unsubscribe from one first.'},
+                status=400,
+            )
         _, created = UserTopicPreference.objects.get_or_create(
             user=request.user,
             topic=topic,
@@ -274,8 +300,8 @@ def manage_categories(request):
         UserTopicPreference.objects.filter(user=request.user).values_list('topic_id', flat=True)
     )
     return render(request, 'trending/select_categories.html', {
-        'topics': topics,
-        'subscribed_ids': subscribed_ids,
+        'trending_topics': topics,
+        'subscribed_topic_ids': subscribed_ids,
     })
 
 
@@ -290,6 +316,13 @@ def bulk_subscribe(request):
     topic_ids = body.get('topic_ids', [])
     if not isinstance(topic_ids, list):
         return JsonResponse({'error': 'topic_ids must be a list'}, status=400)
+
+    topic_ids = list(dict.fromkeys(topic_ids))
+    if len(topic_ids) > 5:
+        return JsonResponse(
+            {'error': 'max_reached', 'message': 'You can select at most 5 categories.'},
+            status=400,
+        )
 
     current_ids = set(
         UserTopicPreference.objects.filter(user=request.user).values_list('topic_id', flat=True)
@@ -937,29 +970,9 @@ def save_automation_rules(request):
             user=request.user,
         ).exclude(topic_id__in=submitted_topic_ids).delete()
 
-    # Sync active categories → UserTopicPreference so Trending Feed reflects same selections
-    active_topic_ids = {r['topic_id'] for r in saved if r['is_active']}
-    current_pref_ids = set(
-        UserTopicPreference.objects.filter(user=request.user).values_list('topic_id', flat=True)
-    )
-    to_add = active_topic_ids - current_pref_ids
-    to_remove = current_pref_ids - active_topic_ids
-
-    topics_map = {t.id: t for t in Topic.objects.filter(id__in=to_add | to_remove, is_active=True)}
-    for tid in to_add:
-        topic = topics_map.get(tid)
-        if not topic:
-            continue
-        UserTopicPreference.objects.get_or_create(
-            user=request.user, topic=topic, defaults={'is_auto_detected': False},
-        )
-        Topic.objects.filter(id=tid).update(subscriber_count=F('subscriber_count') + 1)
-
-    UserTopicPreference.objects.filter(
-        user=request.user, topic_id__in=to_remove, is_auto_detected=False,
-    ).delete()
-    for tid in to_remove:
-        Topic.objects.filter(id=tid).update(subscriber_count=F('subscriber_count') - 1)
+    # Feed subscriptions (UserTopicPreference) are managed independently via
+    # select_categories / toggle_subscription / bulk_subscribe.
+    # Automation rules do NOT override feed preferences.
 
     return JsonResponse({'rules': saved, 'count': len(saved)})
 
@@ -1167,6 +1180,16 @@ def schedule_automation_item(request, content_item_id):
         'scheduled_at': scheduled_dt.isoformat(),
         'status': post.status,
     })
+
+
+@login_required
+@require_POST
+def refresh_feed(request):
+    from .tasks import collect_all_sources, recalculate_trending_scores, deduplicate_content
+    collect_all_sources.delay(force=True)
+    recalculate_trending_scores.delay()
+    deduplicate_content.delay()
+    return JsonResponse({'status': 'triggered'})
 
 
 @login_required
