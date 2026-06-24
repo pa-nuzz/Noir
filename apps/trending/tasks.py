@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task(queue='low')
-def collect_all_sources():
+def collect_all_sources(force=False):
     from django.db import close_old_connections
     close_old_connections()
 
@@ -20,15 +20,18 @@ def collect_all_sources():
 
     sources = ContentSource.objects.filter(is_active=True)
 
-    now = tz.now()
-    due_sources = []
-    for source in sources:
-        if source.last_fetched is None:
-            due_sources.append(source)
-        else:
-            elapsed = (now - source.last_fetched).total_seconds() / 3600
-            if elapsed >= source.poll_interval_hours:
+    if force:
+        due_sources = list(sources)
+    else:
+        now = tz.now()
+        due_sources = []
+        for source in sources:
+            if source.last_fetched is None:
                 due_sources.append(source)
+            else:
+                elapsed = (now - source.last_fetched).total_seconds() / 3600
+                if elapsed >= source.poll_interval_hours:
+                    due_sources.append(source)
 
     collectors = {
         'rss': RSSCollector(),
@@ -67,22 +70,24 @@ def recalculate_trending_scores():
     from django.db import close_old_connections
     close_old_connections()
 
-    from .models import FeedItem
+    from django.db.models import Q
+    from .models import FeedItem, Topic
     from .services.categorizer import Categorizer
     from .services.content_cleaner import ContentCleaner
     from .services.scorer import Scorer
-    from .services.summarizer import Summarizer
 
     cleaner = ContentCleaner()
     categorizer = Categorizer()
-    summarizer = Summarizer()
     scorer = Scorer()
+
+    all_topics = list(Topic.objects.filter(is_active=True))
 
     cutoff = tz.now() - timedelta(hours=72)
     items = FeedItem.objects.filter(
         is_duplicate=False,
-        published_at__gte=cutoff,
-    ).order_by('-fetched_at')[:200]
+    ).filter(
+        Q(published_at__gte=cutoff) | Q(fetched_at__gte=cutoff)
+    ).order_by('-fetched_at')[:500]
 
     updated = 0
     for item in items:
@@ -90,14 +95,15 @@ def recalculate_trending_scores():
         try:
             item = cleaner.clean(item)
             item_before_topic = item.topic
-            item = categorizer.categorize(item)
+            item = categorizer.categorize(item, topics=all_topics)
             if item.topic is None:
                 item.topic = item_before_topic
-            item = summarizer.summarize(item)
             item.trending_score = scorer.score(item)
-            save_fields = ['content_cleaned', 'trending_score', 'language', 'ai_summary', 'ai_categories']
+            save_fields = ['content_cleaned', 'trending_score', 'language']
             if item.topic is not None:
                 save_fields.append('topic')
+            if item.ai_categories:
+                save_fields.append('ai_categories')
             item.save(update_fields=save_fields)
             updated += 1
         except Exception as e:
@@ -271,6 +277,12 @@ def generate_currents_snapshots():
         try:
             user = User.objects.get(id=uid)
         except User.DoesNotExist:
+            continue
+
+        # Per-user freshness guard — skip if snapshot is less than 1 hour old
+        last_snap = CurrentsSnapshot.objects.filter(user=user).order_by('-created_at').first()
+        if last_snap and (timezone.now() - last_snap.created_at) < timedelta(hours=1):
+            logger.info("Skipping user %s — snapshot fresh enough", uid)
             continue
 
         try:

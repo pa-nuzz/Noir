@@ -1,4 +1,3 @@
-import hashlib
 import logging
 import re
 from datetime import datetime, timezone
@@ -62,9 +61,10 @@ class WebScraper:
             if i < len(link_hrefs):
                 href = link_hrefs[i]
                 article_url = urljoin(source.url, href)
+                if not article_url.startswith('http'):
+                    continue
             else:
-                raw = title + clean
-                article_url = f"hash://sha256/{hashlib.sha256(raw.encode()).hexdigest()}"
+                continue
 
             if FeedItem.objects.filter(url=article_url).exists():
                 continue

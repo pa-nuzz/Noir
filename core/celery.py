@@ -35,10 +35,9 @@ app.conf.beat_schedule = {
     },
 
     # Trending Topics
-    'collect-trending-sources-every-5-minutes': {
+    'collect-trending-sources': {
         'task': 'apps.trending.tasks.collect_all_sources',
-        # 'schedule': crontab(hour='0,6,12,18', minute='0'),
-        'schedule': crontab(minute='*/5'),
+        'schedule': crontab(minute='*/30'),
         'options': {'queue': 'low'},
     },
     'recalculate-trending-scores': {
@@ -63,7 +62,7 @@ app.conf.beat_schedule = {
     },
     'generate-currents-snapshots': {
         'task': 'apps.trending.tasks.generate_currents_snapshots',
-        'schedule': crontab(minute='*/5'),
+        'schedule': crontab(hour='*', minute='0'),
         'options': {'queue': 'low'},
     },
 }
