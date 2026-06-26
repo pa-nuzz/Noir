@@ -48,6 +48,7 @@ def generate(request):
         prompt = request.POST.get('prompt', '').strip()
         platform = request.POST.get('platform', '')
         tone = request.POST.get('tone', 'professional')
+        next_url = request.POST.get('next', 'content_studio:content_hub')
 
         if not prompt:
             messages.error(request, 'Please enter a prompt.')
@@ -75,19 +76,19 @@ def generate(request):
             item = service.generate_content(content_type, prompt, platform=platform, tone=tone, **extra)
             if item is None:
                 messages.error(request, f'Unknown content type: {content_type}')
-                return redirect('content_studio:generate')
+                return redirect(next_url)
             if item.body.startswith('['):
                 error_msg = item.body
                 item.delete()
                 messages.error(request, error_msg)
-                return redirect('content_studio:generate')
+                return redirect(next_url)
             asset_ids = request.POST.get('asset_ids', '')
             if asset_ids:
                 ids = [int(x) for x in asset_ids.split(',') if x.strip().isdigit()]
                 if ids:
                     item.attachments.set(ids)
             messages.success(request, f'{item.get_content_type_display()} generated!')
-            return redirect('content_studio:detail', item_id=item.id)
+            return redirect(next_url)
 
     generators = service.get_available_generators()
     return render(request, 'content_studio/generate.html', {

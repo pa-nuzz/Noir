@@ -66,7 +66,7 @@
 
 <div id="auto-rules-list" class="space-y-3">
   {% for topic in trending_topics %}
-  <div class="auto-card{% if topic.id in subscribed_topic_ids %} active{% endif %}" data-topic-id="{{ topic.id }}">
+  <div class="auto-card{% if topic.id in active_automation_topic_ids %} active{% endif %}" data-topic-id="{{ topic.id }}">
     <div class="auto-card-header" onclick="toggleAutoCategory(this.closest('.auto-card'))">
       <div class="auto-card-icon" style="background:{{ topic.color }}18">
         <span>{{ topic.icon }}</span>
@@ -75,14 +75,14 @@
         <div class="auto-card-name">{{ topic.name }}</div>
         <div class="auto-card-desc">{{ topic.description }}</div>
       </div>
-      <span class="auto-toggle" id="auto-indicator-{{ topic.id }}">{% if topic.id in subscribed_topic_ids %}⚡{% else %}⊞{% endif %}</span>
+      <span class="auto-toggle" id="auto-indicator-{{ topic.id }}">{% if topic.id in active_automation_topic_ids %}⚡{% else %}⊞{% endif %}</span>
     </div>
     <div class="auto-settings">
       <label class="text-xs font-semibold text-slate-600">Platforms:</label>
       <div class="auto-platform-grid">
         {% for p in all_platforms %}
-        <span class="auto-platform-chip{% if not topic.id in subscribed_topic_ids %} disabled{% endif %}" onclick="togglePlatform({{ topic.id }}, '{{ p.platform }}', this)">
-          <input type="checkbox" value="{{ p.platform }}"{% if not topic.id in subscribed_topic_ids %} disabled{% endif %}>
+        <span class="auto-platform-chip{% if not topic.id in active_automation_topic_ids %} disabled{% endif %}" onclick="togglePlatform({{ topic.id }}, '{{ p.platform }}', this)">
+          <input type="checkbox" value="{{ p.platform }}"{% if not topic.id in active_automation_topic_ids %} disabled{% endif %}>
           {% if p.connected %}<span class="connected-dot"></span>{% endif %}
           {{ p.name }}{% if p.connected and p.account_name %} · {{ p.account_name }}{% endif %}
         </span>
@@ -98,6 +98,10 @@
 </div>
 
 <div class="auto-actions">
+  <span id="auto-unsaved-indicator" class="hidden text-xs text-amber-600 font-semibold flex items-center gap-1.5">
+    <span class="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0"></span>
+    Unsaved changes
+  </span>
   <button onclick="saveAutomationRules()" class="btn-action btn-action-primary inline-flex text-sm">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
     Save All Automation Rules
@@ -108,6 +112,27 @@
 
 <script>
 var autoRulesData = {};
+var _hasUnsavedChanges = false;
+
+function markUnsaved() {
+  if (_hasUnsavedChanges) return;
+  _hasUnsavedChanges = true;
+  var el = document.getElementById('auto-unsaved-indicator');
+  if (el) el.classList.remove('hidden');
+}
+
+function markSaved() {
+  _hasUnsavedChanges = false;
+  var el = document.getElementById('auto-unsaved-indicator');
+  if (el) el.classList.add('hidden');
+}
+
+window.addEventListener('beforeunload', function(e) {
+  if (_hasUnsavedChanges) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
 
 function initAutoRules() {
   var savedRules = {};
@@ -175,6 +200,7 @@ function toggleAutoCategory(card) {
     }
   });
   updateActiveCount();
+  markUnsaved();
 }
 
 function togglePlatform(topicId, platform, el) {
@@ -189,6 +215,7 @@ function togglePlatform(topicId, platform, el) {
     var idx = platforms.indexOf(platform);
     if (idx > -1) platforms.splice(idx, 1);
   }
+  markUnsaved();
 }
 
 function toggleAllRules(enable) {
@@ -211,6 +238,7 @@ function toggleAllRules(enable) {
     });
   });
   updateActiveCount();
+  markUnsaved();
 }
 
 function updateActiveCount() {
@@ -232,6 +260,7 @@ function saveAutomationRules() {
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {
+    markSaved();
     showToast('success', data.count + ' rule(s) saved!');
   })
   .catch(function() {

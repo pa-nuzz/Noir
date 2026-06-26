@@ -19,22 +19,22 @@
   </div>
 
   <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
-    <div class="premium-surface rounded-2xl p-5">
+    <a href="{% url 'content_studio:content_hub' %}?tab=history" class="premium-surface rounded-2xl p-5 hover:ring-2 hover:ring-cyan-400 transition-all block">
       <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Total Items</p>
       <p class="text-2xl font-bold text-slate-900 mt-1">{{ stats.total }}</p>
-    </div>
-    <div class="premium-surface rounded-2xl p-5">
+    </a>
+    <a href="{% url 'content_studio:content_hub' %}?tab=history&status=draft" class="premium-surface rounded-2xl p-5 hover:ring-2 hover:ring-cyan-400 transition-all block">
       <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Drafts</p>
       <p class="text-2xl font-bold text-slate-900 mt-1">{{ stats.drafts }}</p>
-    </div>
-    <div class="premium-surface rounded-2xl p-5">
+    </a>
+    <a href="{% url 'content_studio:content_hub' %}?tab=history&status=approved" class="premium-surface rounded-2xl p-5 hover:ring-2 hover:ring-cyan-400 transition-all block">
       <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Approved</p>
       <p class="text-2xl font-bold text-slate-900 mt-1">{{ stats.approved }}</p>
-    </div>
-    <div class="premium-surface rounded-2xl p-5">
+    </a>
+    <a href="{% url 'content_studio:content_hub' %}?tab=history&status=published" class="premium-surface rounded-2xl p-5 hover:ring-2 hover:ring-cyan-400 transition-all block">
       <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Published</p>
       <p class="text-2xl font-bold text-slate-900 mt-1">{{ stats.published }}</p>
-    </div>
+    </a>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
