@@ -148,6 +148,7 @@ INSTALLED_APPS = [
     'django_otp.plugins.otp_totp',
     'django_otp.plugins.otp_static',
     'debug_toolbar',
+    'django_celery_beat',
 
     # Local Apps
     'apps.accounts',
@@ -276,10 +277,13 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_TASK_ALWAYS_EAGER = config('CELERY_TASK_ALWAYS_EAGER', default=False, cast=bool)
 CELERY_TASK_EAGER_PROPAGATES = True
 
-# "connect to Redis over TLS but don't validate the SSL certificate" 
+# "connect to Redis over TLS but don't validate the SSL certificate"
 # (CERT_NONE = don't verify certificate chain or hostname)
-CELERY_BROKER_USE_SSL = {"ssl_cert_reqs": ssl.CERT_NONE}
-CELERY_REDIS_BACKEND_USE_SSL = {"ssl_cert_reqs": ssl.CERT_NONE}
+# Only apply SSL params when URL scheme is rediss:// (Upstash/production)
+if CELERY_BROKER_URL.startswith('rediss://'):
+    CELERY_BROKER_USE_SSL = {"ssl_cert_reqs": ssl.CERT_NONE}
+if CELERY_RESULT_BACKEND.startswith('rediss://'):
+    CELERY_REDIS_BACKEND_USE_SSL = {"ssl_cert_reqs": ssl.CERT_NONE}
 
 # Queue separation — prevents slow tasks from blocking critical ones
 CELERY_TASK_DEFAULT_QUEUE = 'default'

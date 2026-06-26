@@ -1,3 +1,4 @@
+django-celery-beat==2.9.0
 tinycss2==1.5.1
 bleach==6.4.0 
 webencodings==0.5.1

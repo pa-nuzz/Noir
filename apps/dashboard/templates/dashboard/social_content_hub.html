@@ -87,9 +87,12 @@
   @media (max-width: 1024px) { .sch-media-sidebar { display: none; } }
   @media (max-width: 768px) { .sch-media-grid { grid-template-columns: repeat(2, 1fr); } .sch-media-grid-sm { grid-template-columns: repeat(3, 1fr); } }
 
+  .sch-kpi-card { display: block; text-decoration: none; color: inherit; transition: transform 0.15s, box-shadow 0.15s; }
+  .sch-kpi-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+
   /* Toast shared with trending feed */
-  .tr-toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 10px; font-size: 0.8125rem; font-weight: 600; color: #FFFFFF; z-index: 9999; opacity: 0; transform: translateY(10px); transition: all 0.25s; }
-  .tr-toast.show { opacity: 1; transform: translateY(0); }
+  .tr-toast { position: fixed; top: 24px; right: 24px; padding: 12px 20px; border-radius: 10px; font-size: 0.8125rem; font-weight: 600; color: #FFFFFF; z-index: 9999; opacity: 0; transform: translateX(10px); transition: all 0.25s; pointer-events: none; }
+  .tr-toast.show { opacity: 1; transform: translateX(0); }
   .tr-toast.success { background: #059669; }
   .tr-toast.error { background: #DC2626; }
   .tr-toast.info { background: #3B82F6; }
@@ -110,18 +113,18 @@
 
   <!-- KPI Cards -->
   <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-    <div class="premium-surface rounded-2xl p-5">
+    <a href="{% url 'media_assets:library' %}" class="sch-kpi-card premium-surface rounded-2xl p-5">
       <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Media Assets</p>
-      <p class="text-2xl font-bold text-slate-900 mt-1">{{ media_assets|length }}</p>
-    </div>
-    <div class="premium-surface rounded-2xl p-5">
+      <p class="text-2xl font-bold text-slate-900 mt-1">{{ media_assets_total }}</p>
+    </a>
+    <a href="{% url 'content_studio:content_hub' %}" class="sch-kpi-card premium-surface rounded-2xl p-5">
       <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Content Items</p>
-      <p class="text-2xl font-bold text-slate-900 mt-1">{{ content_items|length }}</p>
-    </div>
-    <div class="premium-surface rounded-2xl p-5">
+      <p class="text-2xl font-bold text-slate-900 mt-1">{{ content_items_total }}</p>
+    </a>
+    <a href="#" onclick="switchTab('trending'); return false;" class="sch-kpi-card premium-surface rounded-2xl p-5">
       <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Trending Topics</p>
       <p class="text-2xl font-bold text-slate-900 mt-1">{{ trending_topics|length }}</p>
-    </div>
+    </a>
   </div>
 
   <!-- Quick Actions -->
@@ -243,7 +246,8 @@
 <script>
 function switchTab(tabId) {
   if (tabId === 'trending') {
-    var hasCategories = {{ subscribed_topic_ids|length }} > 0;
+    window._refineTriggered = false;
+    var hasCategories = {{ automation_rule_count }} > 0;
     if (!hasCategories) {
       showTrendingToast('Select categories first to see trending topics', 'info');
       tabId = 'automation';
@@ -300,16 +304,16 @@ function showTrendingToast(msg, type, anchor) {
   if (anchor) {
     var rect = anchor.getBoundingClientRect();
     t.style.position = 'fixed';
-    t.style.bottom = 'auto';
+    t.style.top = 'auto';
     t.style.right = 'auto';
     t.style.left = Math.max(8, rect.left) + 'px';
     t.style.top = (rect.bottom + 6) + 'px';
   } else {
     t.style.position = 'fixed';
-    t.style.bottom = '24px';
+    t.style.top = '24px';
     t.style.right = '24px';
     t.style.left = 'auto';
-    t.style.top = 'auto';
+    t.style.bottom = 'auto';
   }
 
   clearTimeout(t._hide);

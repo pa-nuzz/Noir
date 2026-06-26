@@ -12,6 +12,9 @@ LLM_MODEL = getattr(settings, 'LLM_MODEL', 'gpt-4o')
 LLM_BASE_URL = getattr(settings, 'LLM_BASE_URL', 'https://api.openai.com/v1').rstrip('/')
 LLM_API_KEY = getattr(settings, 'LLM_API_KEY', None) or os.environ.get('LLM_API_KEY')
 
+_last_llm_request_time = 0
+_llm_min_interval = 3.0
+
 
 class LLMPipelineError(Exception):
     def __init__(self, agent, error_code, message):
@@ -262,6 +265,12 @@ def _call_llm(system_prompt, user_prompt, api_key=None):
     retryable_statuses = {429, 500, 502, 503}
 
     for attempt in range(max_retries):
+        global _last_llm_request_time
+        elapsed = time.time() - _last_llm_request_time
+        if elapsed < _llm_min_interval:
+            time.sleep(_llm_min_interval - elapsed)
+        _last_llm_request_time = time.time()
+
         timeout = 30.0 + (attempt * 15.0)
         try:
             response = httpx.post(url, json=payload, headers=headers, timeout=timeout)

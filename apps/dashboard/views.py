@@ -1506,6 +1506,7 @@ def social_content_hub(request):
 
     # ─── Media Library data ──────────────────────────────────────────
     media_assets = []
+    media_assets_total = 0
     media_folders = []
     media_tags = []
     media_current_type = ''
@@ -1525,6 +1526,7 @@ def social_content_hub(request):
         media_query = request.GET.get('media_q', '').strip()
 
         assets_qs = MediaAsset.objects.filter(user=user).select_related('folder').order_by('-created_at')
+        media_assets_total = assets_qs.count()
 
         if media_query:
             assets_qs = service.search_assets(media_query)
@@ -1532,7 +1534,6 @@ def social_content_hub(request):
             assets_qs = assets_qs.filter(file_type=media_current_type)
         if media_current_folder and str(media_current_folder).isdigit():
             assets_qs = assets_qs.filter(folder_id=int(media_current_folder))
-
         asset_list = list(assets_qs[:32])
         for a in asset_list:
             a.display_url = service.get_asset_url(a)
@@ -1558,24 +1559,22 @@ def social_content_hub(request):
                 'is_audio': a.file_type == 'audio',
             })
 
-    # ─── Trending Topics data ─────────────────────────────────────────
+    # ─── Trending Topics & Automation data ────────────────────────────
     trending_topics = []
-    subscribed_topic_ids = []
-    try:
-        from apps.trending.models import Topic, UserTopicPreference
-        trending_topics = _safe_list(Topic.objects.filter(is_active=True).order_by('-subscriber_count'))
-        subscribed_topic_ids = list(
-            UserTopicPreference.objects.filter(user=user).values_list('topic_id', flat=True)
-        )
-    except Exception:
-        pass
-
-    # ─── Automation data ──────────────────────────────────────────────
+    automation_rule_count = 0
+    active_automation_topic_ids = set()
     all_platforms = []
     automation_rules = []
     automation_rules_json = []
     content_items = []
+    content_items_total = 0
     try:
+        from apps.trending.models import Topic, TrendingAutomationRule
+        trending_topics = _safe_list(Topic.objects.filter(is_active=True).order_by('-subscriber_count'))
+        active_rules = TrendingAutomationRule.objects.filter(user=user, is_active=True)
+        automation_rule_count = active_rules.count()
+        active_automation_topic_ids = set(active_rules.values_list('topic_id', flat=True))
+
         from apps.social_accounts.models import SocialAccount
         connected_accounts = _safe_list(
             SocialAccount.objects.filter(user=user, is_active=True).values('platform', 'account_name')
@@ -1594,7 +1593,6 @@ def social_content_hub(request):
             }
             for p in ['linkedin', 'twitter', 'instagram', 'facebook', 'tiktok', 'youtube']
         ]
-        from apps.trending.models import TrendingAutomationRule
         automation_rules = _safe_list(
             TrendingAutomationRule.objects.filter(user=user).select_related('topic')
         )
@@ -1608,9 +1606,9 @@ def social_content_hub(request):
             for rule in automation_rules
         }
         from apps.content_studio.models import ContentItem
-        content_items = _safe_list(
-            filter_by_context(request, ContentItem.objects.all()).order_by('-created_at')[:20]
-        )
+        content_items_qs = filter_by_context(request, ContentItem.objects.all()).order_by('-created_at')
+        content_items_total = content_items_qs.count()
+        content_items = _safe_list(content_items_qs[:20])
     except Exception:
         pass
 
@@ -1619,17 +1617,20 @@ def social_content_hub(request):
         'calendar_month_label': calendar_month_label,
         'calendar_days': calendar_days,
         'media_assets': media_assets,
+        'media_assets_total': media_assets_total,
         'media_folders': media_folders,
         'media_tags': media_tags,
         'media_current_type': media_current_type,
         'media_current_folder': media_current_folder,
         'media_query': media_query,
         'trending_topics': trending_topics,
-        'subscribed_topic_ids': subscribed_topic_ids,
+        'automation_rule_count': automation_rule_count,
+        'active_automation_topic_ids': active_automation_topic_ids,
         'all_platforms': all_platforms,
         'automation_rules': automation_rules,
         'automation_rules_json': automation_rules_json,
         'content_items': content_items,
+        'content_items_total': content_items_total,
     }
     return render(request, 'dashboard/social_content_hub.html', context)
 

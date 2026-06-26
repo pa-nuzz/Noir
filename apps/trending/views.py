@@ -1,20 +1,19 @@
 import json
 import logging
 import math
-import re as _re
-from datetime import datetime, timedelta
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import F, Q
+from django.db.models import Q
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET, require_POST
 
 from core.tenant import get_current_tenant
 
-from .models import ContentSource, FeedItem, CurrentItem, Topic, UserActivityProfile, UserFeedInteraction, UserTopicPreference
+from .models import ContentSource, FeedItem, CurrentItem, Topic, UserActivityProfile, UserFeedInteraction
 from .services.user_profiler import UserProfiler
 from .services.content_generator import generate_llm_content
 
@@ -22,26 +21,40 @@ from .services.content_generator import generate_llm_content
 @login_required
 @require_GET
 def feed_data(request):
+    from .models import TrendingAutomationRule
+
     PAGE_SIZE = 40
     page = max(1, int(request.GET.get('page', 1) or 1))
     offset = (page - 1) * PAGE_SIZE
 
     topic_id = request.GET.get('topic_id')
-    want_subscribed = bool(request.GET.get('subscribed'))
+    if topic_id:
+        try:
+            topic_id = int(topic_id)
+        except (ValueError, TypeError):
+            topic_id = None
+
+    automation_topic_ids = list(
+        TrendingAutomationRule.objects.filter(
+            user=request.user, is_active=True,
+        ).values_list('topic_id', flat=True)
+    )
+
+    if topic_id and topic_id in automation_topic_ids:
+        automation_topic_ids = [topic_id]
+
+    if not automation_topic_ids:
+        return JsonResponse({
+            'items': [], 'total': 0,
+            'needs_categories': True,
+            'page': 1, 'total_pages': 0,
+            'has_next': False, 'has_prev': False,
+        })
 
     qs = FeedItem.objects.filter(
         is_duplicate=False,
+        topic_id__in=automation_topic_ids,
     ).select_related('topic', 'source').order_by('-trending_score', '-published_at')
-
-    if want_subscribed:
-        subscribed_ids = list(
-            UserTopicPreference.objects.filter(user=request.user)
-            .values_list('topic_id', flat=True)
-        )
-        if subscribed_ids:
-            qs = qs.filter(topic_id__in=subscribed_ids)
-    elif topic_id:
-        qs = qs.filter(topic_id=topic_id)
 
     dismissed_ids = set(
         UserFeedInteraction.objects.filter(
@@ -100,11 +113,12 @@ def feed_data(request):
 @login_required
 @require_GET
 def topic_list(request):
+    from .models import TrendingAutomationRule
     topics = Topic.objects.filter(is_active=True).order_by('-subscriber_count')
 
-    subscribed_ids = set(
-        UserTopicPreference.objects.filter(
-            user=request.user,
+    auto_ids = set(
+        TrendingAutomationRule.objects.filter(
+            user=request.user, is_active=True,
         ).values_list('topic_id', flat=True)
     )
 
@@ -118,56 +132,13 @@ def topic_list(request):
             'icon': topic.icon,
             'color': topic.color,
             'subscriber_count': topic.subscriber_count,
-            'is_subscribed': topic.id in subscribed_ids,
+            'is_subscribed': topic.id in auto_ids,
         })
 
     return JsonResponse({'topics': data})
 
 
-@login_required
-@require_POST
-def toggle_subscription(request):
-    try:
-        body = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
-    topic_id = body.get('topic_id')
-    subscribe = body.get('subscribe', True)
-
-    if not topic_id:
-        return JsonResponse({'error': 'topic_id is required'}, status=400)
-
-    topic = get_object_or_404(Topic, id=topic_id, is_active=True)
-
-    if subscribe:
-        current_count = UserTopicPreference.objects.filter(user=request.user).count()
-        if current_count >= 5:
-            return JsonResponse(
-                {'error': 'max_reached', 'message': 'Maximum 5 categories allowed. Unsubscribe from one first.'},
-                status=400,
-            )
-        _, created = UserTopicPreference.objects.get_or_create(
-            user=request.user,
-            topic=topic,
-            defaults={'is_auto_detected': False},
-        )
-        if created:
-            Topic.objects.filter(id=topic.id).update(
-                subscriber_count=F('subscriber_count') + 1
-            )
-    else:
-        deleted, _ = UserTopicPreference.objects.filter(
-            user=request.user,
-            topic=topic,
-            is_auto_detected=False,
-        ).delete()
-        if deleted:
-            Topic.objects.filter(id=topic.id).update(
-                subscriber_count=F('subscriber_count') - 1
-            )
-
-    return JsonResponse({'subscribed': subscribe})
 
 
 @login_required
@@ -294,309 +265,71 @@ def toggle_bookmark(request, item_id):
 
 @login_required
 @require_GET
-def manage_categories(request):
-    topics = Topic.objects.filter(is_active=True).order_by('name')
-    subscribed_ids = set(
-        UserTopicPreference.objects.filter(user=request.user).values_list('topic_id', flat=True)
-    )
-    return render(request, 'trending/select_categories.html', {
-        'trending_topics': topics,
-        'subscribed_topic_ids': subscribed_ids,
-    })
-
-
-@login_required
-@require_POST
-def bulk_subscribe(request):
-    try:
-        body = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
-
-    topic_ids = body.get('topic_ids', [])
-    if not isinstance(topic_ids, list):
-        return JsonResponse({'error': 'topic_ids must be a list'}, status=400)
-
-    topic_ids = list(dict.fromkeys(topic_ids))
-    if len(topic_ids) > 5:
-        return JsonResponse(
-            {'error': 'max_reached', 'message': 'You can select at most 5 categories.'},
-            status=400,
-        )
-
-    current_ids = set(
-        UserTopicPreference.objects.filter(user=request.user).values_list('topic_id', flat=True)
-    )
-    new_ids = set(topic_ids)
-    to_add = new_ids - current_ids
-    to_remove = current_ids - new_ids
-
-    topics = {t.id: t for t in Topic.objects.filter(id__in=to_add | to_remove, is_active=True)}
-
-    for tid in to_add:
-        topic = topics.get(tid)
-        if not topic:
-            continue
-        UserTopicPreference.objects.get_or_create(
-            user=request.user, topic=topic, defaults={'is_auto_detected': False},
-        )
-        Topic.objects.filter(id=tid).update(subscriber_count=F('subscriber_count') + 1)
-
-    UserTopicPreference.objects.filter(
-        user=request.user, topic_id__in=to_remove, is_auto_detected=False,
-    ).delete()
-    for tid in to_remove:
-        Topic.objects.filter(id=tid).update(subscriber_count=F('subscriber_count') - 1)
-
-    return JsonResponse({'subscribed_ids': list(new_ids)})
-
-
-@login_required
-@require_GET
 def currents_data(request):
     from .models import TrendingAutomationRule, CurrentsSnapshot
+    from collections import OrderedDict
 
-    # Check rules first
-    has_rules = TrendingAutomationRule.objects.filter(
+    rules = TrendingAutomationRule.objects.filter(
         user=request.user, is_active=True,
-    ).exclude(platforms=[]).exists()
-
-    if not has_rules:
+    )
+    if not rules.exists():
         return JsonResponse({'items': [], 'total': 0, 'needs_automation': True})
 
-    # Read from latest snapshot batch
     latest = CurrentsSnapshot.objects.filter(
         user=request.user,
     ).order_by('-created_at').values('batch_id', 'created_at').first()
 
-    # ─── Helper to build response from snapshots ──────────────────────
-    def _snapshot_response(snap_qs, batch_created_at, batch_id):
-        from collections import OrderedDict
-
-        ready_ids = set(
-            CurrentItem.objects.filter(user=request.user).values_list('feed_item_id', flat=True)
-        )
-        item_map = OrderedDict()
-
-        for s in snap_qs:
-            feed = s.feed_item
-            if feed.id not in item_map:
-                topic = feed.topic
-                item_map[feed.id] = {
-                    'id': feed.id,
-                    'title': feed.title,
-                    'url': feed.url,
-                    'author': feed.author,
-                    'summary': feed.ai_summary or (feed.content_cleaned or '')[:300],
-                    'topic': {
-                        'id': topic.id,
-                        'name': topic.name,
-                        'icon': topic.icon,
-                        'color': topic.color,
-                    } if topic else None,
-                    'source': feed.source.name if feed.source else 'Unknown',
-                    'score': feed.trending_score,
-                    'is_queued': feed.id in ready_ids,
-                    'published_at': feed.published_at.isoformat() if feed.published_at else None,
-                    'image_url': feed.image_url or '',
-                    'generated_content': {},
-                    'active_platforms': [],
-                }
-            if s.platforms_data and isinstance(s.platforms_data, dict):
-                item_map[feed.id]['generated_content'].update(s.platforms_data)
-
-        for d in item_map.values():
-            d['active_platforms'] = list(d['generated_content'].keys()) if d['generated_content'] else []
-
+    if not latest:
         return JsonResponse({
-            'items': list(item_map.values()),
-            'total': len(item_map),
-            'generated_at': batch_created_at.isoformat(),
-            'batch_id': batch_id,
+            'items': [], 'total': 0,
+            'needs_feed_load': True,
         })
 
-    # Cache hit — check staleness
-    if latest:
-        from django.utils import timezone
-        batch_age = timezone.now() - latest['created_at']
-        if batch_age <= timedelta(minutes=15):
-            snapshots = CurrentsSnapshot.objects.filter(
-                user=request.user,
-                batch_id=latest['batch_id'],
-            ).select_related('feed_item__topic', 'feed_item__source')
-            return _snapshot_response(snapshots, latest['created_at'], latest['batch_id'])
+    snapshots = CurrentsSnapshot.objects.filter(
+        user=request.user, batch_id=latest['batch_id'],
+    ).select_related('feed_item__topic', 'feed_item__source')
 
-    # ─── Cold start: generate inline ──────────────────────────────────
-    import uuid
+    # Build response from snapshots
+    ready_ids = set(
+        CurrentItem.objects.filter(user=request.user).values_list('feed_item_id', flat=True)
+    )
+    item_map = OrderedDict()
 
-    rules = TrendingAutomationRule.objects.filter(
-        user=request.user, is_active=True,
-    ).exclude(platforms=[]).select_related('topic')
+    for s in snapshots:
+        feed = s.feed_item
+        if feed.id not in item_map:
+            topic = feed.topic
+            item_map[feed.id] = {
+                'id': feed.id,
+                'title': feed.title,
+                'url': feed.url,
+                'author': feed.author,
+                'summary': feed.ai_summary or (feed.content_cleaned or '')[:300],
+                'topic': {
+                    'id': topic.id,
+                    'name': topic.name,
+                    'icon': topic.icon,
+                    'color': topic.color,
+                } if topic else None,
+                'source': feed.source.name if feed.source else 'Unknown',
+                'score': feed.trending_score,
+                'is_queued': feed.id in ready_ids,
+                'published_at': feed.published_at.isoformat() if feed.published_at else None,
+                'image_url': feed.image_url or '',
+                'generated_content': {},
+                'active_platforms': [],
+            }
+        if s.platforms_data and isinstance(s.platforms_data, dict):
+            item_map[feed.id]['generated_content'].update(s.platforms_data)
 
-    topic_platforms = {r.topic_id: r.platforms for r in rules}
-    all_active_platforms = sorted(set(
-        p for plats in topic_platforms.values() for p in plats
-    ))
-
-    # Top 5 per category → overall top 5
-    from itertools import chain
-    candidates = list(chain.from_iterable(
-        FeedItem.objects.filter(
-            is_duplicate=False, topic_id=tid,
-        ).select_related('topic', 'source').order_by('-trending_score')[:5]
-        for tid in topic_platforms
-    ))
-    candidates.sort(key=lambda x: x.trending_score, reverse=True)
-    items = candidates[:5]
-
-    # Build response data
-    data = []
-    for item in items:
-        data.append({
-            'id': item.id,
-            'title': item.title,
-            'url': item.url,
-            'author': item.author,
-            'summary': item.ai_summary or (item.content_cleaned or '')[:300],
-            'topic': {
-                'id': item.topic.id,
-                'name': item.topic.name,
-                'icon': item.topic.icon,
-                'color': item.topic.color,
-            } if item.topic else None,
-            'source': item.source.name if item.source else 'Unknown',
-            'score': item.trending_score,
-            'is_queued': False,
-            'published_at': item.published_at.isoformat() if item.published_at else None,
-            'image_url': item.image_url or '',
-            'generated_content': {},
-            'active_platforms': topic_platforms.get(item.topic_id, all_active_platforms),
-        })
-
-    # Inline LLM generation
-    try:
-        from apps.content_studio.llm.llm_service import _call_llm_fatal, LLMPipelineError
-        from apps.content_studio.llm.critique_prompts import build_batch_critic_prompt, build_batch_refiner_prompt
-
-        prompt_parts = []
-        for item in items:
-            title = item.title or ''
-            summary = item.ai_summary or item.content_cleaned or ''
-            prompt_parts.append(f"ITEM {item.id}:\nTitle: {title}\nSummary: {summary[:500]}\n")
-
-        platform_reqs = {
-            'linkedin': '- linkedin: Professional, thought-leadership, 1300-2000 chars, 3-5 hashtags',
-            'twitter': '- twitter: Concise, under 280 chars, 1-2 hashtags',
-            'instagram': '- instagram: Visual-first, 150-220 chars before \'more\', 5-8 hashtags',
-            'facebook': '- facebook: Conversational, 150-500 chars, 2-4 hashtags',
-            'tiktok': '- tiktok: Casual and punchy, under 100 chars, 1-3 hashtags',
-        }
-        req_lines = [platform_reqs[p] for p in all_active_platforms if p in platform_reqs]
-        if not req_lines:
-            req_lines = [f'- {p}: Standard social media post' for p in all_active_platforms]
-
-        platform_entries = '\n'.join(
-            f'      "{p}": {{"body": "...", "hashtags": "#tag1 #tag2"}},' for p in all_active_platforms
-        )
-
-        system_prompt = (
-            "You are a social media content strategist. For each news item below, generate "
-            "a platform-optimized post with relevant hashtags for each applicable platform.\n\n"
-            "Platforms and their requirements:\n" + "\n".join(req_lines) + "\n\n"
-            "For each item, follow this structure:\n"
-            "- HOOK: bold statement or question (under 15 words)\n"
-            "- BODY: deliver the core message in the platform's style\n"
-            "- CTA: End with an engaging question or action\n\n"
-            "Return ONLY a valid JSON array:\n"
-            "[\n"
-            "  {\n"
-            '    "id": <item_id>,\n'
-            '    "platforms": {\n'
-            + platform_entries +
-            "\n    }\n"
-            "  },\n"
-            "  ...\n"
-            "]\n\n"
-            "Do NOT include markdown code fences, backticks, or any text outside the JSON array."
-        )
-
-        user_prompt = "\n---\n".join(prompt_parts)
-
-        try:
-            initial = _call_llm_fatal('ideator', system_prompt, user_prompt)
-            critic_sys = build_batch_critic_prompt()
-            critic_user = f"USER BRIEF:\n{system_prompt}\n\nJSON DRAFT:\n{initial}"
-            critique = _call_llm_fatal('critic', critic_sys, critic_user)
-            refiner_sys = build_batch_refiner_prompt()
-            refiner_user = (
-                f"USER BRIEF:\n{system_prompt}\n\n"
-                f"JSON DRAFT:\n{initial}\n\n"
-                f"EDITOR CRITIQUE:\n{critique}\n\n"
-                f"Please completely rewrite the entire JSON array, fixing all issues raised."
-            )
-            refined = _call_llm_fatal('refiner', refiner_sys, refiner_user)
-            result = {"success": True, "error": None, "message": None, "content": refined}
-        except LLMPipelineError as e:
-            logger.error("3-agent pipeline failed for cold-start currents: %s", e)
-            result = {"success": False, "error": e.error_code, "message": e.message, "content": None}
-
-        if result['success'] and result['content']:
-            text = result['content'].strip()
-            json_match = _re.search(r'\[.*\]', text, _re.DOTALL)
-            if json_match:
-                parsed = json.loads(json_match.group())
-                gen_map = {entry['id']: entry for entry in parsed if 'id' in entry}
-                for d in data:
-                    entry = gen_map.get(d['id'])
-                    active = d.get('active_platforms', all_active_platforms)
-                    if entry and isinstance(entry.get('platforms'), dict):
-                        d['generated_content'] = {}
-                        for p, info in entry['platforms'].items():
-                            if p in active and isinstance(info, dict):
-                                d['generated_content'][p] = {
-                                    'body': info.get('body', ''),
-                                    'hashtags': info.get('hashtags', ''),
-                                }
-    except Exception as e:
-        logger.warning("LLM generation failed for cold-start currents: %s", e, exc_info=True)
-
-    # Fallback: populate any items without generated content from feed data
-    for d in data:
-        if not d.get('generated_content'):
-            active = d.get('active_platforms', all_active_platforms)
-            fallback_body = d.get('summary', '') or ''
-            d['generated_content'] = {}
-            for p in active:
-                d['generated_content'][p] = {
-                    'body': fallback_body,
-                    'hashtags': '',
-                }
-
-    # Persist as inline batch so subsequent loads read from cache
-    batch_id = 'inline_' + uuid.uuid4().hex[:25]
-    from django.utils import timezone
-    now = timezone.now()
-
-    snapshots = []
-    for d in data:
-        feed = FeedItem.objects.filter(id=d['id']).first()
-        if not feed:
-            continue
-        snapshots.append(CurrentsSnapshot(
-            user=request.user,
-            feed_item=feed,
-            topic=feed.topic,
-            platforms_data=d['generated_content'],
-            batch_id=batch_id,
-        ))
-    if snapshots:
-        CurrentsSnapshot.objects.bulk_create(snapshots)
+    for d in item_map.values():
+        d['active_platforms'] = list(d['generated_content'].keys()) if d['generated_content'] else []
 
     return JsonResponse({
-        'items': data,
-        'total': len(data),
-        'generated_at': now.isoformat(),
-        'batch_id': batch_id,
+        'items': list(item_map.values()),
+        'total': len(item_map),
+        'generated_at': latest['created_at'].isoformat(),
+        'batch_id': latest['batch_id'],
     })
 
 
@@ -651,6 +384,14 @@ def currents_batch_action(request):
                     for p in r.platforms:
                         if p not in platforms_data:
                             platforms_data[p] = {}
+            if not platforms_data:
+                from apps.social_accounts.models import SocialAccount
+                connected = SocialAccount.objects.filter(
+                    user=request.user, is_active=True,
+                ).values_list('platform', flat=True).distinct()
+                for p in connected:
+                    if p:
+                        platforms_data[p] = {}
 
         for platform, content in platforms_data.items():
             if not isinstance(content, dict):
@@ -965,14 +706,17 @@ def save_automation_rules(request):
 
     # Remove rules for topics no longer in the request
     submitted_topic_ids = [r['topic_id'] for r in rules if r.get('topic_id')]
-    if submitted_topic_ids:
-        TrendingAutomationRule.objects.filter(
-            user=request.user,
-        ).exclude(topic_id__in=submitted_topic_ids).delete()
+    TrendingAutomationRule.objects.filter(
+        user=request.user,
+    ).exclude(topic_id__in=submitted_topic_ids).delete()
 
     # Feed subscriptions (UserTopicPreference) are managed independently via
     # select_categories / toggle_subscription / bulk_subscribe.
     # Automation rules do NOT override feed preferences.
+
+    # Invalidate Currents snapshots so the next load immediately reflects the new rules.
+    from .models import CurrentsSnapshot
+    CurrentsSnapshot.objects.filter(user=request.user).delete()
 
     return JsonResponse({'rules': saved, 'count': len(saved)})
 
@@ -1184,12 +928,151 @@ def schedule_automation_item(request, content_item_id):
 
 @login_required
 @require_POST
+def refine_feed_top5(request):
+    """Called by the frontend after rendering page 1 of the feed.
+    Takes the top 5 item IDs, runs LLM refinement, stores as CurrentsSnapshot."""
+    import json, uuid, re
+    from .models import TrendingAutomationRule, CurrentsSnapshot
+
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+
+    item_ids = body.get('item_ids', [])[:5]
+    if not item_ids:
+        return JsonResponse({'ok': False, 'error': 'no item_ids'}, status=400)
+
+    items = list(
+        FeedItem.objects.filter(id__in=item_ids, is_duplicate=False)
+        .select_related('topic', 'source')
+    )
+    if not items:
+        return JsonResponse({'ok': False, 'error': 'items not found'}, status=404)
+
+    topic_platforms = {
+        r.topic_id: r.platforms
+        for r in TrendingAutomationRule.objects.filter(
+            user=request.user, is_active=True,
+        ).exclude(platforms=[])
+    }
+    all_platforms = sorted(set(p for plats in topic_platforms.values() for p in plats))
+
+    if not all_platforms:
+        from apps.social_accounts.models import SocialAccount
+        connected = SocialAccount.objects.filter(
+            user=request.user, is_active=True,
+        ).values_list('platform', flat=True).distinct()
+        connected_platforms = sorted(set(p for p in connected if p))
+        if connected_platforms:
+            all_platforms = connected_platforms
+        else:
+            batch_id = uuid.uuid4().hex
+            CurrentsSnapshot.objects.filter(user=request.user).delete()
+            CurrentsSnapshot.objects.bulk_create([
+                CurrentsSnapshot(
+                    user=request.user, feed_item=item,
+                    topic=item.topic, platforms_data={}, batch_id=batch_id,
+                ) for item in items
+            ])
+            return JsonResponse({'ok': True, 'batch_id': batch_id, 'llm': False})
+
+    from apps.content_studio.llm.llm_service import _call_llm_fatal, LLMPipelineError
+    from apps.content_studio.llm.critique_prompts import build_batch_critic_prompt, build_batch_refiner_prompt
+
+    platform_reqs = {
+        'linkedin': 'Professional, 1300-2000 chars, 3-5 hashtags',
+        'twitter': 'Concise, under 280 chars, 1-2 hashtags',
+        'instagram': 'Visual-first, 150-220 chars, 5-8 hashtags',
+        'facebook': 'Conversational, 150-500 chars, 2-4 hashtags',
+        'tiktok': 'Casual and punchy, under 100 chars, 1-3 hashtags',
+    }
+    req_lines = [f'- {p}: {platform_reqs.get(p, "Standard post")}' for p in all_platforms]
+    platform_entries = '\n'.join(f'      "{p}": {{"body": "...", "hashtags": "#tag1"}},' for p in all_platforms)
+
+    prompt_parts = []
+    for item in items:
+        summary = (item.content_cleaned or item.content_raw or '')[:500]
+        prompt_parts.append(f"ITEM {item.id}:\nTitle: {item.title}\nSummary: {summary}")
+
+    system_prompt = (
+        "You are a social media content strategist. Generate platform-optimized posts.\n\n"
+        "Platforms:\n" + '\n'.join(req_lines) + "\n\n"
+        "Return ONLY a valid JSON array:\n[\n  {\n"
+        '    "id": <item_id>,\n    "platforms": {\n' + platform_entries + "\n    }\n  }\n]\n"
+        "No markdown, no backticks, no text outside the JSON."
+    )
+    user_prompt = '\n---\n'.join(prompt_parts)
+
+    gen_map = {}
+    try:
+        initial = _call_llm_fatal('ideator', system_prompt, user_prompt)
+        critique = _call_llm_fatal(
+            'critic', build_batch_critic_prompt(),
+            f"USER BRIEF:\n{system_prompt}\n\nJSON DRAFT:\n{initial}",
+        )
+        refined = _call_llm_fatal(
+            'refiner', build_batch_refiner_prompt(),
+            f"USER BRIEF:\n{system_prompt}\n\nJSON DRAFT:\n{initial}\n\nCRITIQUE:\n{critique}\n\nFully rewrite the JSON array.",
+        )
+        text = refined.strip()
+        m = re.search(r'\[.*\]', text, re.DOTALL)
+        if m:
+            parsed = json.loads(m.group())
+            gen_map = {entry['id']: entry for entry in parsed if 'id' in entry}
+    except (LLMPipelineError, Exception) as e:
+        logger.error("refine_feed_top5 LLM failed: %s", e)
+
+    batch_id = uuid.uuid4().hex
+    CurrentsSnapshot.objects.filter(user=request.user).delete()
+
+    snapshots = []
+    for item in items:
+        entry = gen_map.get(item.id, {})
+        platforms_data = {}
+        active = topic_platforms.get(item.topic_id, all_platforms)
+        if isinstance(entry, dict) and isinstance(entry.get('platforms'), dict):
+            for p, info in entry['platforms'].items():
+                if p in active and isinstance(info, dict):
+                    platforms_data[p] = {
+                        'body': info.get('body', ''),
+                        'hashtags': info.get('hashtags', ''),
+                    }
+        snapshots.append(CurrentsSnapshot(
+            user=request.user, feed_item=item,
+            topic=item.topic, platforms_data=platforms_data, batch_id=batch_id,
+        ))
+
+    CurrentsSnapshot.objects.bulk_create(snapshots)
+    return JsonResponse({'ok': True, 'batch_id': batch_id, 'llm': bool(gen_map)})
+
+
+@login_required
+@require_POST
 def refresh_feed(request):
     from .tasks import collect_all_sources, recalculate_trending_scores, deduplicate_content
+    from django.core.cache import cache
+
+    scheduled_ts = cache.get('trending_scheduled_refresh_ts', 0)
+    key = f'trending_manual_count_{request.user.id}'
+    manual = cache.get(key, {'count': 0, 'last_reset': 0})
+
+    if manual['last_reset'] < scheduled_ts:
+        manual = {'count': 0, 'last_reset': scheduled_ts}
+
+    if manual['count'] >= 10:
+        return JsonResponse({
+            'status': 'limit_reached',
+            'message': 'Manual refresh limit reached (10/10). Wait for the next scheduled refresh to reset.',
+        }, status=429)
+
+    manual['count'] += 1
+    cache.set(key, manual, timeout=86400)
+
     collect_all_sources.delay(force=True)
     recalculate_trending_scores.delay()
     deduplicate_content.delay()
-    return JsonResponse({'status': 'triggered'})
+    return JsonResponse({'status': 'triggered', 'remaining': 10 - manual['count']})
 
 
 @login_required
