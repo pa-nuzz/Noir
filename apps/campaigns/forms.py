@@ -11,7 +11,7 @@ from .services.content import text_to_html
 class CampaignForm(forms.ModelForm):
     sender = forms.ModelChoiceField(
         queryset=Sender.objects.none(),
-        required=True,
+        required=False,
     )
     contact_list = forms.ModelChoiceField(
         queryset=ContactList.objects.none(),
@@ -71,7 +71,7 @@ class CampaignForm(forms.ModelForm):
         model = Campaign
         fields = [
             'name', 'subject', 'from_name', 'reply_to', 'recipient_emails',
-            'body_text', 'sender', 'scheduled_at',
+            'body_text', 'body_html', 'sender', 'scheduled_at',
             'is_ab_test', 'ab_test_duration_hours',
         ]
         widgets = {
@@ -84,6 +84,8 @@ class CampaignForm(forms.ModelForm):
         request = kwargs.pop('request', None)
         user = kwargs.pop('user', request.user if request else None)
         super().__init__(*args, **kwargs)
+        self.fields['subject'].required = False
+        self.fields['body_text'].required = False
         if user:
             sender_field = self.fields['sender']
             if isinstance(sender_field, forms.ModelChoiceField):
@@ -129,7 +131,10 @@ class CampaignForm(forms.ModelForm):
         cleaned_data = super().clean()
         is_ab = cleaned_data.get('is_ab_test')
 
-        if is_ab:
+        action = self.data.get('action', 'save_draft') if self.data else 'save_draft'
+        is_draft_only = action in ('save_draft', 'send_test')
+
+        if is_ab and not is_draft_only:
             var_a_subject = (cleaned_data.get('variant_a_subject') or '').strip()
             var_a_body = (cleaned_data.get('variant_a_body') or '').strip()
             var_b_subject = (cleaned_data.get('variant_b_subject') or '').strip()
@@ -139,10 +144,18 @@ class CampaignForm(forms.ModelForm):
                 self.add_error('variant_a_subject', 'Variant A subject and body are required for A/B testing.')
             if not var_b_subject or not var_b_body:
                 self.add_error('variant_b_subject', 'Variant B subject and body are required for A/B testing.')
-        else:
+        elif not is_draft_only:
+            subject = (cleaned_data.get('subject') or '').strip()
+            if not subject:
+                self.add_error('subject', 'Subject line is required before sending.')
             body_text = (cleaned_data.get('body_text') or '').strip()
-            body_html = (cleaned_data.get('body_html') or '').strip() or self.data.get('body_html', '').strip()
-            if not body_text and not body_html:
+            body_html = (cleaned_data.get('body_html') or '').strip()
+            if body_text and not body_html:
+                cleaned_data['body_html'] = '<p>' + body_text.replace('\n', '<br>') + '</p>'
+            elif body_html and not body_text:
+                import re
+                cleaned_data['body_text'] = re.sub(r'<[^>]+>', '', body_html)
+            if not cleaned_data.get('body_text') and not cleaned_data.get('body_html'):
                 raise forms.ValidationError('Message content is required.')
 
         scheduled_at = cleaned_data.get('scheduled_at')

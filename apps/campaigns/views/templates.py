@@ -5,7 +5,7 @@ import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 
 from django.urls import reverse
 from django.contrib import messages
@@ -15,6 +15,33 @@ from apps.campaigns.default_templates import WELCOME_TEMPLATE, NEWSLETTER_TEMPLA
 from apps.workspaces.decorators import require_workspace_permission
 from apps.workspaces.query_helpers import filter_by_context
 from core.tenant import get_current_tenant, tenant_context
+
+def _get_template_or_404(request, template_id):
+    """Fetch a template. Default templates (is_default=True) are accessible to all.
+    Custom templates must belong to the current user (workspace=None in personal mode,
+    or workspace matches session in workspace mode).
+    """
+    user = request.user
+
+    # Check unscoped - does a template with this ID exist at all?
+    if not EmailTemplate.objects.filter(id=template_id).exists():
+        raise Http404("No EmailTemplate matches the given query.")
+
+    # Default templates are accessible to everyone
+    if EmailTemplate.objects.filter(id=template_id, is_default=True).exists():
+        return get_object_or_404(EmailTemplate, id=template_id, is_default=True)
+
+    # For non-default templates, apply workspace/user scoping
+    scoped = filter_by_context(request, EmailTemplate.objects.all())
+    if scoped.filter(id=template_id).exists():
+        return get_object_or_404(scoped, id=template_id)
+
+    # One more fallback: in personal mode, templates with workspace=None belong to their user
+    # Allow access if this template belongs to the user directly (workspace=None)
+    if EmailTemplate.objects.filter(id=template_id, user=user, workspace__isnull=True).exists():
+        return get_object_or_404(EmailTemplate, id=template_id, user=user, workspace__isnull=True)
+
+    raise Http404("No EmailTemplate matches the given query.")
 
 logger = logging.getLogger(__name__)
 
@@ -165,7 +192,7 @@ def template_create(request):
 @require_workspace_permission('campaigns', 'edit')
 def template_edit(request, template_id):
     """Edit an existing email template."""
-    template = get_object_or_404(filter_by_context(request, EmailTemplate.objects.all()), id=template_id)
+    template = _get_template_or_404(request, template_id)
 
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
@@ -211,7 +238,7 @@ def template_edit(request, template_id):
 @require_workspace_permission('campaigns', 'delete')
 def template_delete(request, template_id):
     """Delete (soft-delete) an email template. Default templates cannot be deleted."""
-    template = get_object_or_404(filter_by_context(request, EmailTemplate.objects.all()), id=template_id)
+    template = _get_template_or_404(request, template_id)
     if template.is_default:
         messages.error(request, f'"{template.name}" is a default template and cannot be deleted. Duplicate it instead.')
         return redirect('campaigns:template_list')
@@ -232,11 +259,9 @@ def template_delete(request, template_id):
 
 @login_required
 @require_workspace_permission('campaigns', 'read')
-@login_required
-@require_workspace_permission('campaigns', 'read')
 def template_preview(request, template_id):
     """Return rendered HTML for template preview in iframe."""
-    template = get_object_or_404(filter_by_context(request, EmailTemplate.objects.all()), id=template_id)
+    template = _get_template_or_404(request, template_id)
     html = template.render_complete_html()
     return HttpResponse(html, content_type='text/html; charset=utf-8')
 
@@ -245,7 +270,7 @@ def template_preview(request, template_id):
 @require_workspace_permission('campaigns', 'create')
 def template_use(request, template_id):
     """Use a template to start a new campaign."""
-    template = get_object_or_404(filter_by_context(request, EmailTemplate.objects.all()), id=template_id)
+    template = _get_template_or_404(request, template_id)
     template.increment_use()
     # Redirect to campaign create with template pre-filled
     return redirect(reverse('campaigns:campaign_create') + f'?template={template.id}')
@@ -256,7 +281,7 @@ def template_use(request, template_id):
 @require_workspace_permission('campaigns', 'create')
 def template_duplicate(request, template_id):
     """Create a user-editable copy of a template (default or otherwise)."""
-    original = get_object_or_404(filter_by_context(request, EmailTemplate.objects.all()), id=template_id)
+    original = _get_template_or_404(request, template_id)
     if request.method == 'POST':
         base_name = original.name.rstrip(' (Copy)').rstrip(' copy')
         copy_name = base_name + ' (Copy)'

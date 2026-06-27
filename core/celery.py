@@ -33,6 +33,11 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/5'),
         'options': {'queue': 'default'},
     },
+    'recover-stuck-sending-campaigns-every-5-minutes': {
+        'task': 'apps.campaigns.tasks.recover_stuck_sending_campaigns',
+        'schedule': crontab(minute='*/5'),
+        'options': {'queue': 'default'},
+    },
 
     # Trending Topics
     'collect-trending-sources': {

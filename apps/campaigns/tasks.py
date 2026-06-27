@@ -1,11 +1,39 @@
 import logging
-import time
 from celery import shared_task
+from django.utils import timezone
+from datetime import timedelta
 
 from core.tenant import tenant_context
 from apps.workspaces.models import Workspace
 
 logger = logging.getLogger(__name__)
+
+STUCK_SENDING_THRESHOLD_MINUTES = 30
+
+
+@shared_task
+def recover_stuck_sending_campaigns():
+    from django.db import close_old_connections
+    from apps.campaigns.models import Campaign
+
+    close_old_connections()
+    threshold = timezone.now() - timedelta(minutes=STUCK_SENDING_THRESHOLD_MINUTES)
+    stuck = Campaign.objects.filter(
+        status='sending',
+        updated_at__lt=threshold,
+    )
+    count = 0
+    for campaign in stuck:
+        campaign.status = 'failed'
+        campaign.save(update_fields=['status', 'updated_at'])
+        logger.warning(
+            f"[Recovery] Campaign '{campaign.name}' (id={campaign.id}) was stuck in 'sending' "
+            f"since {campaign.updated_at} — marked as 'failed'."
+        )
+        count += 1
+    if count:
+        logger.info(f"[Recovery] Recovered {count} stuck campaign(s).")
+    return count
 
 
 @shared_task
@@ -16,6 +44,41 @@ def run_scheduled_campaigns_task():
     for workspace in Workspace.objects.all():
         with tenant_context(workspace):
             run_scheduled_campaigns()
+
+    from django.db import close_old_connections
+    close_old_connections()
+    from apps.campaigns.models import Campaign
+    from core.tenant import get_current_tenant
+
+    saved_tenant = get_current_tenant()
+    try:
+        from core.tenant import set_current_tenant
+        set_current_tenant(None)
+        personal_campaigns = Campaign.objects.filter(
+            status='scheduled',
+            scheduled_at__isnull=False,
+            scheduled_at__lte=__import__('django').utils.timezone.now(),
+            workspace__isnull=True,
+        ).select_related('sender', 'user')
+        for campaign in personal_campaigns:
+            try:
+                campaign.status = 'sending'
+                campaign.save(update_fields=['status', 'updated_at'])
+                from .services.delivery import send_campaign_with_smtp
+                base_url = __import__('django').conf.settings.TRACKING_BASE_URL or ''
+                sent, failed, err = send_campaign_with_smtp(campaign, base_url)
+                campaign.refresh_from_db()
+                campaign.sent_count = (campaign.sent_count or 0) + sent
+                campaign.bounce_count = (campaign.bounce_count or 0) + failed
+                campaign.status = 'sent' if sent > 0 else 'failed'
+                campaign.save(update_fields=['sent_count', 'bounce_count', 'status', 'updated_at'])
+            except Exception as e:
+                logger.error(f"Error sending personal campaign {campaign.id}: {e}")
+                campaign.status = 'failed'
+                campaign.save(update_fields=['status', 'updated_at'])
+    finally:
+        from core.tenant import set_current_tenant
+        set_current_tenant(saved_tenant)
 
 
 @shared_task(bind=True, max_retries=3)
@@ -71,13 +134,15 @@ def evaluate_ab_test_winner(self, campaign_id: int, workspace_id: int = None):
 
 def run_send_campaign(campaign_id: int, base_url: str, recipients_override: list = None):
     """Synchronous send - used by both Celery task and view fallback."""
+    from django.db import close_old_connections
     from apps.campaigns.models import Campaign
     from .services.delivery import send_campaign_with_smtp
+
+    close_old_connections()
 
     try:
         campaign = Campaign.objects.get(pk=campaign_id)
     except Campaign.DoesNotExist:
-        logger.error(f"[Send] Campaign {campaign_id} not found — aborting.")
         return 0, 0, "Campaign not found"
 
     workspace = campaign.workspace
@@ -95,7 +160,7 @@ def run_send_campaign(campaign_id: int, base_url: str, recipients_override: list
             campaign.refresh_from_db()
             campaign.sent_count = (campaign.sent_count or 0) + sent_count
             campaign.bounce_count = (campaign.bounce_count or 0) + failed_count
-            campaign.status = 'sent' if campaign.sent_count > 0 else 'failed'
+            campaign.status = 'sent' if sent_count > 0 else 'failed'
             campaign.save(update_fields=['sent_count', 'bounce_count', 'status', 'updated_at'])
 
             # Trigger outbound webhooks
@@ -155,6 +220,8 @@ def async_send_campaign(self, campaign_id: int, base_url: str, recipients_overri
     Updates campaign status to 'sent' when all recipients are processed.
     """
     try:
+        from django.db import close_old_connections
+        close_old_connections()
         sent, failed, error = run_send_campaign(campaign_id, base_url, recipients_override)
         logger.info(f"[AsyncSend] Campaign {campaign_id} completed: sent={sent}, failed={failed}")
         return {'sent': sent, 'failed': failed, 'error': error}
@@ -165,7 +232,10 @@ def async_send_campaign(self, campaign_id: int, base_url: str, recipients_overri
         except Exception:
             logger.error(f"[AsyncSend] Campaign {campaign_id} exhausted all retries.")
             from apps.campaigns.models import Campaign
-            campaign = Campaign.objects.get(pk=campaign_id)
-            campaign.status = 'failed'
-            campaign.save(update_fields=['status', 'updated_at'])
+            try:
+                campaign = Campaign.objects.get(pk=campaign_id)
+                campaign.status = 'failed'
+                campaign.save(update_fields=['status', 'updated_at'])
+            except Campaign.DoesNotExist:
+                logger.error(f"[AsyncSend] Campaign {campaign_id} no longer exists — skipping status update.")
             return {'sent': 0, 'failed': 0, 'error': str(exc)}

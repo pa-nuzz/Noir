@@ -27,15 +27,8 @@ from apps.campaigns.tasks import run_send_campaign, async_send_campaign
 from apps.campaigns.forms import CampaignForm
 from apps.workspaces.decorators import require_workspace_permission
 from apps.workspaces.query_helpers import filter_by_context
-from apps.campaigns.services import (
-    text_to_html,
-    apply_campaign_spam_signals,
-    merge_recipient_emails,
-    send_test_email_with_smtp,
-    update_campaign_unique_open_count,
-)
-from apps.campaigns.tasks import async_send_campaign, run_send_campaign
-from apps.contacts.models import ContactList, Contact, ContactTag
+from core.tenant import get_current_tenant, tenant_context
+from apps.contacts.models import Contact
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +40,14 @@ def _campaign_form_view(request, campaign=None, read_only=False):
 
     # Fetch user's active SMTP senders for form dropdown
     senders = filter_by_context(request, Sender.objects.filter(is_active=True))
-    user_templates = filter_by_context(request, EmailTemplate.objects.filter(is_active=True))
+    tenant = get_current_tenant()
+    if tenant is not None:
+        with tenant_context(None):
+            user_templates = EmailTemplate.objects.filter(is_active=True).filter(
+                Q(workspace=tenant) | Q(is_default=True)
+            ).distinct()
+    else:
+        user_templates = filter_by_context(request, EmailTemplate.objects.filter(is_active=True))
     selected_template = None
     templates_json = json.dumps({
         str(t.id): {'id': t.id, 'name': t.name, 'subject': t.subject, 'body_html': t.body_html, 'body_text': t.body_text}
@@ -75,148 +75,171 @@ def _campaign_form_view(request, campaign=None, read_only=False):
         action = request.POST.get('action', 'save_draft')
         test_email = request.POST.get('test_email')
 
-        if form.is_valid():
-            campaign_obj = form.save(commit=False)
-            campaign_obj.user = request.user
-            ws_id = request.session.get('active_workspace_id')
-            if ws_id:
-                campaign_obj.workspace_id = ws_id
-            # Link the source template if one was used
-            template_id = request.POST.get('template_id')
-            if template_id:
-                try:
-                    campaign_obj.template = filter_by_context(request, EmailTemplate.objects.all()).get(id=template_id)
-                except (EmailTemplate.DoesNotExist, AttributeError):
-                    logger.warning(f"Template {template_id} not found for user {request.user.id}")
+        if not form.is_valid():
+            messages.error(request, 'Please fix the errors below before continuing.')
+            return render(request, 'campaigns/create.html', {
+                'form': form,
+                'senders': senders,
+                'campaign': campaign,
+                'contact_lists': filter_by_context(request, ContactList.objects.all()),
+                'available_tags': filter_by_context(request, ContactTag.objects.all()),
+                'templates': user_templates,
+                'templates_json': templates_json,
+                'wizard_steps': wizard_steps,
+                'current_step': 4,
+            })
 
-            explicit_html = request.POST.get('body_html', '').strip()
-            if explicit_html:
-                campaign_obj.body_html = explicit_html
-            else:
-                raw_body = campaign_obj.body_text or ''
-                campaign_obj.body_html = text_to_html(raw_body) if not raw_body.strip().startswith('<') else raw_body
+        campaign_obj = form.save(commit=False)
+        campaign_obj.user = request.user
+        ws_id = request.session.get('active_workspace_id')
+        if ws_id:
+            campaign_obj.workspace_id = ws_id
 
-            apply_campaign_spam_signals(campaign_obj)
+        template_id = request.POST.get('template_id')
+        if template_id:
+            try:
+                campaign_obj.template = filter_by_context(request, EmailTemplate.objects.all()).get(id=template_id)
+            except (EmailTemplate.DoesNotExist, AttributeError):
+                logger.warning(f"Template {template_id} not found for user {request.user.id}")
 
-            selected_list_ids = [v for v in request.POST.getlist('contact_lists') if v.isdigit()]
-            selected_tag_ids = [v for v in request.POST.getlist('contact_tags') if v.isdigit()]
+        explicit_html = request.POST.get('body_html', '').strip()
+        if explicit_html:
+            campaign_obj.body_html = explicit_html
+        else:
+            raw_body = campaign_obj.body_text or ''
+            campaign_obj.body_html = text_to_html(raw_body) if not raw_body.strip().startswith('<') else raw_body
 
-            if selected_list_ids:
-                selected_lists = filter_by_context(request, ContactList.objects.filter(id__in=selected_list_ids))
-                if selected_tag_ids:
-                    tagged_emails = Contact.objects.filter(
-                        contact_list__in=selected_lists, is_active=True, tags__id__in=selected_tag_ids,
-                    ).values_list('email', flat=True).distinct()
-                    campaign_obj.recipient_emails = merge_recipient_emails(campaign_obj.recipient_emails, list(tagged_emails))
-                else:
-                    for lst in selected_lists:
-                        campaign_obj.recipient_emails = merge_recipient_emails(campaign_obj.recipient_emails, lst.get_email_list())
-            elif selected_tag_ids:
+        apply_campaign_spam_signals(campaign_obj)
+
+        selected_list_ids = [v for v in request.POST.getlist('contact_lists') if v.isdigit()]
+        selected_tag_ids = [v for v in request.POST.getlist('contact_tags') if v.isdigit()]
+
+        if selected_list_ids:
+            selected_lists = filter_by_context(request, ContactList.objects.filter(id__in=selected_list_ids))
+            if selected_tag_ids:
                 tagged_emails = Contact.objects.filter(
-                    contact_list__in=filter_by_context(request, ContactList.objects.all()),
-                    is_active=True, tags__id__in=selected_tag_ids,
+                    contact_list__in=selected_lists, is_active=True, tags__id__in=selected_tag_ids,
                 ).values_list('email', flat=True).distinct()
                 campaign_obj.recipient_emails = merge_recipient_emails(campaign_obj.recipient_emails, list(tagged_emails))
+            else:
+                for lst in selected_lists:
+                    campaign_obj.recipient_emails = merge_recipient_emails(campaign_obj.recipient_emails, lst.get_email_list())
+        elif selected_tag_ids:
+            tagged_emails = Contact.objects.filter(
+                contact_list__in=filter_by_context(request, ContactList.objects.all()),
+                is_active=True, tags__id__in=selected_tag_ids,
+            ).values_list('email', flat=True).distinct()
+            campaign_obj.recipient_emails = merge_recipient_emails(campaign_obj.recipient_emails, list(tagged_emails))
 
-            contact_list = form.cleaned_data.get('contact_list')
-            if contact_list:
-                campaign_obj.recipient_emails = merge_recipient_emails(campaign_obj.recipient_emails, contact_list.get_email_list())
+        contact_list = form.cleaned_data.get('contact_list')
+        if contact_list:
+            campaign_obj.recipient_emails = merge_recipient_emails(campaign_obj.recipient_emails, contact_list.get_email_list())
 
-            csv_context_raw = request.POST.get('csv_context', '')
-            if csv_context_raw:
-                try:
-                    campaign_obj.recipient_context = json.loads(csv_context_raw)
-                except json.JSONDecodeError:
-                    logger.warning(f"Invalid CSV context JSON for campaign {campaign_obj.id}")
+        csv_context_raw = request.POST.get('csv_context', '')
+        if csv_context_raw:
+            try:
+                campaign_obj.recipient_context = json.loads(csv_context_raw)
+            except json.JSONDecodeError:
+                logger.warning(f"Invalid CSV context JSON for campaign {campaign_obj.id}")
 
-            if action == 'send_test':
-                if not test_email:
-                    messages.error(request, 'Enter a test email address before sending a test.')
-                    return render(request, 'campaigns/create.html', {
-                        'form': form,
-                        'senders': senders,
-                        'campaign': campaign,
-                        'contact_lists': filter_by_context(request, ContactList.objects.all()),
-                        'available_tags': filter_by_context(request, ContactTag.objects.all()),
-                        'templates': user_templates,
-                        'templates_json': templates_json,
-                        'wizard_steps': wizard_steps,
-                        'current_step': 4,
-                    })
-                try:
-                    validate_email(test_email)
-                except ValidationError:
-                    messages.error(request, 'Enter a valid test email address.')
-                    return render(request, 'campaigns/create.html', {
-                        'form': form,
-                        'senders': senders,
-                        'campaign': campaign,
-                        'contact_lists': filter_by_context(request, ContactList.objects.all()),
-                        'available_tags': filter_by_context(request, ContactTag.objects.all()),
-                        'templates': user_templates,
-                        'templates_json': templates_json,
-                        'wizard_steps': wizard_steps,
-                        'current_step': 4,
-                    })
-                campaign_obj.total_recipients = len(campaign_obj.get_recipient_list())
-                if not campaign_obj.pk:
-                    campaign_obj.status = 'draft'
-                campaign_obj.save()
-                _process_campaign_attachments(request, campaign_obj)
-                try:
-                    send_test_email_with_smtp(campaign_obj, test_email)
-                    messages.success(request, f'Test email sent to {test_email}.')
-                except Exception as exc:
-                    messages.error(request, f'Test send failed: {exc}')
-                return redirect('campaigns:campaign_edit', campaign_id=campaign_obj.id)
+        if action == 'send_test':
+            if not test_email:
+                messages.error(request, 'Enter a test email address before sending a test.')
+                return render(request, 'campaigns/create.html', {
+                    'form': form,
+                    'senders': senders,
+                    'campaign': campaign,
+                    'contact_lists': filter_by_context(request, ContactList.objects.all()),
+                    'available_tags': filter_by_context(request, ContactTag.objects.all()),
+                    'templates': user_templates,
+                    'templates_json': templates_json,
+                    'wizard_steps': wizard_steps,
+                    'current_step': 4,
+                })
+            try:
+                validate_email(test_email)
+            except ValidationError:
+                messages.error(request, 'Enter a valid test email address.')
+                return render(request, 'campaigns/create.html', {
+                    'form': form,
+                    'senders': senders,
+                    'campaign': campaign,
+                    'contact_lists': filter_by_context(request, ContactList.objects.all()),
+                    'available_tags': filter_by_context(request, ContactTag.objects.all()),
+                    'templates': user_templates,
+                    'templates_json': templates_json,
+                    'wizard_steps': wizard_steps,
+                    'current_step': 4,
+                })
+            campaign_obj.total_recipients = len(campaign_obj.get_recipient_list())
+            if not campaign_obj.pk:
+                campaign_obj.status = 'draft'
+            campaign_obj.save()
+            _process_campaign_attachments(request, campaign_obj)
+            try:
+                send_test_email_with_smtp(campaign_obj, test_email)
+                messages.success(request, f'Test email sent to {test_email}.')
+            except Exception as exc:
+                messages.error(request, f'Test send failed: {exc}')
+            return redirect('campaigns:campaign_edit', campaign_id=campaign_obj.id)
 
-            if action == 'send_now':
-                logger.info(f"[Campaign Send] User {request.user.id} initiating send for campaign '{campaign_obj.name}' (action={action})")
-                pre_send_errors, recipient_count = _validate_campaign_ready_to_send(campaign_obj)
-                if pre_send_errors:
-                    logger.warning(f"[Campaign Send] Validation failed: {pre_send_errors}")
-                    for error in pre_send_errors:
-                        messages.error(request, error)
-                    campaign_obj.status = 'draft'
-                    campaign_obj.total_recipients = recipient_count
-                    campaign_obj.save()
-                    _process_campaign_attachments(request, campaign_obj)
-                    return redirect('campaigns:campaign_edit', campaign_id=campaign_obj.id)
-
-                logger.info(f"[Campaign Send] Validation passed, {recipient_count} recipients")
-                campaign_obj.status = 'sending'
+        if action == 'send_now':
+            logger.info(f"[Campaign Send] User {request.user.id} initiating send for campaign '{campaign_obj.name}' (action={action})")
+            pre_send_errors, recipient_count = _validate_campaign_ready_to_send(campaign_obj)
+            if pre_send_errors:
+                logger.warning(f"[Campaign Send] Validation failed: {pre_send_errors}")
+                for error in pre_send_errors:
+                    messages.error(request, error)
+                campaign_obj.status = 'draft'
                 campaign_obj.total_recipients = recipient_count
                 campaign_obj.save()
                 _process_campaign_attachments(request, campaign_obj)
-                base_url = (settings.TRACKING_BASE_URL or request.build_absolute_uri('/')).rstrip('/')
-                logger.info(f"[Campaign Send] Using base_url: {base_url}")
-                
-                try:
+                return redirect('campaigns:campaign_edit', campaign_id=campaign_obj.id)
+
+            logger.info(f"[Campaign Send] Validation passed, {recipient_count} recipients")
+            campaign_obj.status = 'sending'
+            campaign_obj.total_recipients = recipient_count
+            campaign_obj.save()
+            _process_campaign_attachments(request, campaign_obj)
+            base_url = (settings.TRACKING_BASE_URL or request.build_absolute_uri('/')).rstrip('/')
+            logger.info(f"[Campaign Send] Using base_url: {base_url}")
+            
+            try:
+                from django.conf import settings
+                use_eager = getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False)
+                if use_eager:
+                    result = async_send_campaign.apply(args=(campaign_obj.id, base_url), kwargs={'workspace_id': campaign_obj.workspace_id})
+                    logger.info(f"[Campaign Send] Eager send result: {result}")
+                    messages.success(request, f'Campaign "{campaign_obj.name}" sent successfully.')
+                else:
                     logger.info("[Campaign Send] Attempting Celery async send")
-                    result = async_send_campaign.delay(campaign_obj.id, base_url, workspace_id=campaign_obj.workspace_id)
-                    logger.info(f"[Campaign Send] Celery task submitted: {result}")
-                    messages.success(request, f'Campaign "{campaign_obj.name}" is now sending in the background.')
-                except Exception as celery_exc:
-                    logger.warning(f"Celery unavailable, running send synchronously: {celery_exc}")
                     try:
-                        logger.info("[Campaign Send] Running synchronous send")
+                        result = async_send_campaign.delay(campaign_obj.id, base_url, workspace_id=campaign_obj.workspace_id)
+                        logger.info(f"[Campaign Send] Celery task submitted: {result}")
+                        messages.success(request, f'Campaign "{campaign_obj.name}" is now sending in the background.')
+                    except Exception as celery_exc:
+                        logger.warning(f"Celery unavailable, running send synchronously: {celery_exc}")
                         sent, failed, error = run_send_campaign(campaign_obj.id, base_url)
                         logger.info(f"[Campaign Send] Sync send completed: sent={sent}, failed={failed}, error={error}")
                         if sent > 0:
+                            campaign_obj.refresh_from_db()
+                            campaign_obj.status = 'sent'
+                            campaign_obj.sent_count = (campaign_obj.sent_count or 0) + sent
+                            campaign_obj.save(update_fields=['status', 'sent_count', 'updated_at'])
                             messages.success(request, f'Campaign "{campaign_obj.name}" sent ({sent} recipients).')
                         else:
-                            messages.error(request, f'Send failed: {error}')
-                    except Exception as e2:
-                        logger.exception(f"Sync send failed: {e2}")
-                        messages.error(request, f'Failed to send campaign: {e2}')
-                return redirect('campaigns:campaign_list')
+                            messages.error(request, f'Send failed: {error or "Unknown error"}')
+            except Exception as e:
+                logger.exception(f"Campaign send failed: {e}")
+                messages.error(request, f'Failed to send campaign: {e}')
+            return redirect('campaigns:campaign_view', campaign_id=campaign_obj.id)
 
-            campaign_obj.status = 'scheduled' if campaign_obj.scheduled_at else 'draft'
-            campaign_obj.total_recipients = len(campaign_obj.get_recipient_list())
-            campaign_obj.save()
-            _process_campaign_attachments(request, campaign_obj)
-            messages.success(request, f'Campaign "{campaign_obj.name}" saved as {campaign_obj.status}.')
-            return redirect('campaigns:campaign_list')
+        campaign_obj.status = 'scheduled' if campaign_obj.scheduled_at else 'draft'
+        campaign_obj.total_recipients = len(campaign_obj.get_recipient_list())
+        campaign_obj.save()
+        _process_campaign_attachments(request, campaign_obj)
+        messages.success(request, f'Campaign "{campaign_obj.name}" saved as {campaign_obj.status}.')
+        return redirect('campaigns:campaign_list')
     # GET request or form initialization: display campaign form
     else:
         initial = {}
@@ -239,39 +262,6 @@ def _campaign_form_view(request, campaign=None, read_only=False):
             'selected_template': selected_template, 'csv_columns': [],
             'wizard_steps': wizard_steps, 'current_step': 4,
         })
-
-    initial = {}
-    template_id = request.GET.get('template')
-    if template_id and not campaign:
-        try:
-            selected_template = request.user.email_templates.get(id=template_id, is_active=True)
-            initial['subject'] = selected_template.subject
-            initial['body_text'] = selected_template.body_text or ''
-            initial['body_html'] = selected_template.body_html or ''
-        except EmailTemplate.DoesNotExist:
-            logger.warning(f"Template {template_id} not found for campaign creation")
-    form = CampaignForm(request=request, instance=campaign, initial=initial or None)
-
-    csv_columns = []
-    if campaign and campaign.recipient_context:
-        cols = set()
-        for data in campaign.recipient_context.values():
-            cols.update(data.keys())
-        csv_columns = sorted(cols)
-
-    return render(request, 'campaigns/create.html', {
-        'form': form,
-        'senders': senders,
-        'campaign': campaign,
-        'contact_lists': filter_by_context(request, ContactList.objects.all()),
-        'available_tags': filter_by_context(request, ContactTag.objects.all()),
-        'templates': user_templates,
-        'templates_json': templates_json,
-        'selected_template': selected_template,
-        'csv_columns': csv_columns,
-        'wizard_steps': wizard_steps,
-        'current_step': 0,
-    })
 
 
 # These functions are defined below _campaign_form_view

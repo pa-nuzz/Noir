@@ -5,7 +5,7 @@ Usage for links: {% include 'campaigns/_button.html' with type='primary' size='s
 Supports data attributes: {% include 'campaigns/_button.html' with type='danger' text='' button_type='submit' data_loading='Deleting...' extra_class='p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all cursor-pointer' %}
 Use `{% url 'view_name' as view_name_url %}` before the include to pre-resolve URLs.
 {% endcomment %}
-{% with type=type|default:'primary' size=size|default:'' text=text|default:'' href_url=href_url|default:'' data_loading=data_loading|default:'' button_type=button_type|default:'button' extra_class=extra_class|default:'' btn_id=id|default:'' %}
+{% with type=type|default:'primary' size=size|default:'' text=text|default:'' href_url=href_url|default:'' data_loading=data_loading|default:'' button_type=button_type|default:'button' extra_class=extra_class|default:'' btn_id=id|default:'' name=name|default:'' value=value|default:'' %}
 {% if href_url %}
 {% if type == 'primary' %}
 <a href="{{ href_url }}" class="btn-action btn-action-primary{% if size == 'sm' %} btn-sm{% endif %}{% if extra_class %} {{ extra_class }}{% endif %}" {% if data_loading %}data-loading="{{ data_loading }}"{% endif %}{% if btn_id %} id="{{ btn_id }}"{% endif %}>{{ text }}</a>
@@ -16,11 +16,11 @@ Use `{% url 'view_name' as view_name_url %}` before the include to pre-resolve U
 {% endif %}
 {% else %}
 {% if type == 'primary' %}
-<button type="{{ button_type }}" class="btn-action btn-action-primary{% if size == 'sm' %} btn-sm{% endif %}{% if extra_class %} {{ extra_class }}{% endif %}" {% if data_loading %}data-loading="{{ data_loading }}"{% endif %}{% if btn_id %} id="{{ btn_id }}"{% endif %}>{{ text }}</button>
+<button type="{{ button_type }}" name="{{ name }}" value="{{ value }}" class="btn-action btn-action-primary{% if size == 'sm' %} btn-sm{% endif %}{% if extra_class %} {{ extra_class }}{% endif %}" {% if data_loading %}data-loading="{{ data_loading }}"{% endif %}{% if btn_id %} id="{{ btn_id }}"{% endif %}>{{ text }}</button>
 {% elif type == 'secondary' %}
-<button type="{{ button_type }}" class="btn-action btn-action-secondary{% if size == 'sm' %} btn-sm{% endif %}{% if extra_class %} {{ extra_class }}{% endif %}" {% if data_loading %}data-loading="{{ data_loading }}"{% endif %}{% if btn_id %} id="{{ btn_id }}"{% endif %}>{{ text }}</button>
+<button type="{{ button_type }}" name="{{ name }}" value="{{ value }}" class="btn-action btn-action-secondary{% if size == 'sm' %} btn-sm{% endif %}{% if extra_class %} {{ extra_class }}{% endif %}" {% if data_loading %}data-loading="{{ data_loading }}"{% endif %}{% if btn_id %} id="{{ btn_id }}"{% endif %}>{{ text }}</button>
 {% elif type == 'danger' %}
-<button type="{{ button_type }}" class="btn-action btn-action-danger{% if size == 'sm' %} btn-sm{% endif %}{% if extra_class %} {{ extra_class }}{% endif %}" {% if data_loading %}data-loading="{{ data_loading }}"{% endif %}{% if btn_id %} id="{{ btn_id }}"{% endif %}>{{ text }}</button>
+<button type="{{ button_type }}" name="{{ name }}" value="{{ value }}" class="btn-action btn-action-danger{% if size == 'sm' %} btn-sm{% endif %}{% if extra_class %} {{ extra_class }}{% endif %}" {% if data_loading %}data-loading="{{ data_loading }}"{% endif %}{% if btn_id %} id="{{ btn_id }}"{% endif %}>{{ text }}</button>
 {% endif %}
 {% endif %}
 {% endwith %}

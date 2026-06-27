@@ -74,9 +74,33 @@ def verify_sender(request):
                 sender.is_active = True
                 sender.is_verified = True
                 sender.last_verified_at = timezone.now()
-                sender.save(update_fields=['is_active', 'is_verified', 'last_verified_at'])
+                if password:
+                    sender.set_password(password)
+                    sender.save(update_fields=['is_active', 'is_verified', 'last_verified_at', '_password'])
+                else:
+                    sender.save(update_fields=['is_active', 'is_verified', 'last_verified_at'])
             except Sender.DoesNotExist:
                 pass
+        else:
+            from apps.senders.models import Sender
+            ws_id = request.session.get('active_workspace_id')
+            from apps.workspaces.models import Workspace
+            workspace = Workspace.objects.filter(id=ws_id).first() if ws_id else None
+            sender = Sender(
+                user=request.user,
+                workspace=workspace,
+                display_name=from_email,
+                from_email=from_email,
+                username=username or from_email,
+                smtp_host=host,
+                smtp_port=port,
+                use_tls=use_tls,
+                is_active=True,
+                is_verified=True,
+                last_verified_at=timezone.now(),
+            )
+            sender.set_password(password)
+            sender.save()
 
         return JsonResponse({'success': True, 'message': f'Connection verified as {authenticated_as}!'})
     except smtplib.SMTPAuthenticationError:

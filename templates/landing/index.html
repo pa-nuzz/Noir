@@ -43,6 +43,12 @@
   padding: .3rem .75rem; border-radius: 9999px;
 }
 .badge-cyan { background: var(--cyan-l); color: #0891B2; }
+.badge-sm {
+  display: inline-flex; align-items: center;
+  background: var(--primary-l); color: var(--primary);
+  font-size: .6rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  padding: .25rem .6rem; border-radius: 9999px;
+}
 
 /* ── Section heading ── */
 .section-label { font-family: 'Plus Jakarta Sans', sans-serif; font-size: .65rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-subtle); margin-bottom: .75rem; }
@@ -71,6 +77,14 @@
 .trust-marquee { overflow: hidden; mask-image: linear-gradient(90deg, transparent 0, black 8%, black 92%, transparent 100%); -webkit-mask-image: linear-gradient(90deg, transparent 0, black 8%, black 92%, transparent 100%); }
 .trust-marquee-inner { display: flex; width: max-content; animation: marqueeLeft 36s linear infinite; }
 
+/* ── Marquee pulse ── */
+@keyframes marqueeGlow { 0%,100%{opacity:.5} 50%{opacity:1} }
+.trust-marquee-wrap { position:relative; overflow:hidden; }
+.trust-marquee-wrap::before, .trust-marquee-wrap::after { content:''; position:absolute; top:0; bottom:0; width:80px; z-index:1; pointer-events:none; }
+.trust-marquee-wrap::before { left:0; background:linear-gradient(to right, #f8fafc, transparent); }
+.trust-marquee-wrap::after { right:0; background:linear-gradient(to left, #f8fafc, transparent); }
+.trust-marquee-inner { animation: marqueeLeft 36s linear infinite, marqueeGlow 4s ease-in-out infinite; }
+
 /* ── Float anims ── */
 @keyframes floatA { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
 @keyframes floatB { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
@@ -78,41 +92,65 @@
 .float-b { animation: floatB 5s ease-in-out infinite; }
 
 /* ── FAQ ── */
-.faq-answer { max-height:0; overflow:hidden; transition:max-height .32s ease, padding .3s ease; }
-.faq-item.open .faq-answer { max-height:260px; }
+.faq-answer { max-height:0; overflow:hidden; transition:max-height .35s ease, padding .3s ease; }
+.faq-item.open .faq-answer { max-height:300px; }
 .faq-chevron { transition: transform .3s ease; }
 .faq-item.open .faq-chevron { transform: rotate(180deg); }
+.faq-item.open { border-left: 4px solid #c4b5fd; }
 
-/* ── Scroll reveal ── */
+/* ── Bento Features ── */
+.bento-grid { display:grid; grid-template-columns:repeat(12,1fr); gap:16px; }
+.bento-card { position:relative; border-radius:1rem; border:1px solid var(--border); background:var(--surface); overflow:hidden; cursor:pointer; transition:border-color .2s,box-shadow .2s,border-left-color .2s; border-left:4px solid transparent; }
+.bento-card:hover { border-color:var(--border-h); border-left-color:#C4B5FD; box-shadow:0 4px 24px -4px rgba(109,40,217,.08),0 12px 40px -12px rgba(10,37,64,.06); }
+.bento-features { max-height:0;opacity:0;overflow:hidden;transition:max-height .35s ease,opacity .25s ease; }
+.bento-card:hover .bento-features,.bento-card.active .bento-features { max-height:260px;opacity:1; }
+.bento-feature-item { opacity:0;transform:translateY(4px);transition:opacity .2s ease,transform .2s ease; }
+.bento-card:hover .bento-feature-item,.bento-card.active .bento-feature-item { opacity:1;transform:translateY(0); }
+.bento-card:hover .bento-feature-item:nth-child(1),.bento-card.active .bento-feature-item:nth-child(1){transition-delay:.03s}
+.bento-card:hover .bento-feature-item:nth-child(2),.bento-card.active .bento-feature-item:nth-child(2){transition-delay:.06s}
+.bento-card:hover .bento-feature-item:nth-child(3),.bento-card.active .bento-feature-item:nth-child(3){transition-delay:.09s}
+.bento-card:hover .bento-feature-item:nth-child(4),.bento-card.active .bento-feature-item:nth-child(4){transition-delay:.12s}
+.bento-num { font-size:4.5rem;line-height:1;font-weight:800;color:rgba(109,40,217,.04);position:absolute;top:-8px;right:12px;pointer-events:none;transition:color .2s; }
+.bento-card:hover .bento-num { color:rgba(109,40,217,.07); }
+@media(max-width:640px){ .bento-grid{grid-template-columns:1fr!important;} }
+
+
 .reveal { opacity:0; transform:translateY(20px); transition: opacity .55s ease, transform .55s ease; }
 .reveal.in { opacity:1; transform:none; }
-
-/* ── Bento hover lift ── */
-.bento-card { transition: border-color .2s, box-shadow .2s, transform .2s; }
-.bento-card:hover { border-color: #C4B5FD; box-shadow: 0 8px 32px -8px rgba(109,40,217,.12); transform: translateY(-2px); }
-
-/* ── Integration chip ── */
-.integ-chip { transition: border-color .18s, box-shadow .18s, transform .18s; }
-.integ-chip:hover { border-color: #A78BFA; box-shadow: 0 6px 20px -6px rgba(109,40,217,.2); transform: translateY(-2px); }
 
 /* ── Tab underline accent (from Social Hub) ── */
 .feature-tab { display:inline-flex; align-items:center; gap:8px; padding:10px 18px; font-size:.875rem; font-weight:600; color:var(--ink-subtle); border-bottom:2px solid transparent; cursor:pointer; transition:all .15s; white-space:nowrap; }
 .feature-tab.active { color:var(--ink); border-bottom-color:var(--cyan); font-weight:700; }
 .feature-tab:hover:not(.active) { color:var(--ink); }
 
-/* ── Pricing toggle ── */
-.price-display { display:inline-block; transition: opacity .15s; }
-.ptoggle { padding: .4rem 1.1rem; border-radius:9999px; font-size:.8rem; font-weight:600; border:none; cursor:pointer; transition:all .15s; }
-.ptoggle.active { background:white; color:var(--ink); box-shadow:0 1px 3px rgba(10,37,64,.1); }
-.ptoggle:not(.active) { background:transparent; color:var(--ink-muted); }
-
 /* ── Hero graph bars ── */
 .bar { border-radius: 4px 4px 0 0; min-width:10px; background: #EDE9FE; transition: background .2s; }
 .bar.accent { background: var(--primary); }
 
+/* ── Connector line animation ── */
+@keyframes lineFlow { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
+.how-line-animated { background:linear-gradient(90deg, #ddd6fe, #a855f7, #06b6d4, #ddd6fe); background-size: 200% 100%; animation: lineFlow 3s linear infinite; }
+
+/* ── Sparkline bars ── */
+@keyframes sparkPulse { 0%,100%{opacity:.6;transform:scaleY(.85)} 50%{opacity:1;transform:scaleY(1)} }
+.spark-bar { transform-origin:bottom; animation: sparkPulse 2s ease-in-out infinite; }
+.spark-bar:nth-child(2){animation-delay:.15s}
+.spark-bar:nth-child(3){animation-delay:.3s}
+.spark-bar:nth-child(4){animation-delay:.45s}
+
+/* ── Stat icon pulse ── */
+@keyframes iconPulse { 0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.4)} 50%{box-shadow:0 0 0 8px rgba(255,255,255,0)} }
+.stat-icon-pulse { animation: iconPulse 2.5s ease-in-out infinite; }
+
 @media(prefers-reduced-motion:reduce){
-  .float-a,.float-b,.trust-marquee-inner,.reveal{ animation:none!important; opacity:1; transform:none; }
+  .float-a,.float-b,.trust-marquee-inner,.reveal,.spark-bar,.stat-icon-pulse,.how-line-animated{ animation:none!important; opacity:1; transform:none; }
 }
+
+/* ── Demo video player — smooth entrance animations ── */
+.demo-num { transition: none; }
+.demo-kpi { transition-timing-function: cubic-bezier(.4,0,.2,1); }
+.demo-row { transition-timing-function: cubic-bezier(.4,0,.2,1); }
+.demo-act { transition-timing-function: cubic-bezier(.4,0,.2,1); }
 </style>
 {% endblock %}
 {% block content %}
@@ -120,171 +158,148 @@
 <!-- ══════════════════════════════════════════
      HERO
 ══════════════════════════════════════════ -->
-<section class="relative overflow-hidden pt-14 pb-20 sm:pt-18">
-  <!-- bg glows -->
+<section class="relative overflow-hidden pt-16 pb-24 sm:pt-20">
+  <!-- Ambient background -->
   <div class="absolute inset-0 pointer-events-none">
-    <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-[700px] h-80 bg-primary/8 rounded-full blur-3xl"></div>
-    <div class="absolute top-32 right-0 w-72 h-72 bg-cyan/8 rounded-full blur-3xl"></div>
+    <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-gradient-to-br from-violet-500/10 via-purple-500/5 to-cyan-500/10 rounded-full blur-3xl"></div>
+    <div class="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-cyan-500/6 to-transparent rounded-full blur-3xl"></div>
   </div>
-  <!-- subtle dot grid -->
-  <div class="absolute inset-0 pointer-events-none opacity-40" style="background-image:radial-gradient(circle, #CBD5E1 1px, transparent 1px);background-size:28px 28px;"></div>
 
   <div class="relative max-w-8xl mx-auto px-5 sm:px-8">
+
     <!-- CENTER HEADLINE -->
     <div class="max-w-4xl mx-auto text-center">
 
-      <h1 class="font-serif text-[2.8rem] sm:text-[3.75rem] lg:text-[4.75rem] text-ink leading-[1.05] tracking-tight">
+      <h1 class="font-serif text-4xl sm:text-5xl lg:text-7xl text-slate-900 leading-[1.02] tracking-tight">
         One platform.<br>
-        <em class="not-italic" style="color:var(--primary)">Every channel.</em>
+        <span class="bg-gradient-to-r from-violet-600 to-cyan-500 bg-clip-text text-transparent">Every channel.</span>
       </h1>
-      <p class="mt-5 text-ink-muted text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed">
-        IDA unifies email, social, content, and AI automation into one clean workspace — so your team ships campaigns that actually convert.
+      <p class="mt-6 text-slate-500 text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed">
+        IDA unifies email, social, content, and AI automation into one intelligent workspace — so your team ships campaigns that actually convert.
       </p>
-      <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-        <a href="{% if user.is_authenticated %}{% url 'dashboard:dashboard' %}{% else %}{% url 'accounts:register' %}{% endif %}" class="group inline-flex items-center gap-2 bg-primary hover:bg-primary-hover text-white font-semibold text-sm px-7 py-3.5 rounded-xl shadow-lg shadow-primary/20 transition-all">
-          Start for free
-          <svg class="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+
+      <!-- Premium CTA Buttons -->
+      <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+        <a href="{% if user.is_authenticated %}{% url 'dashboard:dashboard' %}{% else %}{% url 'accounts:register' %}{% endif %}"
+           class="group inline-flex items-center gap-2.5 px-8 py-4 rounded-xl text-white font-bold text-sm
+                  bg-gradient-to-r from-violet-600 via-purple-600 to-cyan-500
+                  shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/30
+                  hover:-translate-y-0.5 transition-all duration-200">
+          Start for free — it's free forever
+          <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </a>
-        <button type="button" id="openDemoModal" class="inline-flex items-center gap-2 bg-white border border-surface-border text-ink-muted hover:text-ink hover:border-border-h font-semibold text-sm px-7 py-3.5 rounded-xl transition-all shadow-sm">
+        <button type="button" id="openDemoModal"
+           class="group inline-flex items-center gap-2 px-8 py-4 rounded-xl text-slate-600 font-bold text-sm
+                  bg-white border border-slate-200 shadow-sm
+                  hover:border-violet-300 hover:text-violet-700 hover:-translate-y-0.5 transition-all duration-200">
           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-          Watch demo
+          Watch 2-min demo
         </button>
       </div>
-      <div class="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-xs text-ink-subtle">
-        <span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> No credit card</span>
-        <span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> 5-min setup</span>
-        <span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> Free forever plan</span>
+
+      <!-- Trust badges inline -->
+      <div class="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400">
+        <span class="flex items-center gap-1.5"><svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> No credit card required</span>
+        <span class="flex items-center gap-1.5"><svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> Setup in 5 minutes</span>
+        <span class="flex items-center gap-1.5"><svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> Free forever plan</span>
       </div>
     </div>
 
-    <!-- HERO DASHBOARD PREVIEW — center-anchored -->
-    <div class="relative mt-14 max-w-5xl mx-auto hidden md:block">
-      <!-- main dashboard -->
-      <div class="card-raised rounded-2xl overflow-hidden float-a">
-        <div class="flex items-center gap-2 border-b border-border px-5 py-3 bg-surface-raised">
-          <span class="h-2.5 w-2.5 rounded-full bg-border"></span>
-          <span class="h-2.5 w-2.5 rounded-full bg-border"></span>
-          <span class="h-2.5 w-2.5 rounded-full bg-border"></span>
-          <span class="ml-3 text-[10px] font-bold uppercase tracking-[.18em] text-ink-subtle">IDA Dashboard</span>
-          <span class="ml-auto inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Live
-          </span>
-        </div>
-        <!-- KPI strip like Social Hub -->
-        <div class="grid grid-cols-4 divide-x divide-border bg-surface-raised">
-          <div class="px-6 py-4">
-            <p class="text-[9px] font-bold uppercase tracking-wider text-ink-subtle mb-1">Emails Sent</p>
-            <p class="text-xl font-bold text-ink">42.1K</p>
-            <p class="text-[10px] font-semibold text-emerald-600 mt-0.5 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>18%</p>
-          </div>
-          <div class="px-6 py-4">
-            <p class="text-[9px] font-bold uppercase tracking-wider text-ink-subtle mb-1">Social Reach</p>
-            <p class="text-xl font-bold text-ink">128K</p>
-            <p class="text-[10px] font-semibold text-emerald-600 mt-0.5 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>24%</p>
-          </div>
-          <div class="px-6 py-4">
-            <p class="text-[9px] font-bold uppercase tracking-wider text-ink-subtle mb-1">Engagement</p>
-            <p class="text-xl font-bold text-ink">48.4%</p>
-            <p class="text-[10px] font-semibold text-emerald-600 mt-0.5 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>6.2%</p>
-          </div>
-          <div class="px-6 py-4">
-            <p class="text-[9px] font-bold uppercase tracking-wider text-ink-subtle mb-1">Deliverability</p>
-            <p class="text-xl font-bold text-ink">98.4%</p>
-            <p class="text-[10px] font-semibold text-emerald-600 mt-0.5 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>Best ever</p>
-          </div>
-        </div>
-        <div class="grid grid-cols-3 gap-4 p-5">
-          <!-- Campaign performance chart -->
-          <div class="col-span-2 rounded-xl border border-border bg-surface-raised p-4">
-            <div class="flex items-center justify-between mb-3">
-              <p class="text-[10px] font-bold uppercase tracking-wider text-ink-subtle">Campaign Performance</p>
-              <span class="text-[10px] font-semibold text-ink-subtle">Last 7 days</span>
+    <!-- Clean dashboard preview -->
+    <div class="mt-16 max-w-5xl mx-auto hidden md:block">
+      <div class="relative">
+        <!-- Floating glow behind preview -->
+        <div class="absolute -inset-4 bg-gradient-to-br from-violet-500/10 via-purple-500/5 to-cyan-500/10 rounded-3xl blur-xl pointer-events-none"></div>
+        <div class="relative rounded-2xl overflow-hidden border border-slate-200/80 bg-white shadow-2xl shadow-slate-900/10">
+          <!-- Window chrome -->
+          <div class="flex items-center gap-2 px-5 py-3.5 bg-slate-50 border-b border-slate-100">
+            <div class="flex gap-1.5">
+              <div class="w-3 h-3 rounded-full bg-red-400/60"></div>
+              <div class="w-3 h-3 rounded-full bg-amber-400/60"></div>
+              <div class="w-3 h-3 rounded-full bg-emerald-400/60"></div>
             </div>
-            <div class="h-24 flex items-end gap-1.5">
-              <div class="bar flex-1" style="height:32%"></div>
-              <div class="bar flex-1" style="height:50%"></div>
-              <div class="bar flex-1" style="height:41%"></div>
-              <div class="bar flex-1" style="height:68%"></div>
-              <div class="bar flex-1" style="height:55%"></div>
-              <div class="bar flex-1" style="height:48%"></div>
-              <div class="bar flex-1 accent" style="height:88%"></div>
+            <div class="flex-1 flex justify-center">
+              <div class="px-4 py-1 rounded-lg bg-white border border-slate-200 text-[11px] text-slate-400 font-medium shadow-sm">
+                app.idadev.techaxis.com.np
+              </div>
             </div>
+            <div class="w-16"></div>
           </div>
-          <!-- Recent posts mini — mirrors Social Hub -->
-          <div class="rounded-xl border border-border overflow-hidden">
-            <div class="px-3.5 py-2.5 border-b border-border bg-surface-raised">
-              <p class="text-[10px] font-bold uppercase tracking-wider text-ink-subtle">Recent Posts</p>
+          <!-- Dashboard content -->
+          <div class="grid grid-cols-4 divide-x divide-slate-100">
+            <div class="px-6 py-5">
+              <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Emails Sent</p>
+              <p class="text-2xl font-extrabold text-slate-900">42.1K</p>
+              <div class="flex items-center gap-1 mt-1">
+                <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                <span class="text-[11px] font-semibold text-emerald-600">+18%</span>
+              </div>
             </div>
-            <div class="divide-y divide-border">
-              <div class="flex items-center gap-2.5 px-3.5 py-2.5">
-                <span class="chip plat-instagram text-[9px]">Ig</span>
-                <p class="text-[10px] text-ink flex-1 truncate">Q2 Launch campaign</p>
-                <span class="chip status-published text-[9px]">Live</span>
+            <div class="px-6 py-5">
+              <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Social Reach</p>
+              <p class="text-2xl font-extrabold text-slate-900">128K</p>
+              <div class="flex items-center gap-1 mt-1">
+                <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                <span class="text-[11px] font-semibold text-emerald-600">+24%</span>
               </div>
-              <div class="flex items-center gap-2.5 px-3.5 py-2.5">
-                <span class="chip plat-twitter text-[9px]">X</span>
-                <p class="text-[10px] text-ink flex-1 truncate">Product update thread</p>
-                <span class="chip status-scheduled text-[9px]">Sched</span>
+            </div>
+            <div class="px-6 py-5">
+              <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Engagement</p>
+              <p class="text-2xl font-extrabold text-slate-900">48.4%</p>
+              <div class="flex items-center gap-1 mt-1">
+                <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                <span class="text-[11px] font-semibold text-emerald-600">+6.2%</span>
               </div>
-              <div class="flex items-center gap-2.5 px-3.5 py-2.5">
-                <span class="chip plat-linkedin text-[9px]">Li</span>
-                <p class="text-[10px] text-ink flex-1 truncate">Industry insights post</p>
-                <span class="chip status-draft text-[9px]">Draft</span>
-              </div>
-              <div class="flex items-center gap-2.5 px-3.5 py-2.5">
-                <span class="chip plat-facebook text-[9px]">Fb</span>
-                <p class="text-[10px] text-ink flex-1 truncate">Weekend promotion</p>
-                <span class="chip status-published text-[9px]">Live</span>
+            </div>
+            <div class="px-6 py-5">
+              <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Deliverability</p>
+              <p class="text-2xl font-extrabold text-slate-900">98.4%</p>
+              <div class="flex items-center gap-1 mt-1">
+                <svg class="w-3.5 h-3.5 text-violet-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                <span class="text-[11px] font-semibold text-violet-600">Best ever</span>
               </div>
             </div>
           </div>
-        </div>
-        <!-- Queue health bar — straight from Social Hub design -->
-        <div class="px-5 pb-4">
-          <div class="rounded-xl border border-border bg-surface-raised p-3.5">
-            <div class="flex items-center justify-between mb-2">
-              <p class="text-[10px] font-bold uppercase tracking-wider text-ink-subtle">Queue Health</p>
-              <span class="text-[10px] font-semibold text-emerald-600">14 published</span>
-            </div>
-            <div class="queue-bar">
-              <div class="flex h-full">
-                <div class="h-full bg-slate-300 transition-all" style="width:10%"></div>
-                <div class="h-full bg-primary transition-all" style="width:25%"></div>
-                <div class="h-full bg-amber-400 transition-all" style="width:5%"></div>
-                <div class="h-full bg-emerald-500 transition-all" style="width:55%"></div>
-                <div class="h-full bg-red-400 transition-all" style="width:5%"></div>
+          <!-- Chart area -->
+          <div class="px-6 pb-5">
+            <div class="rounded-xl border border-slate-100 bg-slate-50/50 p-4">
+              <div class="flex items-center justify-between mb-3">
+                <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Campaign Performance</p>
+                <span class="text-[10px] text-slate-400">Last 7 days</span>
               </div>
-            </div>
-            <div class="flex gap-4 mt-2 text-[9px] font-semibold text-ink-subtle flex-wrap">
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span>Drafts 3</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-primary inline-block"></span>Scheduled 8</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>Publishing 2</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>Published 14</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-400 inline-block"></span>Failed 1</span>
+              <div class="flex items-end gap-1.5 h-16">
+                <div class="flex-1 rounded-sm bg-violet-100" style="height:35%"></div>
+                <div class="flex-1 rounded-sm bg-violet-200" style="height:52%"></div>
+                <div class="flex-1 rounded-sm bg-violet-100" style="height:44%"></div>
+                <div class="flex-1 rounded-sm bg-violet-300" style="height:70%"></div>
+                <div class="flex-1 rounded-sm bg-violet-200" style="height:58%"></div>
+                <div class="flex-1 rounded-sm bg-violet-100" style="height:50%"></div>
+                <div class="flex-1 rounded-sm bg-gradient-to-t from-violet-600 to-cyan-400" style="height:90%"></div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-
-      
     </div>
 
-    <!-- Mobile fallback -->
+    <!-- Mobile fallback card -->
     <div class="md:hidden mt-10 max-w-sm mx-auto">
-      <div class="card-raised rounded-2xl overflow-hidden">
-        <div class="flex items-center gap-2 border-b border-border bg-surface-raised px-4 py-3">
-          <span class="h-2 w-2 rounded-full bg-border"></span><span class="h-2 w-2 rounded-full bg-border"></span><span class="h-2 w-2 rounded-full bg-border"></span>
-          <span class="ml-2 text-[9px] font-bold uppercase tracking-widest text-ink-subtle">IDA Dashboard</span>
+      <div class="rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden">
+        <div class="flex items-center gap-2 px-4 py-3 bg-slate-50 border-b border-slate-100">
+          <span class="h-2 w-2 rounded-full bg-slate-300"></span>
+          <span class="ml-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">IDA Dashboard</span>
         </div>
-        <div class="grid grid-cols-3 gap-2 p-4">
-          <div class="rounded-xl bg-primary-light p-2.5"><p class="text-[8px] font-bold text-primary">Emails</p><p class="text-sm font-bold text-ink">42.1K</p></div>
-          <div class="rounded-xl bg-cyan-light p-2.5"><p class="text-[8px] font-bold" style="color:#0891B2">Social</p><p class="text-sm font-bold text-ink">128K</p></div>
-          <div class="rounded-xl bg-emerald-50 p-2.5"><p class="text-[8px] font-bold text-emerald-600">Engage</p><p class="text-sm font-bold text-ink">48.4%</p></div>
+        <div class="grid grid-cols-3 divide-x divide-slate-100 p-4">
+          <div class="text-center"><p class="text-[10px] text-slate-400 font-bold uppercase">Emails</p><p class="text-base font-extrabold text-slate-900">42.1K</p></div>
+          <div class="text-center"><p class="text-[10px] text-slate-400 font-bold uppercase">Social</p><p class="text-base font-extrabold text-slate-900">128K</p></div>
+          <div class="text-center"><p class="text-[10px] text-slate-400 font-bold uppercase">Engage</p><p class="text-base font-extrabold text-slate-900">48.4%</p></div>
         </div>
       </div>
     </div>
   </div>
 </section>
+
+
 
 <!-- ══════════════════════════════════════════
      TRUST BAR
@@ -326,6 +341,7 @@
     </div>
   </div>
 </section>
+
 
 <!-- ══════════════════════════════════════════
      PRODUCT MODULES
@@ -412,42 +428,59 @@
 </section>
 
 <!-- ══════════════════════════════════════════
-     FEATURES — Bento grid, centered
-══════════════════════════════════════════ -->
-<section id="features" class="py-24 bg-white border-y border-border">
-  <div class="max-w-8xl mx-auto px-5 sm:px-8 lg:px-12">
-    <div class="max-w-2xl mx-auto text-center mb-12 reveal">
-      <span class="badge mb-4 inline-flex">Features</span>
-      <h2 class="font-serif text-3xl sm:text-4xl lg:text-5xl text-ink leading-tight">Everything you need<br>to scale digital.</h2>
-      <p class="mt-4 text-ink-muted">Built for deliverability. Designed for speed. Packed with power.</p>
+     FEATURES — interactive bento-switch
+═══════════════════════════════════════════ -->
+<section id="features" class="py-24 bg-white relative overflow-hidden">
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-gradient-to-br from-violet-500/[.04] via-purple-500/[.02] to-cyan-500/[.04] rounded-full blur-3xl"></div>
+  </div>
+  <div class="relative max-w-6xl mx-auto px-6 lg:px-12">
+    <div class="text-center mb-14 reveal">
+      <span class="badge mb-3 inline-flex">Features</span>
+      <h2 class="font-serif text-3xl sm:text-4xl" style="color:var(--ink)">Built for teams <span class="bg-gradient-to-r from-violet-600 to-cyan-500 bg-clip-text text-transparent">who ship.</span></h2>
+      <p class="mt-3 text-sm max-w-md mx-auto" style="color:var(--ink-muted)">Tap a module to see what's inside. Five pillars, twenty capabilities, zero fluff.</p>
     </div>
-    <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+    <div class="bento-grid reveal">
       {% for cat in feature_categories %}
-      <div class="bento-card reveal card p-6">
-        <div class="flex items-center gap-3 mb-5">
-          <div class="w-10 h-10 rounded-xl bg-primary-light flex items-center justify-center text-primary flex-shrink-0">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-              {% if cat.category == 'Email Campaigns' %}<path d="M3 8l9 6 9-6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>{% elif cat.category == 'AI & Intelligence' %}<path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>{% elif cat.category == 'Contacts & Senders' %}<path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>{% elif cat.category == 'Social Media' %}<path d="M13 19l-4-4 4-4m6-4l-4 4 4 4M3 12h18"/>{% else %}<path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>{% endif %}
-            </svg>
-          </div>
-          <div>
-            <h3 class="font-bold text-ink text-base">{{ cat.category }}</h3>
-            <p class="section-label mt-0 mb-0">4 capabilities</p>
-          </div>
-        </div>
-        <p class="text-ink-muted text-sm leading-relaxed mb-4">{{ cat.subtitle }}</p>
-        <div class="space-y-3">
-          {% for feature in cat.features %}
-          <div class="flex items-start gap-2.5">
-            <span class="flex-shrink-0 mt-0.5 w-4 h-4 rounded bg-cyan-light flex items-center justify-center">
-              <svg class="w-2.5 h-2.5" style="color:var(--cyan)" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
-            </span>
+      {% if cat.category == 'Email Campaigns' %}
+      <div class="bento-card col-span-12 sm:col-span-7" data-bento="cat-{{ forloop.counter }}">
+      {% elif cat.category == 'AI & Intelligence' %}
+      <div class="bento-card col-span-12 sm:col-span-5" data-bento="cat-{{ forloop.counter }}">
+      {% elif cat.category == 'Contacts & Senders' %}
+      <div class="bento-card col-span-12 sm:col-span-5" data-bento="cat-{{ forloop.counter }}">
+      {% elif cat.category == 'Social Media' %}
+      <div class="bento-card col-span-12 sm:col-span-7" data-bento="cat-{{ forloop.counter }}">
+      {% else %}
+      <div class="bento-card col-span-12" data-bento="cat-{{ forloop.counter }}">
+      {% endif %}
+        <span class="bento-num">{{ forloop.counter|stringformat:"02d" }}</span>
+        <div class="relative p-6">
+          <div class="flex items-center gap-3 mb-2">
+            <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center shadow-sm shadow-violet-500/10">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                {% if cat.category == 'Email Campaigns' %}<path d="M3 8l9 6 9-6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>{% elif cat.category == 'AI & Intelligence' %}<path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>{% elif cat.category == 'Contacts & Senders' %}<path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>{% elif cat.category == 'Social Media' %}<path d="M13 19l-4-4 4-4m6-4l-4 4 4 4M3 12h18"/>{% else %}<path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>{% endif %}
+              </svg>
+            </div>
             <div>
-              <p class="text-sm font-semibold text-ink">{{ feature.title }}</p>
-              <p class="text-xs text-ink-subtle leading-relaxed">{{ feature.description }}</p>
+              <h3 class="font-bold text-sm" style="color:var(--ink)">{{ cat.category }}</h3>
+              <p class="text-xs" style="color:var(--ink-subtle)">{{ cat.subtitle }}</p>
             </div>
           </div>
-          {% endfor %}
+
+          <div class="bento-features mt-4">
+            {% for feature in cat.features %}
+            <div class="bento-feature-item flex items-start gap-2.5 py-2.5 px-2.5 {% if not forloop.last %}border-b border-slate-100{% endif %} hover:bg-slate-50/80 transition-colors">
+              <div class="w-4 h-4 rounded-full bg-gradient-to-r from-violet-500 to-cyan-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <svg class="w-2 h-2 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+              </div>
+              <div class="min-w-0">
+                <p class="text-xs font-semibold" style="color:var(--ink)">{{ feature.title }}</p>
+                <p class="text-[11px] mt-0.5 leading-relaxed" style="color:var(--ink-muted)">{{ feature.description }}</p>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
         </div>
       </div>
       {% endfor %}
@@ -456,18 +489,25 @@
 </section>
 
 <!-- ══════════════════════════════════════════
-     STATS — dark strip
+     STATS — primary gradient strip
 ══════════════════════════════════════════ -->
-<section class="py-20 bg-ink relative overflow-hidden">
-  <div class="absolute inset-0 pointer-events-none opacity-[.04]" style="background-image:radial-gradient(circle,#fff 1px,transparent 1px);background-size:28px 28px;"></div>
+<section class="py-20 relative overflow-hidden" style="background:linear-gradient(135deg,#6D28D9 0%,#06B6D4 100%)">
+  <div class="absolute inset-0 pointer-events-none opacity-[.06]" style="background-image:radial-gradient(circle,#fff 1px,transparent 1px);background-size:28px 28px;"></div>
   <div class="relative max-w-8xl mx-auto px-5 sm:px-8 lg:px-12">
     <div class="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-4">
       {% for stat in stats %}
-      <div class="reveal rounded-2xl border border-white/8 bg-white/5 p-7">
-        <div class="w-10 h-10 rounded-xl border border-white/10 bg-white/8 flex items-center justify-center text-white mb-5">{{ stat.icon_svg|safe }}</div>
+      <div class="reveal rounded-2xl border border-white/15 bg-white/10 p-7 backdrop-blur-sm">
+        <div class="stat-icon-pulse w-10 h-10 rounded-xl border border-white/15 bg-white/10 flex items-center justify-center text-white mb-5">{{ stat.icon_svg|safe }}</div>
         <p class="text-4xl sm:text-5xl font-bold text-white tracking-tight font-sans stat-count" data-target="{{ stat.value }}">0</p>
-        <p class="text-white/70 font-semibold text-sm mt-2">{{ stat.label }}</p>
-        <p class="text-white/35 text-xs mt-0.5">{{ stat.description }}</p>
+        <div class="flex items-end gap-1 mt-3 mb-3">
+          <div class="spark-bar w-2 rounded-sm bg-white/30" style="height:12px"></div>
+          <div class="spark-bar w-2 rounded-sm bg-white/40" style="height:20px"></div>
+          <div class="spark-bar w-2 rounded-sm bg-white/50" style="height:14px"></div>
+          <div class="spark-bar w-2 rounded-sm bg-white/60" style="height:24px"></div>
+          <div class="spark-bar w-2 rounded-sm bg-white" style="height:18px"></div>
+        </div>
+        <p class="text-white/80 font-semibold text-sm mt-2">{{ stat.label }}</p>
+        <p class="text-white/40 text-xs mt-0.5">{{ stat.description }}</p>
       </div>
       {% endfor %}
     </div>
@@ -475,62 +515,89 @@
 </section>
 
 <!-- ══════════════════════════════════════════
-     HOW IT WORKS — centered
+     HOW IT WORKS — visually enhanced 3-step
 ══════════════════════════════════════════ -->
-<section class="py-24 bg-surface-raised">
+<section class="py-20 bg-white relative overflow-hidden">
+  <div class="absolute inset-0 pointer-events-none opacity-[0.03]" style="background-image:radial-gradient(circle,#6D28D9 1px,transparent 1px);background-size:32px 32px;"></div>
+  <div class="max-w-7xl mx-auto px-6 lg:px-12 relative">
+    <div class="text-center mb-16 reveal">
+      <span class="badge mb-4 inline-flex">Process</span>
+      <h2 class="font-serif text-4xl lg:text-5xl text-slate-900 leading-tight tracking-tight">Get started in <span class="bg-gradient-to-r from-violet-600 to-cyan-500 bg-clip-text text-transparent">minutes.</span></h2>
+      <p class="mt-4 text-slate-500 max-w-xl mx-auto">Three simple steps from signup to your first campaign. No credit card required.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 reveal">
+      {% for step in workflow_steps %}
+      <div class="relative text-center group">
+        {% if not forloop.last %}
+        <div class="hidden md:block absolute top-12 left-[60%] w-[80%] h-0.5 bg-gradient-to-r from-violet-300 to-cyan-300 -translate-x-full z-0"></div>
+        {% endif %}
+        <div class="relative z-10">
+          <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center text-white text-2xl font-black mx-auto mb-6 shadow-xl shadow-violet-500/30 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+            {{ forloop.counter }}
+          </div>
+          <div class="w-14 h-14 rounded-xl bg-white border-2 border-slate-100 flex items-center justify-center mx-auto mb-5 -mt-2 shadow-lg group-hover:border-violet-200 transition-colors">
+            {{ step.icon_svg|safe }}
+          </div>
+          <h3 class="font-bold text-slate-900 text-lg mb-3">{{ step.title }}</h3>
+          <p class="text-slate-500 text-sm leading-relaxed mb-5 max-w-xs mx-auto">{{ step.description }}</p>
+          {% if step.cta %}
+          <a href="{% if user.is_authenticated %}{% url 'dashboard:dashboard' %}{% else %}{% url 'accounts:register' %}{% endif %}"
+             class="inline-flex items-center gap-1.5 text-sm font-bold text-violet-600 hover:gap-3 transition-all">
+            {{ step.cta }}
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="text-center mt-14 reveal">
+      <a href="{% if user.is_authenticated %}{% url 'dashboard:dashboard' %}{% else %}{% url 'accounts:register' %}{% endif %}"
+         class="inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-cyan-500 text-white font-bold text-base shadow-xl shadow-violet-500/30 hover:shadow-2xl hover:-translate-y-0.5 transition-all">
+        Start Your Free Trial
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+      <p class="text-slate-400 text-sm mt-3">No credit card required · 14-day free trial</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     TESTIMONIALS — featured + marquee
+═════════════════════════════════════════ -->
+<section class="py-24 bg-white border-y border-slate-200">
   <div class="max-w-8xl mx-auto px-5 sm:px-8 lg:px-12">
     <div class="max-w-2xl mx-auto text-center mb-14 reveal">
-      <span class="badge mb-4 inline-flex">How it works</span>
-      <h2 class="font-serif text-3xl sm:text-4xl lg:text-5xl text-ink leading-tight">From signup to send<br>in 3 steps.</h2>
-      <p class="mt-4 text-ink-muted">No migration headaches. No long onboarding. No PhD required.</p>
-    </div>
-    <div class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-5">
-      {% for step in workflow_steps %}
-      <div class="reveal card p-7 relative text-center">
-        <div class="w-12 h-12 mx-auto rounded-xl bg-primary-light flex items-center justify-center text-primary mb-4">{{ step.icon_svg|safe }}</div>
-        <span class="text-5xl font-bold text-border block mb-3 font-sans">{{ step.number }}</span>
-        <h3 class="font-bold text-ink text-lg mb-2">{{ step.title }}</h3>
-        <p class="text-ink-muted text-sm leading-relaxed">{{ step.description }}</p>
-        {% if not forloop.last %}
-        <div class="hidden md:flex absolute top-1/2 -right-3 z-10 w-6 h-6 rounded-full bg-white border border-border items-center justify-center text-primary">
-          <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-        {% endif %}
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-</section>
-
-<!-- ══════════════════════════════════════════
-     TESTIMONIALS — centered
-══════════════════════════════════════════ -->
-<section class="py-24 bg-white border-y border-border">
-  <div class="max-w-8xl mx-auto px-5 sm:px-8 lg:px-12">
-    <div class="max-w-2xl mx-auto text-center mb-10 reveal">
       <span class="badge mb-4 inline-flex">What teams say</span>
-      <h2 class="font-serif text-3xl sm:text-4xl lg:text-5xl text-ink leading-tight">Loved by teams that ship.</h2>
+      <h2 class="font-serif text-3xl sm:text-4xl lg:text-5xl text-slate-900 leading-tight">Loved by teams that ship.</h2>
     </div>
-    <!-- Featured -->
-    <div class="max-w-3xl mx-auto mb-10 reveal">
-      <div class="card p-8 sm:p-10 border-l-4" style="border-left-color:var(--cyan)">
-        <div class="text-amber-400 text-lg mb-4">★★★★★</div>
-        <p class="text-ink text-lg font-medium leading-relaxed">"We switched from Mailchimp and our inbox delivery rate jumped from 71% to 98.4% in the first two weeks. The AI optimization alone paid for itself in the first campaign — and IDA's social tools saved us another subscription."</p>
-        <div class="mt-6 flex items-center gap-3">
-          <div class="w-10 h-10 rounded-full bg-primary-light text-primary flex items-center justify-center text-sm font-bold">AM</div>
-          <div>
-            <p class="font-semibold text-ink text-sm">Aakriti Maharjan</p>
-            <p class="text-xs text-ink-subtle">Head of Growth · Forma Labs</p>
+
+    <!-- Featured testimonial -->
+    <div class="max-w-3xl mx-auto mb-12 reveal">
+      <div class="rounded-2xl bg-white border border-slate-200 p-8 sm:p-10 shadow-xl shadow-slate-200/50 relative overflow-hidden">
+        <div class="absolute top-6 left-6 text-8xl text-violet-100 font-serif leading-none select-none">"</div>
+        <div class="relative">
+          <div class="text-amber-400 text-lg mb-5">★★★★★</div>
+          <p class="text-slate-700 text-lg sm:text-xl font-medium leading-relaxed">"We switched from Mailchimp and our inbox delivery rate jumped from 71% to 98.4% in the first two weeks. The AI optimization alone paid for itself in the first campaign — and IDA's social tools saved us another subscription."</p>
+          <div class="mt-6 flex items-center gap-3">
+            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center text-white text-sm font-black shadow-lg shadow-violet-500/20">AM</div>
+            <div>
+              <p class="font-bold text-slate-900">Aakriti Maharjan</p>
+              <p class="text-slate-500 text-sm">Head of Growth &middot; Forma Labs</p>
+            </div>
           </div>
         </div>
       </div>
     </div>
-    <!-- Marquee -->
-    <div class="trust-marquee">
-      <div class="trust-marquee-inner gap-4 py-1">
+
+    <!-- Marquee with wide, compact cards -->
+    <div class="trust-marquee overflow-x-auto">
+      <div class="trust-marquee-inner gap-5 py-2" style="display:flex;">
         {% for t in testimonials %}
         <article class="flex-shrink-0 w-72 card p-5">
-          <div class="text-amber-400 text-xs">★★★★★</div>
+          <div class="text-amber-400 text-xs mb-2">★★★★★</div>
           <p class="text-ink-muted text-xs leading-relaxed mt-3 line-clamp-4">"{{ t.quote }}"</p>
           <div class="mt-4 flex items-center gap-2.5">
             <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold {{ t.color }}">{{ t.initials }}</div>
@@ -543,7 +610,7 @@
         {% endfor %}
         {% for t in testimonials %}
         <article class="flex-shrink-0 w-72 card p-5">
-          <div class="text-amber-400 text-xs">★★★★★</div>
+          <div class="text-amber-400 text-xs mb-2">★★★★★</div>
           <p class="text-ink-muted text-xs leading-relaxed mt-3 line-clamp-4">"{{ t.quote }}"</p>
           <div class="mt-4 flex items-center gap-2.5">
             <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold {{ t.color }}">{{ t.initials }}</div>
@@ -559,25 +626,6 @@
   </div>
 </section>
 
-
-<section class="py-24 bg-surface-raised">
-  <div class="max-w-8xl mx-auto px-5 sm:px-8 lg:px-12">
-    <div class="max-w-2xl mx-auto text-center mb-10 reveal">
-      <span class="badge mb-4 inline-flex">Integrations</span>
-      <h2 class="font-serif text-3xl sm:text-4xl lg:text-5xl text-ink leading-tight">Connects to your stack.</h2>
-      <p class="mt-4 text-ink-muted">Native integrations with the tools your team already uses. Plus webhooks and Zapier for everything else.</p>
-    </div>
-    <div class="max-w-5xl mx-auto grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-      {% for integ in integrations %}
-      <div class="integ-chip reveal card p-4 text-center cursor-pointer">
-        <div class="w-10 h-10 mx-auto rounded-xl bg-primary-light flex items-center justify-center text-primary font-bold text-sm mb-2">{{ integ.name|slice:":2"|upper }}</div>
-        <p class="text-[9px] font-bold text-ink-muted">{{ integ.name }}</p>
-      </div>
-      {% endfor %}
-    </div>
-    <p class="text-center text-sm text-ink-subtle mt-7">Don't see what you need? <a href="#" class="text-primary font-semibold hover:underline">Build a custom integration →</a></p>
-  </div>
-</section>
 
 
 <!-- <section id="pricing" class="py-24 bg-white border-y border-border" style="scroll-margin-top: 68px">
@@ -627,26 +675,26 @@
 </section> -->
 
 <!-- ══════════════════════════════════════════
-     FAQ — centered
-══════════════════════════════════════════ -->
-<section class="py-24 bg-surface-raised">
+     FAQ — centered, modern styling
+═════════════════════════════════════════ -->
+<section class="py-24 bg-white">
   <div class="max-w-3xl mx-auto px-5 sm:px-8">
-    <div class="text-center mb-10 reveal">
+    <div class="text-center mb-12 reveal">
       <span class="badge mb-4 inline-flex">FAQ</span>
-      <h2 class="font-serif text-3xl sm:text-4xl lg:text-5xl text-ink leading-tight">Questions? Answered.</h2>
-      <p class="mt-4 text-ink-muted">Everything you need to know. Can't find an answer? <a href="#" class="text-primary font-semibold hover:underline">Talk to us →</a></p>
+      <h2 class="font-serif text-3xl sm:text-4xl lg:text-5xl text-slate-900 leading-tight">Questions? Answered.</h2>
+      <p class="mt-4 text-slate-500">Everything you need to know. Can't find an answer? <a href="#" class="text-violet-600 font-semibold hover:underline">Talk to us &rarr;</a></p>
     </div>
     <div class="space-y-2">
       {% for faq in faqs %}
-      <div class="faq-item reveal card overflow-hidden hover:border-indigo-200 transition-colors">
+      <div class="faq-item reveal rounded-xl border border-slate-200 bg-white overflow-hidden hover:border-violet-200 transition-colors">
         <button type="button" class="faq-trigger w-full flex items-center justify-between gap-4 px-6 py-4 text-left">
-          <span class="font-semibold text-ink text-sm">{{ faq.question }}</span>
-          <span class="flex-shrink-0 w-7 h-7 rounded-lg border border-border flex items-center justify-center faq-chevron">
-            <svg class="w-3.5 h-3.5 text-ink-muted" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          <span class="font-semibold text-slate-900 text-sm">{{ faq.question }}</span>
+          <span class="flex-shrink-0 w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center faq-chevron">
+            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
           </span>
         </button>
         <div class="faq-answer px-6">
-          <p class="text-ink-muted text-sm leading-relaxed pb-5">{{ faq.answer }}</p>
+          <p class="text-slate-500 text-sm leading-relaxed pb-5">{{ faq.answer }}</p>
         </div>
       </div>
       {% endfor %}
@@ -657,137 +705,341 @@
 <!-- ══════════════════════════════════════════
      FOOTER
 ══════════════════════════════════════════ -->
-<footer class="bg-ink border-t border-white/5">
-  <div class="max-w-8xl mx-auto px-5 sm:px-8 lg:px-12 pt-14 pb-10">
+<footer class="relative overflow-hidden" style="background:linear-gradient(135deg,#6D28D9 0%,#5B21B6 100%)">
+  <div class="absolute inset-0 pointer-events-none opacity-[.05]" style="background-image:radial-gradient(circle,#fff 1px,transparent 1px);background-size:28px 28px;"></div>
+  <div class="relative max-w-8xl mx-auto px-5 sm:px-8 lg:px-12 pt-14 pb-10">
     <div class="flex flex-col lg:flex-row items-start gap-12 lg:gap-16">
       <div class="flex-shrink-0 max-w-xs">
         <a href="{% if user.is_authenticated %}{% url 'dashboard:dashboard' %}{% else %}{% url 'home' %}{% endif %}">
           <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="IDA" class="h-24 w-auto brightness-0 invert opacity-80 hover:opacity-100 transition-opacity"/>
         </a>
-        <p class="mt-4 text-ink-subtle text-sm leading-relaxed">Unify email, social, content, and AI into one intelligent platform.</p>
+        <p class="mt-4 text-white/60 text-sm leading-relaxed">Unify email, social, content, and AI into one intelligent platform.</p>
         <div class="mt-5 flex items-center gap-2">
-          <a href="#" class="w-8 h-8 rounded-lg border border-white/8 hover:border-white/20 text-ink-subtle hover:text-white flex items-center justify-center transition-all" aria-label="Twitter"><svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
-          <a href="#" class="w-8 h-8 rounded-lg border border-white/8 hover:border-white/20 text-ink-subtle hover:text-white flex items-center justify-center transition-all" aria-label="LinkedIn"><svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452z"/></svg></a>
-          <a href="#" class="w-8 h-8 rounded-lg border border-white/8 hover:border-white/20 text-ink-subtle hover:text-white flex items-center justify-center transition-all" aria-label="GitHub"><svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg></a>
+          <a href="#" class="w-8 h-8 rounded-lg border border-white/15 hover:border-white/30 text-white/50 hover:text-white flex items-center justify-center transition-all" aria-label="Twitter"><svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+          <a href="#" class="w-8 h-8 rounded-lg border border-white/15 hover:border-white/30 text-white/50 hover:text-white flex items-center justify-center transition-all" aria-label="LinkedIn"><svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452z"/></svg></a>
+          <a href="#" class="w-8 h-8 rounded-lg border border-white/15 hover:border-white/30 text-white/50 hover:text-white flex items-center justify-center transition-all" aria-label="GitHub"><svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg></a>
         </div>
       </div>
       <div class="flex-1 grid grid-cols-2 md:grid-cols-4 gap-8">
         <div>
-          <h4 class="section-label mb-3">Product</h4>
+          <h4 class="section-label mb-3 !text-white/50">Product</h4>
           <ul class="space-y-2">
-            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Email Campaigns</a></li>
-            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Social Media</a></li>
-            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">AI Copilot</a></li>
-            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Analytics</a></li>
-            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Integrations</a></li>
+            <li><a href="#" class="text-xs text-white/50 hover:text-white transition-colors">Email Campaigns</a></li>
+            <li><a href="#" class="text-xs text-white/50 hover:text-white transition-colors">Social Media</a></li>
+            <li><a href="#" class="text-xs text-white/50 hover:text-white transition-colors">AI Copilot</a></li>
+            <li><a href="#" class="text-xs text-white/50 hover:text-white transition-colors">Analytics</a></li>
+            <li><a href="#" class="text-xs text-white/50 hover:text-white transition-colors">Integrations</a></li>
           </ul>
         </div>
         <div>
-          <h4 class="section-label mb-3">Solutions</h4>
+          <h4 class="section-label mb-3 !text-white/50">Solutions</h4>
           <ul class="space-y-2">
-            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Growth Teams</a></li>
-            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Enterprise</a></li>
-            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Agencies</a></li>
-            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">E-commerce</a></li>
-            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Nonprofits</a></li>
+            <li><a href="#" class="text-xs text-white/50 hover:text-white transition-colors">Growth Teams</a></li>
+            <li><a href="#" class="text-xs text-white/50 hover:text-white transition-colors">Enterprise</a></li>
+            <li><a href="#" class="text-xs text-white/50 hover:text-white transition-colors">Agencies</a></li>
+            <li><a href="#" class="text-xs text-white/50 hover:text-white transition-colors">E-commerce</a></li>
+            <li><a href="#" class="text-xs text-white/50 hover:text-white transition-colors">Nonprofits</a></li>
           </ul>
         </div>
         <div>
-          <h4 class="section-label mb-3">Resources</h4>
+          <h4 class="section-label mb-3 !text-white/50">Resources</h4>
           <ul class="space-y-2">
-            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Documentation</a></li>
-            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">API Reference</a></li>
-            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Blog</a></li>
-            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Community</a></li>
-            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Status</a></li>
+            <li><a href="#" class="text-xs text-white/50 hover:text-white transition-colors">Documentation</a></li>
+            <li><a href="#" class="text-xs text-white/50 hover:text-white transition-colors">API Reference</a></li>
+            <li><a href="#" class="text-xs text-white/50 hover:text-white transition-colors">Blog</a></li>
+            <li><a href="#" class="text-xs text-white/50 hover:text-white transition-colors">Community</a></li>
+            <li><a href="#" class="text-xs text-white/50 hover:text-white transition-colors">Status</a></li>
           </ul>
         </div>
         <div>
-          <h4 class="section-label mb-3">Company</h4>
+          <h4 class="section-label mb-3 !text-white/50">Company</h4>
           <ul class="space-y-2">
-            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">About</a></li>
-            <li><a href="#" class="text-xs text-ink-subtle hover:text-white transition-colors">Careers</a></li>
-            <li><a href="{% url 'privacy' %}" class="text-xs text-ink-subtle hover:text-white transition-colors">Privacy</a></li>
-            <li><a href="{% url 'terms' %}" class="text-xs text-ink-subtle hover:text-white transition-colors">Terms</a></li>
-            <li><a href="{% url 'cookies' %}" class="text-xs text-ink-subtle hover:text-white transition-colors">Contact</a></li>
+            <li><a href="#" class="text-xs text-white/50 hover:text-white transition-colors">About</a></li>
+            <li><a href="#" class="text-xs text-white/50 hover:text-white transition-colors">Careers</a></li>
+            <li><a href="{% url 'privacy' %}" class="text-xs text-white/50 hover:text-white transition-colors">Privacy</a></li>
+            <li><a href="{% url 'terms' %}" class="text-xs text-white/50 hover:text-white transition-colors">Terms</a></li>
+            <li><a href="{% url 'cookies' %}" class="text-xs text-white/50 hover:text-white transition-colors">Contact</a></li>
           </ul>
         </div>
       </div>
     </div>
   </div>
-  <div class="border-t border-white/5">
+  <div class="border-t border-white/10">
     <div class="max-w-8xl mx-auto px-5 sm:px-8 lg:px-12 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
-      <p class="text-[10px] text-ink-subtle/50">&copy; {% now "Y" %} IDA — Intelligent Digital Automation. All rights reserved.</p>
+      <p class="text-[10px] text-white/40">&copy; {% now "Y" %} IDA — Intelligent Digital Automation. All rights reserved.</p>
       <div class="flex items-center gap-5">
-        <a href="{% url 'privacy' %}" class="text-[10px] text-ink-subtle/50 hover:text-ink-subtle transition-colors">Privacy Policy</a>
-        <a href="{% url 'terms' %}" class="text-[10px] text-ink-subtle/50 hover:text-ink-subtle transition-colors">Terms of Service</a>
-        <a href="{% url 'cookies' %}" class="text-[10px] text-ink-subtle/50 hover:text-ink-subtle transition-colors">Cookie Policy</a>
+        <a href="{% url 'privacy' %}" class="text-[10px] text-white/40 hover:text-white/60 transition-colors">Privacy Policy</a>
+        <a href="{% url 'terms' %}" class="text-[10px] text-white/40 hover:text-white/60 transition-colors">Terms of Service</a>
+        <a href="{% url 'cookies' %}" class="text-[10px] text-white/40 hover:text-white/60 transition-colors">Cookie Policy</a>
       </div>
     </div>
   </div>
 </footer>
 
-<!-- DEMO MODAL -->
-<div id="demoModal" class="fixed inset-0 z-[80] opacity-0 pointer-events-none transition-opacity duration-150" aria-hidden="true">
-  <div id="demoBackdrop" class="absolute inset-0 bg-ink/60 backdrop-blur-sm"></div>
-  <div class="relative min-h-full flex items-center justify-center p-4">
-    <div class="w-full max-w-4xl card-raised rounded-2xl overflow-hidden">
-      <div class="flex items-center justify-between border-b border-border px-5 py-4 bg-surface-raised">
+<!-- VIDEO MODAL -->
+<div id="videoModal" class="fixed inset-0 z-[90] opacity-0 pointer-events-none transition-opacity duration-300" aria-hidden="true">
+  <div class="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"></div>
+  <div class="relative min-h-full flex items-center justify-center p-4 sm:p-8">
+    <div class="relative w-full max-w-4xl rounded-2xl overflow-hidden shadow-2xl shadow-violet-500/20 border border-slate-200 bg-white">
+      <!-- Modal header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white">
         <div>
-          <p class="section-label mb-0.5">Product demo</p>
-          <h3 class="text-base font-bold text-ink">How IDA works</h3>
+          <p class="text-[10px] font-bold uppercase tracking-widest text-violet-600">Live Preview</p>
+          <h3 class="text-slate-900 font-bold text-sm mt-0.5">IDA Platform — 30-second walkthrough</h3>
         </div>
-        <button type="button" id="closeDemoModal" class="w-8 h-8 rounded-lg border border-border text-ink-muted hover:text-ink flex items-center justify-center transition-colors">
+        <button type="button" id="closeVideoModal" class="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-200 flex items-center justify-center transition-all">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
-      <div class="p-5">
-        <div class="rounded-xl border border-border bg-surface-raised p-5">
-          <div class="grid lg:grid-cols-2 gap-4">
-            <div class="space-y-3">
-              <div class="card p-4">
-                <p class="section-label mb-1">Live campaign</p>
-                <p class="text-sm font-bold text-ink">Q2 Product Launch</p>
-                <p class="text-xs text-ink-muted mt-0.5">14,820 recipients · Scheduled</p>
-              </div>
-              <div class="card p-4">
-                <div class="flex items-center justify-between mb-2">
-                  <p class="section-label mb-0">Spam risk</p>
-                  <span class="chip status-published">Low</span>
+      <!-- Animated "Remotion-style" product demo video — premium IDA dashboard mockup -->
+      <div class="relative bg-white rounded-2xl overflow-hidden shadow-2xl shadow-violet-500/10 border border-slate-200">
+        <!-- Browser chrome — light theme -->
+        <div class="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200">
+          <div class="flex gap-1.5">
+            <div class="w-3 h-3 rounded-full bg-red-400/60"></div>
+            <div class="w-3 h-3 rounded-full bg-amber-400/60"></div>
+            <div class="w-3 h-3 rounded-full bg-emerald-400/60"></div>
+          </div>
+          <div class="flex-1 flex justify-center">
+            <div class="px-5 py-1 rounded-lg bg-white border border-slate-200 text-[10px] text-slate-500 font-medium shadow-sm">
+              app.idadev.techaxis.com.np/dashboard
+            </div>
+          </div>
+          <div class="w-16"></div>
+        </div>
+
+        <!-- Demo content — IDA light theme -->
+        <div class="relative overflow-hidden" style="height:540px; background:#f8fafc;">
+
+          <!-- Scene: full dashboard overview -->
+          <div id="demo-scene" class="absolute inset-0 p-5">
+
+            <!-- Top header bar -->
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center">
+                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                 </div>
-                <div class="queue-bar"><div class="queue-bar-fill bg-emerald-500" style="width:92%"></div></div>
+                <div>
+                  <p class="text-slate-900 font-bold text-sm leading-none">IDA Command Center</p>
+                  <p class="text-slate-400 text-[10px] mt-0.5">June 27, 2026</p>
+                </div>
               </div>
-              <div class="card p-4">
-                <p class="section-label mb-1">AI suggestion</p>
-                <p class="text-xs text-ink-muted">Best send window: <strong class="text-ink">10:30 AM – 11:15 AM</strong></p>
+              <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span class="text-emerald-600 text-[10px] font-bold">Live</span>
+                </div>
+                <div class="w-8 h-8 rounded-xl bg-violet-100 border border-violet-200 flex items-center justify-center">
+                  <svg class="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                </div>
               </div>
             </div>
-            <div class="card p-4">
-              <div class="flex items-center justify-between mb-3">
-                <p class="text-sm font-semibold text-ink">Dashboard</p>
-                <span class="chip status-published">Live</span>
+
+            <!-- KPI strip -->
+            <div class="grid grid-cols-4 gap-3 mb-4" id="demo-kpis">
+              <div class="demo-kpi rounded-xl border border-slate-200 bg-white p-4 opacity-0" data-delay="200" style="opacity:0;transform:translateY(6px);transition:opacity .4s,transform .4s;">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
+                    <svg class="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                  </span>
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </div>
+                <p class="text-2xl font-extrabold text-slate-900 tabular-nums demo-num" data-target="42891">0</p>
+                <p class="text-[10px] font-semibold text-slate-500 mt-0.5">Emails Sent</p>
+                <div class="flex items-center gap-1 mt-1">
+                  <svg class="w-3 h-3 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                  <span class="text-[10px] text-emerald-600 font-bold">+18%</span>
+                </div>
               </div>
-              <div class="grid grid-cols-3 gap-2 mb-3">
-                <div class="bg-surface-raised rounded-lg p-2"><p class="text-[8px] text-ink-subtle">Emails</p><p class="text-sm font-bold text-ink">42.1K</p></div>
-                <div class="bg-surface-raised rounded-lg p-2"><p class="text-[8px] text-ink-subtle">Social</p><p class="text-sm font-bold text-ink">128K</p></div>
-                <div class="bg-surface-raised rounded-lg p-2"><p class="text-[8px] text-ink-subtle">Engage</p><p class="text-sm font-bold text-ink">48.4%</p></div>
+              <div class="demo-kpi rounded-xl border border-slate-200 bg-white p-4 opacity-0" data-delay="400" style="opacity:0;transform:translateY(6px);transition:opacity .4s,transform .4s;">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="w-8 h-8 rounded-lg bg-cyan-100 flex items-center justify-center">
+                    <svg class="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/></svg>
+                  </span>
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </div>
+                <p class="text-2xl font-extrabold text-slate-900 tabular-nums"><span class="demo-num" data-target="42">0</span><span class="text-slate-400">%</span></p>
+                <p class="text-[10px] font-semibold text-slate-500 mt-0.5">Open Rate</p>
+                <div class="flex items-center gap-1 mt-1">
+                  <svg class="w-3 h-3 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                  <span class="text-[10px] text-emerald-600 font-bold">+6.2%</span>
+                </div>
               </div>
-              <div class="h-20 flex items-end gap-1.5">
-                <div class="bar flex-1" style="height:28%"></div>
-                <div class="bar flex-1" style="height:46%"></div>
-                <div class="bar flex-1" style="height:36%"></div>
-                <div class="bar flex-1" style="height:66%"></div>
-                <div class="bar flex-1" style="height:52%"></div>
-                <div class="bar flex-1" style="height:76%"></div>
-                <div class="bar flex-1 accent" style="height:94%"></div>
+              <div class="demo-kpi rounded-xl border border-slate-200 bg-white p-4 opacity-0" data-delay="600" style="opacity:0;transform:translateY(6px);transition:opacity .4s,transform .4s;">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="w-8 h-8 rounded-lg bg-pink-100 flex items-center justify-center">
+                    <svg class="w-4 h-4 text-pink-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/></svg>
+                  </span>
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </div>
+                <p class="text-2xl font-extrabold text-slate-900 tabular-nums"><span class="demo-num" data-target="128">0</span><span class="text-slate-400">K</span></p>
+                <p class="text-[10px] font-semibold text-slate-500 mt-0.5">Social Reach</p>
+                <div class="flex items-center gap-1 mt-1">
+                  <svg class="w-3 h-3 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                  <span class="text-[10px] text-emerald-600 font-bold">+24%</span>
+                </div>
+              </div>
+              <div class="demo-kpi rounded-xl border border-slate-200 bg-white p-4 opacity-0" data-delay="800" style="opacity:0;transform:translateY(6px);transition:opacity .4s,transform .4s;">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  </span>
+                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </div>
+                <p class="text-2xl font-extrabold text-slate-900 tabular-nums"><span class="demo-num" data-target="98">0</span><span class="text-slate-400">%</span></p>
+                <p class="text-[10px] font-semibold text-slate-500 mt-0.5">Deliverability</p>
+                <div class="flex items-center gap-1 mt-1">
+                  <svg class="w-3 h-3 text-violet-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                  <span class="text-[10px] text-violet-600 font-bold">Best ever</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Main content grid -->
+            <div class="grid grid-cols-3 gap-3" style="height: calc(100% - 150px);">
+
+              <!-- Left: Campaigns table -->
+              <div class="col-span-2 rounded-xl border border-slate-200 bg-white overflow-hidden" id="demo-campaigns">
+                <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                  <p class="text-[11px] font-bold text-slate-700">Recent Campaigns</p>
+                  <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 text-[9px] font-bold border border-emerald-200">3 Active</span>
+                    <a href="#" class="text-[10px] text-violet-600 font-semibold hover:underline">View all</a>
+                  </div>
+                </div>
+                <div class="overflow-hidden">
+                  <table class="w-full text-sm">
+                    <thead>
+                      <tr class="border-b border-slate-100">
+                        <th class="text-left text-[9px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Campaign</th>
+                        <th class="text-left text-[9px] font-semibold text-slate-400 uppercase tracking-wider px-3 py-2">Status</th>
+                        <th class="text-left text-[9px] font-semibold text-slate-400 uppercase tracking-wider px-3 py-2">Recipients</th>
+                        <th class="text-left text-[9px] font-semibold text-slate-400 uppercase tracking-wider px-3 py-2">Open Rate</th>
+                        <th class="text-left text-[9px] font-semibold text-slate-400 uppercase tracking-wider px-3 py-2">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="demo-row border-b border-slate-50 hover:bg-slate-50 transition-colors" data-delay="1200" style="opacity:0;transform:translateX(-8px);transition:opacity .35s,transform .35s;">
+                        <td class="px-4 py-2.5"><span class="font-semibold text-slate-700 text-[12px]">Q2 Product Launch</span></td>
+                        <td class="px-3 py-2.5"><span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span> Sent</span></td>
+                        <td class="px-3 py-2.5 text-slate-500 text-[11px]">42,180</td>
+                        <td class="px-3 py-2.5"><span class="font-semibold text-slate-700 text-[11px]">42.3%</span></td>
+                        <td class="px-3 py-2.5 text-slate-400 text-[10px]">Jun 20</td>
+                      </tr>
+                      <tr class="demo-row border-b border-slate-50 hover:bg-slate-50 transition-colors" data-delay="1700" style="opacity:0;transform:translateX(-8px);transition:opacity .35s,transform .35s;">
+                        <td class="px-4 py-2.5"><span class="font-semibold text-slate-700 text-[12px]">Summer Promo Email</span></td>
+                        <td class="px-3 py-2.5"><span class="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block"></span> Scheduled</span></td>
+                        <td class="px-3 py-2.5 text-slate-500 text-[11px]">18,720</td>
+                        <td class="px-3 py-2.5"><span class="font-semibold text-slate-400 text-[11px]">—</span></td>
+                        <td class="px-3 py-2.5 text-slate-400 text-[10px]">Jun 28</td>
+                      </tr>
+                      <tr class="demo-row border-b border-slate-50 hover:bg-slate-50 transition-colors" data-delay="2200" style="opacity:0;transform:translateX(-8px);transition:opacity .35s,transform .35s;">
+                        <td class="px-4 py-2.5"><span class="font-semibold text-slate-700 text-[12px]">Monthly Newsletter #42</span></td>
+                        <td class="px-3 py-2.5"><span class="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-400"><span class="w-1.5 h-1.5 rounded-full bg-slate-400 inline-block"></span> Draft</span></td>
+                        <td class="px-3 py-2.5 text-slate-500 text-[11px]">5,340</td>
+                        <td class="px-3 py-2.5"><span class="font-semibold text-slate-400 text-[11px]">—</span></td>
+                        <td class="px-3 py-2.5 text-slate-400 text-[10px]">Jun 29</td>
+                      </tr>
+                      <tr class="demo-row hover:bg-slate-50 transition-colors" data-delay="2700" style="opacity:0;transform:translateX(-8px);transition:opacity .35s,transform .35s;">
+                        <td class="px-4 py-2.5"><span class="font-semibold text-slate-700 text-[12px]">Re-engagement Flow</span></td>
+                        <td class="px-3 py-2.5"><span class="inline-flex items-center gap-1 text-[10px] font-semibold text-rose-500"><span class="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block"></span> Failed</span></td>
+                        <td class="px-3 py-2.5 text-slate-500 text-[11px]">3,100</td>
+                        <td class="px-3 py-2.5"><span class="font-semibold text-slate-400 text-[11px]">—</span></td>
+                        <td class="px-3 py-2.5 text-slate-400 text-[10px]">Jun 15</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Right column -->
+              <div class="flex flex-col gap-3">
+
+                <!-- Delivery chart -->
+                <div class="rounded-xl border border-slate-200 bg-white p-4 flex-1">
+                  <div class="flex items-center justify-between mb-3">
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Campaign Performance</p>
+                    <span class="text-[9px] text-slate-400">Last 7 days</span>
+                  </div>
+                  <div class="flex items-end gap-1.5 h-20 mb-3" id="demo-bar-chart">
+                    <div class="flex-1 rounded-t-sm bg-violet-200 demo-bbar" data-h="35" style="height:0%;transition:height .6s cubic-bezier(.4,0,.2,1)"></div>
+                    <div class="flex-1 rounded-t-sm bg-violet-300 demo-bbar" data-h="52" style="height:0%;transition:height .6s cubic-bezier(.4,0,.2,1)"></div>
+                    <div class="flex-1 rounded-t-sm bg-violet-200 demo-bbar" data-h="44" style="height:0%;transition:height .6s cubic-bezier(.4,0,.2,1)"></div>
+                    <div class="flex-1 rounded-t-sm bg-violet-400 demo-bbar" data-h="70" style="height:0%;transition:height .6s cubic-bezier(.4,0,.2,1)"></div>
+                    <div class="flex-1 rounded-t-sm bg-violet-300 demo-bbar" data-h="58" style="height:0%;transition:height .6s cubic-bezier(.4,0,.2,1)"></div>
+                    <div class="flex-1 rounded-t-sm bg-violet-200 demo-bbar" data-h="50" style="height:0%;transition:height .6s cubic-bezier(.4,0,.2,1)"></div>
+                    <div class="flex-1 rounded-t-sm bg-gradient-to-t from-violet-600 to-cyan-400 demo-bbar" data-h="92" style="height:0%;transition:height .6s cubic-bezier(.4,0,.2,1)"></div>
+                  </div>
+                  <div class="flex items-center justify-between text-[10px] text-slate-400">
+                    <span>Mon</span>
+                    <span>Wed</span>
+                    <span>Fri</span>
+                    <span>Sun</span>
+                  </div>
+                </div>
+
+                <!-- Activity feed -->
+                <div class="rounded-xl border border-slate-200 bg-white shadow-sm p-4">
+                  <div class="flex items-center justify-between mb-3">
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Live Activity</p>
+                    <span class="flex items-center gap-1 text-[9px] font-bold text-emerald-600">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live
+                    </span>
+                  </div>
+                  <div class="space-y-2.5">
+                    <div class="demo-act flex items-start gap-2.5 opacity-0" data-delay="3200" style="opacity:0;transition:opacity .3s;">
+                      <div class="w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <p class="text-[11px] font-semibold text-slate-900 leading-tight">Campaign "Q2 Launch" sent</p>
+                        <p class="text-[10px] text-slate-500 mt-0.5">42,180 recipients · 2m ago</p>
+                      </div>
+                    </div>
+                    <div class="demo-act flex items-start gap-2.5 opacity-0" data-delay="3700" style="opacity:0;transition:opacity .3s;">
+                      <div class="w-7 h-7 rounded-lg bg-violet-50 border border-violet-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg class="w-3.5 h-3.5 text-violet-600" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0"/></svg>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <p class="text-[11px] font-semibold text-slate-900 leading-tight">AI draft reply generated</p>
+                        <p class="text-[10px] text-slate-500 mt-0.5">Inbox auto-reply · 5m ago</p>
+                      </div>
+                    </div>
+                    <div class="demo-act flex items-start gap-2.5 opacity-0" data-delay="4200" style="opacity:0;transition:opacity .3s;">
+                      <div class="w-7 h-7 rounded-lg bg-cyan-50 border border-cyan-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg class="w-3.5 h-3.5 text-cyan-600" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M13 19l-4-4 4-4m6-4l-4 4 4 4M3 12h18"/></svg>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <p class="text-[11px] font-semibold text-slate-900 leading-tight">Social post published</p>
+                        <p class="text-[10px] text-slate-500 mt-0.5">LinkedIn · 12m ago</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
+
+          
+
+          <!-- Progress bar at bottom - IDA theme -->
+          <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-200">
+            <div id="demo-progress" class="h-full bg-gradient-to-r from-violet-600 via-purple-600 to-cyan-500 rounded-r-full" style="width:0%"></div>
+          </div>
+
         </div>
-        <div class="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p class="text-xs text-ink-subtle">Interactive preview of the IDA platform across every channel.</p>
-          <a href="{% url 'accounts:register' %}" class="inline-flex items-center justify-center bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-md shadow-primary/20">Start for free</a>
-        </div>
+      </div>
+      <!-- Modal footer -->
+      <div class="px-6 py-4 border-t border-slate-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-3">
+        <p class="text-slate-600 text-xs">Interactive preview of the IDA platform — email, social, AI content & automations.</p>
+        <a href="{% if user.is_authenticated %}{% url 'dashboard:dashboard' %}{% else %}{% url 'accounts:register' %}{% endif %}"
+           class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-xs font-bold
+                  bg-gradient-to-r from-violet-600 to-cyan-500 hover:shadow-lg hover:-translate-y-0.5 transition-all">
+          Start for free
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
       </div>
     </div>
   </div>
@@ -808,17 +1060,137 @@
   var obs=new IntersectionObserver(function(entries,o){entries.forEach(function(entry){if(!entry.isIntersecting)return;var el=entry.target,target=(el.dataset.target||'').trim();var match=target.match(/^([\d,.]+)([^\d,.].*)$/)||target.match(/^([\d,.]+)([%+]?)$/);if(!match){el.textContent=target;o.unobserve(el);return;}var num=parseFloat((match[1]||'').replace(/,/g,'')),suffix=match[2]||'';var decimals=(match[1].split('.')[1]||'').length;var dur=1500,start=null;var step=function(ts){if(!start)start=ts;var p=Math.min((ts-start)/dur,1),ease=1-Math.pow(1-p,3);var cur=num*ease;el.textContent=(decimals>0?cur.toFixed(decimals):Math.round(cur).toLocaleString())+suffix;if(p<1)requestAnimationFrame(step);else el.textContent=match[1]+suffix;};requestAnimationFrame(step);o.unobserve(el);});},{threshold:.45});
   nodes.forEach(function(n){obs.observe(n);});
 })();
-/* demo modal */
+/* video modal — animated demo player */
 (function(){
-  var modal=document.getElementById('demoModal');
-  var open=document.getElementById('openDemoModal');
-  var close=document.getElementById('closeDemoModal');
-  var backdrop=document.getElementById('demoBackdrop');
-  if(!modal||!open||!close||!backdrop)return;
-  var show=function(){modal.classList.remove('opacity-0','pointer-events-none');modal.classList.add('opacity-100');modal.setAttribute('aria-hidden','false');document.body.classList.add('overflow-hidden');};
-  var hide=function(){modal.classList.remove('opacity-100');modal.classList.add('opacity-0','pointer-events-none');modal.setAttribute('aria-hidden','true');document.body.classList.remove('overflow-hidden');};
-  open.addEventListener('click',show);close.addEventListener('click',hide);backdrop.addEventListener('click',hide);
-  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&modal.classList.contains('opacity-100'))hide();});
+  var modal = document.getElementById('videoModal');
+  var open = document.getElementById('openDemoModal');
+  var close = document.getElementById('closeVideoModal');
+  if (!modal || !open || !close) return;
+
+  var show = function() {
+    modal.classList.remove('opacity-0','pointer-events-none');
+    modal.classList.add('opacity-100');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('overflow-hidden');
+    runDemo();
+  };
+
+  var hide = function() {
+    modal.classList.remove('opacity-100');
+    modal.classList.add('opacity-0','pointer-events-none');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('overflow-hidden');
+    stopDemo();
+  };
+
+  open.addEventListener('click', show);
+  close.addEventListener('click', hide);
+  modal.addEventListener('click', function(e) { if (e.target === modal) hide(); });
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && modal.classList.contains('opacity-100')) hide(); });
+
+  /* ── Animated demo engine ── */
+  var demoRunning = false;
+  var demoTimer = null;
+  var progressBar = document.getElementById('demo-progress');
+
+  function stopDemo() {
+    demoRunning = false;
+    clearTimeout(demoTimer);
+    var pf = requestAnimationFrame;
+    if (progressBar) progressBar.style.width = '0%';
+    // Reset KPIs
+    document.querySelectorAll('.demo-kpi').forEach(function(el){
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(6px)';
+    });
+    // Reset rows
+    document.querySelectorAll('.demo-row').forEach(function(el){
+      el.style.opacity = '0';
+      el.style.transform = 'translateX(-8px)';
+    });
+    // Reset activity
+    document.querySelectorAll('.demo-act').forEach(function(el){
+      el.style.opacity = '0';
+    });
+    // Reset chart bars
+    document.querySelectorAll('.demo-bbar').forEach(function(el){
+      el.style.height = '0%';
+    });
+  }
+
+  function animateNum(el, target, suffix, dur) {
+    var start = null;
+    var num = parseFloat(target);
+    var dec = (String(target).split('.')[1] || '').length;
+    var step = function(ts) {
+      if (!start) start = ts;
+      var p = Math.min((ts - start) / dur, 1);
+      var ease = 1 - Math.pow(1 - p, 3);
+      el.textContent = (dec > 0 ? (num * ease).toFixed(dec) : Math.round(num * ease).toLocaleString()) + (suffix || '');
+      if (p < 1) requestAnimationFrame(step);
+      else el.textContent = target + (suffix || '');
+    };
+    requestAnimationFrame(step);
+  }
+
+  function runDemo() {
+    stopDemo();
+    demoRunning = true;
+    var duration = 8000;
+    var startTime = Date.now();
+
+    // Helper to schedule
+    function at(delay, fn) {
+      demoTimer = setTimeout(function() { if (demoRunning) fn(); }, delay);
+    }
+
+    // Animate chart bars (staggered)
+    document.querySelectorAll('.demo-bbar').forEach(function(bar, i) {
+      at(300 + i * 90, function() {
+        bar.style.height = bar.dataset.h + '%';
+      });
+    });
+
+    // KPI cards fade in sequentially
+    document.querySelectorAll('.demo-kpi').forEach(function(kpi, i) {
+      at(parseInt(kpi.dataset.delay || '0'), function() {
+        kpi.style.opacity = '1';
+        kpi.style.transform = 'translateY(0)';
+        // Animate the number
+        var numEl = kpi.querySelector('.demo-num');
+        if (numEl) animateNum(numEl, numEl.dataset.target, numEl.dataset.suffix || '', 900);
+      });
+    });
+
+    // Campaign rows slide in
+    document.querySelectorAll('.demo-row').forEach(function(row) {
+      at(parseInt(row.dataset.delay || '0'), function() {
+        row.style.opacity = '1';
+        row.style.transform = 'translateX(0)';
+      });
+    });
+
+    // Activity items fade in
+    document.querySelectorAll('.demo-act').forEach(function(act) {
+      at(parseInt(act.dataset.delay || '0'), function() {
+        act.style.opacity = '1';
+      });
+    });
+
+    // Progress bar
+    function tickProgress() {
+      if (!demoRunning) return;
+      var elapsed = Date.now() - startTime;
+      var pct = Math.min((elapsed / duration) * 100, 100);
+      if (progressBar) progressBar.style.width = pct + '%';
+      if (elapsed < duration) {
+        requestAnimationFrame(tickProgress);
+      } else {
+        if (progressBar) progressBar.style.width = '100%';
+      }
+    }
+    requestAnimationFrame(tickProgress);
+  }
 })();
 /* faq */
 (function(){
@@ -828,20 +1200,17 @@
     trigger.addEventListener('click',function(){var isOpen=item.classList.contains('open');document.querySelectorAll('.faq-item').forEach(function(i){i.classList.remove('open');});if(!isOpen)item.classList.add('open');});
   });
 })();
-/* price toggle */
+/* bento mobile tap toggle */
 (function(){
-  var prices=document.querySelectorAll('.price-display');
-  var periods=document.querySelectorAll('.billing-period');
-  var monthly=document.getElementById('toggle-monthly-btn');
-  var yearly=document.getElementById('toggle-yearly-btn');
-  if(!prices.length||!monthly||!yearly)return;
-  function setFreq(freq){
-    prices.forEach(function(el){el.textContent=el.dataset[freq]||'';});
-    periods.forEach(function(el){el.textContent=freq==='yearly'?(el.dataset.yearly||'/year'):(el.dataset.monthly||'/month');});
-    if(freq==='monthly'){monthly.classList.add('active');yearly.classList.remove('active');}
-    else{yearly.classList.add('active');monthly.classList.remove('active');}
-  }
-  monthly.onclick=function(){setFreq('monthly');};yearly.onclick=function(){setFreq('yearly');};setFreq('monthly');
+  var cards=document.querySelectorAll('.bento-card');
+  if(!cards.length||window.matchMedia('(hover:hover)').matches)return;
+  cards.forEach(function(c){
+    c.addEventListener('click',function(e){
+      var wasActive=c.classList.contains('active');
+      cards.forEach(function(x){x.classList.remove('active');});
+      if(!wasActive)c.classList.add('active');
+    });
+  });
 })();
 </script>
 {% endblock %}

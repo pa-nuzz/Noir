@@ -34,10 +34,9 @@ def candidate_fernets(include_expired=False):
         key = normalize_key(raw_key)
         if key:
             yield Fernet(key)
-    if getattr(settings, 'DEBUG', False):
-        dev_key = dev_fallback_key()
-        if dev_key:
-            yield Fernet(dev_key)
+    dev_key = dev_fallback_key()
+    if dev_key:
+        yield Fernet(dev_key)
 
 
 def get_fernet():

@@ -278,11 +278,7 @@ function autoExecute() {
         showTrendingToast(data.processed + ' item(s) saved to Content Items', 'success');
         setTimeout(function() { location.reload(); }, 1500);
       } else if (data.success && data.processed === 0) {
-        var errMsg = data.errors && data.errors.length ? ': ' + data.errors[0] : '';
-        statusEl.textContent = '✓ 0 new items' + errMsg;
-      } else if (data.errors && data.errors.length) {
-        statusEl.textContent = '✗ ' + data.errors[0];
-        showTrendingToast(data.errors[0], 'error');
+        statusEl.textContent = '✓ Already processed (0 new items)';
       } else {
         statusEl.textContent = '✗ Action failed';
         showTrendingToast(data.error || 'Action failed', 'error');

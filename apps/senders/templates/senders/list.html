@@ -1,0 +1,176 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}SMTP Senders — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}SMTP Sender Profiles{% endblock %}
+{% block content %}
+<div class="page-shell max-w-none space-y-6">
+
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <p class="eyebrow">Email Settings</p>
+      <h1 class="page-title mt-2">SMTP Senders</h1>
+      <p class="page-lead">Configure and manage your email sending profiles</p>
+    </div>
+    <a href="{% url 'dashboard:settings' %}" class="btn-action btn-action-primary whitespace-nowrap">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      Add Sender
+    </a>
+  </div>
+
+  {% if not senders %}
+  <div class="text-center py-16 bg-white rounded-2xl border border-slate-200">
+    <svg class="w-16 h-16 text-slate-200 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+    <h3 class="text-lg font-bold text-slate-800 mb-1">No Sender Profiles</h3>
+    <p class="text-sm text-slate-500 mb-6">Add an SMTP sender to start sending email campaigns.</p>
+    <a href="{% url 'dashboard:settings' %}" class="btn-action btn-action-primary">Add Your First Sender</a>
+  </div>
+  {% else %}
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+    {% for sender in senders %}
+    <div class="glass-card overflow-hidden flex flex-col" data-sender-card="{{ sender.id }}">
+      <div class="p-5 border-b border-slate-100">
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex-1 min-w-0">
+            <h3 class="font-semibold text-slate-900 truncate">{{ sender.display_name }}</h3>
+            <p class="text-xs text-slate-500 mt-0.5 font-mono">{{ sender.from_email }}</p>
+          </div>
+          {% if sender.is_verified %}
+          <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Verified</span>
+          {% else %}
+          <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">Pending</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="px-5 py-4 flex-1 space-y-2 text-xs text-slate-600 bg-slate-50/30">
+        <div class="flex items-center justify-between">
+          <span class="text-slate-400">SMTP</span>
+          <span class="font-mono font-semibold text-slate-700">{{ sender.smtp_host }}:{{ sender.smtp_port }}</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-slate-400">Provider</span>
+          <span class="font-medium text-slate-700">{{ sender.get_provider_display }}</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-slate-400">Daily Usage</span>
+          <span class="font-medium text-slate-700">{{ sender.emails_sent_today }} / {{ sender.daily_limit }}</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-slate-400">Delay</span>
+          <span class="font-medium text-slate-700">{{ sender.send_delay_seconds }}s</span>
+        </div>
+        {% if sender.last_verified_at %}
+        <div class="flex items-center justify-between">
+          <span class="text-slate-400">Last Verified</span>
+          <span class="font-medium text-slate-700">{{ sender.last_verified_at|date:"M d, Y" }}</span>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="p-4 border-t border-slate-100 bg-slate-50/30 flex items-center gap-2">
+        <button type="button" class="sender-test-btn flex-1 btn-action btn-action-secondary btn-sm text-center cursor-pointer"
+          data-sender-id="{{ sender.id }}"
+          data-host="{{ sender.smtp_host }}"
+          data-port="{{ sender.smtp_port }}"
+          data-username="{{ sender.username }}"
+          data-from-email="{{ sender.from_email }}"
+          data-use-tls="{{ sender.use_tls|yesno:'true,false' }}"
+        >Test Connection</button>
+        <button type="button" class="sender-dns-btn btn-action btn-action-secondary btn-sm cursor-pointer"
+          data-domain="{{ sender.from_email|split:'@'|last }}"
+          data-smtp-host="{{ sender.smtp_host }}"
+        >Audit DNS</button>
+        <form method="post" action="{% url 'dashboard:settings' %}" class="inline" onsubmit="return confirm('Delete sender "{{ sender.display_name|escapejs }}"?')">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete_sender">
+          <input type="hidden" name="sender_id" value="{{ sender.id }}">
+          <button type="submit" class="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function() {
+  var getCookie = function(name) { var m = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)')); return m ? m[2] : ''; };
+  var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken') || '';
+
+  document.querySelectorAll('.sender-test-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var password = prompt('Enter SMTP password / app password for testing:');
+      if (!password) return;
+      btn.disabled = true;
+      btn.textContent = 'Testing...';
+      fetch("{% url 'senders:verify_sender' %}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({
+          sender_id: btn.dataset.senderId,
+          host: btn.dataset.host,
+          port: parseInt(btn.dataset.port),
+          username: btn.dataset.username,
+          from_email: btn.dataset.fromEmail,
+          password: password,
+          use_tls: btn.dataset.useTls !== 'false',
+        }),
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success) {
+          if (typeof showToast === 'function') showToast('success', data.message || 'Sender verified!');
+          else alert('Success: ' + (data.message || 'Sender verified!'));
+          setTimeout(function() { location.reload(); }, 1200);
+        } else {
+          if (typeof showToast === 'function') showToast('error', data.error || 'Verification failed');
+          else alert('Error: ' + (data.error || 'Verification failed'));
+        }
+      })
+      .catch(function() {
+        if (typeof showToast === 'function') showToast('error', 'Network error during verification');
+        else alert('Network error during verification');
+      })
+      .finally(function() { btn.disabled = false; btn.textContent = 'Test Connection'; });
+    });
+  });
+
+  document.querySelectorAll('.sender-dns-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var domain = btn.dataset.domain;
+      var smtpHost = btn.dataset.smtpHost;
+      btn.disabled = true;
+      btn.textContent = 'Auditing...';
+      fetch("{% url 'senders:audit_dns' %}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({ domain: domain, smtp_host: smtpHost || null }),
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success) {
+          var msg = 'DNS Audit for ' + domain + '\nScore: ' + data.score + '/100 — ' + data.overall_status;
+          if (data.checks) data.checks.forEach(function(c) { msg += '\n• ' + c.check + ': ' + c.status; });
+          if (typeof showToast === 'function') showToast('success', 'Score: ' + data.score + '/100 — ' + data.overall_status);
+          else alert(msg);
+        } else {
+          if (typeof showToast === 'function') showToast('error', data.error || 'DNS audit failed');
+          else alert('Error: ' + (data.error || 'DNS audit failed'));
+        }
+      })
+      .catch(function() {
+        if (typeof showToast === 'function') showToast('error', 'Network error during DNS audit');
+        else alert('Network error during DNS audit');
+      })
+      .finally(function() { btn.disabled = false; btn.textContent = 'Audit DNS'; });
+    });
+  });
+})();
+</script>
+{% endblock %}

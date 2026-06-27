@@ -226,7 +226,7 @@ def landing_view(request):
         "color": "bg-indigo-100 text-indigo-600"
     },
     {
-        "quote": "Intelligent Digital Automation (IDA)'s automation builder is the cleanest I've used. We set up a 12-step onboarding sequence in an afternoon — something that took us weeks with our old provider.",
+        "quote": "IDA's automation builder is the cleanest I've used. We set up a 12-step onboarding sequence in an afternoon — something that took us weeks with our old provider.",
         "author": "Anuj Paudel",
         "role": "CTO",
         "company": "Stackpath",
@@ -242,7 +242,7 @@ def landing_view(request):
         "color": "bg-slate-200 text-slate-600"
     },
     {
-        "quote": "We run seasonal campaigns for multiple retail brands. Intelligent Digital Automation (IDA) helped us stabilize sender reputation and cut bounce complaints by more than half.",
+        "quote": "We run seasonal campaigns for multiple retail brands. IDA helped us stabilize sender reputation and cut bounce complaints by more than half.",
         "author": "Sujan Khadka",
         "role": "CRM Lead",
         "company": "Orbit Commerce",
@@ -453,8 +453,9 @@ def landing_view(request):
         "number": "01",
         "title": "Connect your channels",
         "description": "Bring email, social, contacts, and content tools together in minutes — no code, no migration headaches.",
+        "cta": "Get started free",
         "icon_svg": """
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
           <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 015.656 0l1.415 1.415a4 4 0 010 5.656l-3 3a4 4 0 01-5.656 0M10.172 13.828a4 4 0 01-5.656 0l-1.415-1.415a4 4 0 010-5.656l3-3a4 4 0 015.656 0"/>
         </svg>
         """
@@ -463,8 +464,9 @@ def landing_view(request):
         "number": "02",
         "title": "Build with AI",
         "description": "Generate copy, design flows, and optimize sends with AI trained on millions of high-performing campaigns.",
+        "cta": None,
         "icon_svg": """
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
           <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
         </svg>
         """
@@ -473,8 +475,9 @@ def landing_view(request):
         "number": "03",
         "title": "Launch & measure",
         "description": "Send across every channel and watch real-time analytics tell you exactly what's working — and what to improve next.",
+        "cta": "Start sending today",
         "icon_svg": """
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
           <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
         </svg>
         """
@@ -499,11 +502,11 @@ def landing_view(request):
     faqs = [
     {
         "question": "What channels does DIA support?",
-        "answer": "DIA supports email (any SMTP, plus Gmail and Outlook), six social platforms (Facebook, Instagram, X, LinkedIn, TikTok, YouTube), a built-in content studio, and a unified inbox. You can also wire in any tool via webhooks or Zapier."
+        "answer": "IDA supports email (any SMTP, plus Gmail and Outlook), six social platforms (Facebook, Instagram, X, LinkedIn, TikTok, YouTube), a built-in content studio, and a unified inbox. You can also wire in any tool via webhooks or Zapier."
     },
     {
         "question": "How does the AI optimization work?",
-        "answer": "DIA's AI analyzes your historical send data, audience behavior, and industry benchmarks to recommend subject lines, send times, content variations, and audience segments. It also runs a pre-send spam score so you know how an email will perform before it goes out."
+        "answer": "IDA's AI analyzes your historical send data, audience behavior, and industry benchmarks to recommend subject lines, send times, content variations, and audience segments. It also runs a pre-send spam score so you know how an email will perform before it goes out."
     },
     {
         "question": "Can I import my existing contacts and campaigns?",
@@ -529,7 +532,6 @@ def landing_view(request):
         "feature_categories": feature_categories,
         "testimonials": testimonials,
         "stats": stats,
-        "plans": plans,
         "product_modules": product_modules,
         "workflow_steps": workflow_steps,
         "integrations": integrations,

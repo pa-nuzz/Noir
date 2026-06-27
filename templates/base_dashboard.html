@@ -50,6 +50,7 @@
               'toast-in':  'toast-in .4s ease-out forwards',
               'toast-out': 'toast-out .4s ease-in forwards',
             },
+            maxWidth: { '8xl': '88rem' },
           },
         },
       };
@@ -91,6 +92,132 @@
         background: rgba(255, 255, 255, 0.96);
       }
 
+      .glass-topbar {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+      }
+
+      
+      .btn-premium {
+        display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+        font-weight: 600; border: none; cursor: pointer;
+        transition: all 0.18s ease; text-decoration: none;
+        white-space: nowrap; position: relative; overflow: hidden;
+      }
+      .btn-premium:focus { outline: none; }
+      .btn-premium:focus-visible { box-shadow: 0 0 0 3px rgba(109,40,217,0.3); }
+      .btn-premium.primary {
+        background: linear-gradient(135deg, #6D28D9 0%, #7C3AED 50%, #06B6D4 100%);
+        color: #fff; border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(109,40,217,0.3);
+        padding: 9px 18px; font-size: 13.5px;
+      }
+      .btn-premium.primary:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(109,40,217,0.35);
+      }
+      .btn-premium.primary:active:not(:disabled) { transform: translateY(0); }
+      .btn-premium.secondary {
+        background: rgba(255,255,255,0.9); color: #0A2540;
+        border: 1px solid #E2E8F0; border-radius: 10px;
+        padding: 9px 18px; font-size: 13.5px;
+        box-shadow: 0 1px 3px rgba(15,23,42,0.06);
+      }
+      .btn-premium.secondary:hover:not(:disabled) {
+        background: #fff; border-color: #6D28D9; color: #6D28D9;
+        transform: translateY(-1px);
+      }
+      .btn-premium.danger {
+        background: rgba(239,68,68,0.08); color: #DC2626;
+        border: 1px solid rgba(239,68,68,0.2); border-radius: 10px;
+        padding: 9px 18px; font-size: 13.5px;
+      }
+      .btn-premium.danger:hover:not(:disabled) {
+        background: rgba(239,68,68,0.12); transform: translateY(-1px);
+      }
+      .btn-premium:disabled { opacity: 0.55; cursor: not-allowed; transform: none !important; }
+      .btn-premium .spinner {
+        width: 14px; height: 14px; border-radius: 50%;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: #fff; animation: spin 0.6s linear infinite;
+      }
+      .btn-premium.secondary .spinner, .btn-premium.danger .spinner {
+        border: 2px solid rgba(0,0,0,0.15); border-top-color: #6D28D9;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      /* ===== Premium Content Cards ===== */
+      .premium-card {
+        background: #fff; border: 1px solid #E2E8F0;
+        border-radius: 14px; transition: all 0.18s ease;
+      }
+      .premium-card:hover {
+        border-color: #C4B5FD; box-shadow: 0 4px 20px rgba(109,40,217,0.08);
+        transform: translateY(-1px);
+      }
+      .premium-stat {
+        background: linear-gradient(135deg, rgba(109,40,217,0.04) 0%, rgba(6,182,212,0.04) 100%);
+        border: 1px solid rgba(109,40,217,0.08);
+        border-radius: 14px; padding: 20px;
+      }
+      .premium-stat .stat-value {
+        font-size: 28px; font-weight: 800; color: #0A2540; line-height: 1;
+        letter-spacing: -0.02em;
+      }
+      .premium-stat .stat-label {
+        font-size: 12px; font-weight: 600; color: #94A3B8; text-transform: uppercase;
+        letter-spacing: 0.05em; margin-top: 4px;
+      }
+      .premium-stat .stat-change {
+        font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 3px;
+        margin-top: 8px; padding: 2px 8px; border-radius: 99px;
+      }
+      .stat-change.up { color: #059669; background: rgba(5,150,105,0.08); }
+      .stat-change.down { color: #DC2626; background: rgba(220,38,38,0.08); }
+
+      /* ===== Premium Table ===== */
+      .premium-table { width: 100%; border-collapse: collapse; }
+      .premium-table th {
+        font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+        color: #94A3B8; padding: 10px 16px; text-align: left;
+        border-bottom: 1px solid #F1F5F9;
+      }
+      .premium-table td {
+        padding: 14px 16px; font-size: 13.5px; color: #0A2540;
+        border-bottom: 1px solid #F8FAFC; vertical-align: middle;
+      }
+      .premium-table tr:hover td { background: #FAFAFA; }
+      .premium-table tr:last-child td { border-bottom: none; }
+
+      /* ===== Premium Badge ===== */
+      .badge-premium {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 700;
+      }
+      .badge-premium.success { background: rgba(5,150,105,0.1); color: #059669; }
+      .badge-premium.warning { background: rgba(245,158,11,0.1); color: #D97706; }
+      .badge-premium.danger { background: rgba(220,38,38,0.1); color: #DC2626; }
+      .badge-premium.info { background: rgba(6,182,212,0.1); color: #0891B2; }
+      .badge-premium.neutral { background: #F1F5F9; color: #64748B; }
+      .badge-premium.purple { background: rgba(109,40,217,0.1); color: #6D28D9; }
+
+      /* ===== Premium Empty State ===== */
+      .empty-state {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        padding: 60px 20px; text-align: center;
+      }
+      .empty-state .empty-icon {
+        width: 56px; height: 56px; border-radius: 16px;
+        background: linear-gradient(135deg, rgba(109,40,217,0.08), rgba(6,182,212,0.08));
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 16px;
+      }
+      .empty-state .empty-title { font-size: 16px; font-weight: 700; color: #0A2540; margin-bottom: 6px; }
+      .empty-state .empty-desc { font-size: 13px; color: #94A3B8; max-width: 320px; line-height: 1.6; }
+
       .ida-layout * { box-sizing: border-box; margin: 0; padding: 0; }
       .ida-layout { display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: #F8FAFC; font-family:"Raleway", system-ui, sans-serif; }
       .ida-topbar { height: 56px; background: #fff; border-bottom: 0.5px solid var(--border-subtle); display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0; }
@@ -128,12 +255,12 @@
 
     </style>
   </head>
-  <body class="premium-bg text-[#0F1117] font-sans min-h-screen flex flex-col relative overflow-x-hidden" style="font-family:'Raleway',system-ui,sans-serif">
+  <body class="premium-bg text-[#0F1117] font-sans min-h-screen flex flex-col relative overflow-x-auto" style="font-family:'Raleway',system-ui,sans-serif">
     <!-- Sidebar -->
     <aside class="sidebar w-64 bg-white border-r border-slate-200 hidden lg:flex flex-col fixed h-full z-30 shadow-[10px_0_24px_rgba(15,23,42,0.08)]">
       <div class="px-6 py-5 border-b border-white/10">
         <a href="{% url 'dashboard:dashboard' %}" class="inline-flex items-center">
-          <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="Intelligent Digital Automation (IDA) Logo" class="h-[39px] w-auto" />
+          <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="IDA" class="h-[39px] w-auto" />
         </a>
       </div>
 
@@ -290,7 +417,11 @@
               <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
               Analytics
             </a>
-            <a href="{% url 'workspaces:list' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'workspaces' %}active{% endif %}">
+            <a href="{% url 'workspaces:storage_settings' %}" class="sidebar-link sub-link {% if request.resolver_match.url_name == 'storage_settings' or request.resolver_match.url_name == 'storage_google_drive_callback' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
+              Storage
+            </a>
+            <a href="{% url 'workspaces:list' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'workspaces' and request.resolver_match.url_name != 'storage_settings' %}active{% endif %}">
               <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>
               Workspace
             </a>
@@ -452,7 +583,10 @@
             <a href="{% url 'dashboard:analytics' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'dashboard' and request.resolver_match.url_name == 'analytics' %}active{% endif %}">
               <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>Analytics
             </a>
-            <a href="{% url 'workspaces:list' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'workspaces' %}active{% endif %}">
+            <a href="{% url 'workspaces:storage_settings' %}" class="sidebar-link sub-link {% if request.resolver_match.url_name == 'storage_settings' or request.resolver_match.url_name == 'storage_google_drive_callback' %}active{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>Storage
+            </a>
+            <a href="{% url 'workspaces:list' %}" class="sidebar-link sub-link {% if request.resolver_match.namespace == 'workspaces' and request.resolver_match.url_name != 'storage_settings' %}active{% endif %}">
               <span class="w-1.5 h-1.5 rounded-full bg-current mr-3 opacity-40 flex-shrink-0"></span>Workspace
             </a>
           </div>
@@ -489,7 +623,7 @@
     <!-- Main Content Area -->
     <div class="flex-grow lg:ml-64 flex flex-col min-h-screen">
       <!-- Header -->
-      <header class="fixed top-0 left-0 lg:left-64 right-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-sm shadow-sm">
+      <header class="glass-topbar fixed top-0 left-0 lg:left-64 right-0 z-30">
         <div class="h-[68px] px-4 sm:px-6 lg:px-8">
           <div class="flex h-full items-center justify-between gap-4">
 
@@ -821,7 +955,12 @@
               <!-- Workspaces Section -->
               {% elif app_name == 'workspaces' %}
                 <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                {% if view_name == 'social_hub' %}
+                {% if view_name == 'storage_settings' or view_name == 'storage_google_drive_callback' %}
+                  <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 014-4h.5a5.5 5.5 0 0110.78-1.5A4.5 4.5 0 0118 19h-1a3 3 0 00-3-3v-1a3 3 0 00-6 0v1a3 3 0 00-3 3H3z"/></svg>
+                    Storage
+                  </span>
+                {% elif view_name == 'social_hub' %}
                   <span class="text-slate-900 font-semibold p-2 flex items-center gap-1">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                     Social Hub
@@ -1469,6 +1608,18 @@
       .safe-area-bottom {
         padding-bottom: env(safe-area-inset-bottom, 0px);
       }
+
+      .htmx-indicator {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 200ms ease-in;
+      }
+      .htmx-request .htmx-indicator,
+      .htmx-indicator.htmx-request {
+        opacity: 1;
+        pointer-events: auto;
+        transition: opacity 200ms ease-out;
+      }
     </style>
 
     <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
@@ -1476,6 +1627,12 @@
       document.body.addEventListener('htmx:beforeRequest', function(evt) {
         var csrf = document.querySelector('[name=csrfmiddlewaretoken]');
         if (csrf) evt.detail.requestConfig.headers['X-CSRFToken'] = csrf.value;
+      });
+      document.body.addEventListener('htmx:sendTimeout', function(evt) {
+        console.error('HTMX request timeout');
+      });
+      document.body.addEventListener('htmx:responseError', function(evt) {
+        console.error('HTMX response error:', evt.detail.xhr.status, evt.detail.xhr.statusText);
       });
     </script>
 </body>

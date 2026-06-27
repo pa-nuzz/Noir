@@ -38,7 +38,8 @@ def require_workspace_permission(module, action):
             ...
 
     The check is performed against the active workspace in the session.
-    Falls back to allowing all if no active workspace (personal mode).
+    If no active workspace is set (personal mode), the request proceeds but
+    data access is controlled by filter_by_context in the view.
     """
     def decorator(view_func):
         @wraps(view_func)
@@ -52,7 +53,6 @@ def require_workspace_permission(module, action):
             if not membership:
                 messages.error(request, 'You do not have access to this workspace.')
                 return redirect('workspaces:list')
-            # Owner bypass
             if membership.role == 'owner':
                 return view_func(request, *args, **kwargs)
             perm = WorkspacePermission.objects.filter(

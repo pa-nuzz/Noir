@@ -255,7 +255,22 @@
             </div>
           </div>
 
-
+          {% if is_using_server_storage %}
+          <div class="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm">
+            <p class="font-semibold text-amber-800">You're using server storage</p>
+            <p class="mt-1 text-amber-700 leading-relaxed">
+              Switch to Google Drive or S3-Compatible storage to reduce your monthly cost to <strong>Rs 0</strong>.
+              <a href="{% url 'workspaces:storage_settings' %}" class="underline font-semibold">Manage storage backends</a>
+            </p>
+          </div>
+          {% else %}
+          <div class="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm">
+            <p class="font-semibold text-emerald-800">You're using your own storage</p>
+            <p class="mt-1 text-emerald-700 leading-relaxed">
+              Your files are stored on your own {{ config.get_backend_display }}. No storage fees.
+            </p>
+          </div>
+          {% endif %}
         </div>
         {% else %}
         <p class="text-sm text-slate-500">No storage backend configured yet.</p>

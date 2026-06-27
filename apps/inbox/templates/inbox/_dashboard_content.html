@@ -1,11 +1,5 @@
 {% load inbox_filters %}
 
-<div id="inbox-content"  
-hx-indicator="#inbox-loading">
-<div id="inbox-loading" class="htmx-indicator fixed top-4 right-4 z-50 flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-xl px-4 py-2 shadow-lg border border-slate-200 text-sm font-semibold text-primary">
-  <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-  Loading...
-</div>
 {% if messages %}
 <div class="space-y-2 mb-4">
   {% for message in messages %}
@@ -20,7 +14,9 @@ hx-indicator="#inbox-loading">
   {% endfor %}
 </div>
 {% endif %}
-<div class="space-y-6">
+
+<!-- Header + account selector (persistent, not swapped) -->
+<div id="inbox-header-area" class="space-y-4 mb-6">
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div class="flex items-center gap-4 min-w-0">
       <div class="min-w-0">
@@ -41,11 +37,12 @@ hx-indicator="#inbox-loading">
       <div class="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0 w-full sm:w-auto">
         <div class="relative w-full sm:w-auto">
           <select name="inbox_id"
+            id="inbox-account-select"
             hx-get="{% url 'inbox:dashboard' %}"
-            hx-target="#inbox-content"
+            hx-target="#inbox-messages-area"
             hx-push-url="true"
             hx-trigger="change"
-            hx-include="[name='folder']"
+            hx-include="[name='inbox_id'],[name='folder']"
             class="appearance-none bg-white border border-slate-200 rounded-xl px-4 py-2 pr-8 text-sm font-semibold text-slate-700 hover:border-primary/30 cursor-pointer w-full sm:min-w-[200px] focus:outline-none focus:ring-2 focus:ring-primary/20">
             {% for ib in inboxes %}
             <option value="{{ ib.id }}" {% if selected_inbox and selected_inbox.id == ib.id %}selected{% endif %}>{{ ib.email_address }}</option>
@@ -56,26 +53,19 @@ hx-indicator="#inbox-loading">
         {% if selected_inbox %}
         <span class="text-xs text-slate-500 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200">
           <span class="w-2 h-2 rounded-full {% if selected_inbox.last_sync_status == 'success' %}bg-emerald-500{% elif selected_inbox.last_sync_status == 'error' %}bg-red-500{% elif selected_inbox.last_sync_status == 'syncing' %}bg-blue-500 animate-pulse{% else %}bg-amber-400{% endif %}"></span>
-          {% if selected_inbox.last_sync_status == 'success' %}
-            Connected
-          {% elif selected_inbox.last_sync_status == 'syncing' %}
-            Syncing...
-          {% elif selected_inbox.last_sync_status == 'error' %}
-            Failed
-          {% else %}
-            Pending
-          {% endif %}
+          {% if selected_inbox.last_sync_status == 'success' %}Connected{% elif selected_inbox.last_sync_status == 'syncing' %}Syncing...{% elif selected_inbox.last_sync_status == 'error' %}Failed{% else %}Pending{% endif %}
         </span>
         {% endif %}
       </div>
       <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:justify-end">
-        {% if selected_inbox.last_sync_status == 'error' and 'password' in selected_inbox.last_sync_error|lower %}
+        {% if selected_inbox and selected_inbox.last_sync_status == 'error' and 'password' in selected_inbox.last_sync_error|lower %}
         <a href="{% url 'inbox:connect' %}?reconnect={{ selected_inbox.id }}"
            class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 hover:text-amber-800 transition-colors px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           Reconnect
         </a>
         {% endif %}
+        {% if selected_inbox %}
         <button type="button" onclick="InboxDashboard.triggerSync({{ selected_inbox.id }})"
                 id="sync-btn-{{ selected_inbox.id }}"
                 class="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary-hover transition-colors px-3 py-1.5 rounded-lg hover:bg-primary-light cursor-pointer border border-primary/20">
@@ -94,11 +84,15 @@ hx-indicator="#inbox-loading">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
           </button>
         </form>
+        {% endif %}
       </div>
     </div>
   </div>
   {% endif %}
+</div>
 
+<!-- Messages area (SWAPPED by HTMX) -->
+<div id="inbox-messages-area" hx-indicator="#inbox-loading">
   {% if not inboxes %}
   {% url 'inbox:connect' as inbox_connect_url %}
   {% include "components/empty_state.html" with title="No inboxes connected" description="Connect a Gmail or Outlook account to start managing your emails with AI-powered summaries, drafts, and replies." cta_url=inbox_connect_url cta_label="Connect Inbox" icon="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" %}
@@ -109,7 +103,7 @@ hx-indicator="#inbox-loading">
   <div class="flex items-center gap-0 border-b border-slate-200 overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
     <a href="?inbox_id={{ selected_inbox.id }}&folder=inbox"
        hx-get="{% url 'inbox:dashboard' %}?inbox_id={{ selected_inbox.id }}&folder=inbox"
-       hx-target="#inbox-content"
+       hx-target="#inbox-messages-area"
        hx-push-url="true"
        hx-indicator="#inbox-loading"
        class="px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap {% if folder == 'inbox' %}border-primary text-primary{% else %}border-transparent text-slate-500 hover:text-slate-700{% endif %}">
@@ -119,7 +113,7 @@ hx-indicator="#inbox-loading">
     </a>
     <a href="?inbox_id={{ selected_inbox.id }}&folder=sent"
        hx-get="{% url 'inbox:dashboard' %}?inbox_id={{ selected_inbox.id }}&folder=sent"
-       hx-target="#inbox-content"
+       hx-target="#inbox-messages-area"
        hx-push-url="true"
        hx-indicator="#inbox-loading"
        class="px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap {% if folder == 'sent' %}border-primary text-primary{% else %}border-transparent text-slate-500 hover:text-slate-700{% endif %}">
@@ -128,7 +122,7 @@ hx-indicator="#inbox-loading">
     </a>
     <a href="?inbox_id={{ selected_inbox.id }}&folder=drafts"
        hx-get="{% url 'inbox:dashboard' %}?inbox_id={{ selected_inbox.id }}&folder=drafts"
-       hx-target="#inbox-content"
+       hx-target="#inbox-messages-area"
        hx-push-url="true"
        hx-indicator="#inbox-loading"
        class="px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap {% if folder == 'drafts' %}border-primary text-primary{% else %}border-transparent text-slate-500 hover:text-slate-700{% endif %}">
@@ -150,7 +144,7 @@ hx-indicator="#inbox-loading">
       <input id="inbox-search" type="search" value="{{ query }}" placeholder="Search messages"
              name="q"
              hx-get="{% url 'inbox:dashboard' %}?inbox_id={{ selected_inbox.id }}&folder={{ folder }}"
-             hx-target="#inbox-content"
+             hx-target="#inbox-messages-area"
              hx-push-url="true"
              hx-trigger="keyup changed delay:500ms, search"
              hx-include="[name='inbox_id'],[name='folder']"
@@ -159,7 +153,7 @@ hx-indicator="#inbox-loading">
     {% if query %}
     <a href="?inbox_id={{ selected_inbox.id }}&folder={{ folder }}"
        hx-get="{% url 'inbox:dashboard' %}?inbox_id={{ selected_inbox.id }}&folder={{ folder }}"
-       hx-target="#inbox-content"
+       hx-target="#inbox-messages-area"
        hx-push-url="true"
        class="text-xs font-semibold text-slate-500 hover:text-primary">Clear</a>
     {% endif %}
@@ -295,7 +289,7 @@ hx-indicator="#inbox-loading">
     {% if page_obj.has_previous %}
     <a href="?inbox_id={{ selected_inbox.id }}&folder={{ folder }}{% if query %}&q={{ query|urlencode }}{% endif %}&page={{ page_obj.previous_page_number }}"
        hx-get="{% url 'inbox:dashboard' %}?inbox_id={{ selected_inbox.id }}&folder={{ folder }}{% if query %}&q={{ query|urlencode }}{% endif %}&page={{ page_obj.previous_page_number }}"
-       hx-target="#inbox-content"
+       hx-target="#inbox-messages-area"
        hx-push-url="true"
        hx-indicator="#inbox-loading"
        class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors border border-slate-200">Previous</a>
@@ -304,7 +298,7 @@ hx-indicator="#inbox-loading">
     {% if page_obj.has_next %}
     <a href="?inbox_id={{ selected_inbox.id }}&folder={{ folder }}{% if query %}&q={{ query|urlencode }}{% endif %}&page={{ page_obj.next_page_number }}"
        hx-get="{% url 'inbox:dashboard' %}?inbox_id={{ selected_inbox.id }}&folder={{ folder }}{% if query %}&q={{ query|urlencode }}{% endif %}&page={{ page_obj.next_page_number }}"
-       hx-target="#inbox-content"
+       hx-target="#inbox-messages-area"
        hx-push-url="true"
        hx-indicator="#inbox-loading"
        class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors border border-slate-200">Next</a>
@@ -313,6 +307,4 @@ hx-indicator="#inbox-loading">
   {% endif %}
   {% endif %}
 </div>
-</div>
 <input type="hidden" name="folder" value="{{ folder }}">
-<input type="hidden" name="inbox_id" value="{{ selected_inbox.id|default:'' }}">

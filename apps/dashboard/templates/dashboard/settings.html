@@ -583,7 +583,7 @@
     button.innerHTML = '<svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9" stroke-opacity="0.25"></circle><path d="M21 12a9 9 0 00-9-9"/></svg> Auditing...';
 
     try {
-      const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]')?.value || '';
+      const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]')?.value || getCookie('csrftoken') || '';
       const resp = await fetch("{% url 'senders:audit_dns' %}", {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
@@ -826,17 +826,6 @@
       button.disabled = false;
     }
   }
-</script>idden');
-            modal.classList.add('flex');
-        }
-      }
-    }
-  });
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') {
-      if (deleteSenderModal && !deleteSenderModal.classList.contains('hidden')) closeDeleteSenderModal();
-      if (testPasswordModal && !testPasswordModal.classList.contains('hidden')) closeTestPasswordModal();
-    }
-  });
+};
 </script>
 {% endblock %}

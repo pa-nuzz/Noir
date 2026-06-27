@@ -11,20 +11,28 @@ logger = logging.getLogger(__name__)
 
 @shared_task
 def publish_scheduled_posts():
+    from django.db import close_old_connections
     from .models import SocialPost
     from .services import SocialService
 
-    for workspace in Workspace.objects.all():
-        with tenant_context(workspace):
-            now = timezone.now()
-            due = SocialPost.objects.filter(status='scheduled', scheduled_at__lte=now).select_related('user', 'account')
-            for post in due:
-                service = SocialService(post.user)
-                try:
-                    service.publish_post(post.id)
-                    logger.info(f"Scheduled post {post.id} published for workspace {workspace.name}.")
-                except Exception as e:
-                    logger.exception(f"Failed to publish scheduled post {post.id}: {e}")
+    close_old_connections()
+    for workspace in Workspace.objects.all().only('id', 'name'):
+        try:
+            with tenant_context(workspace):
+                close_old_connections()
+                now = timezone.now()
+                due = SocialPost.objects.filter(status='scheduled', scheduled_at__lte=now).select_related('user', 'account')
+                for post in due:
+                    service = SocialService(post.user)
+                    try:
+                        service.publish_post(post.id)
+                        logger.info(f"Scheduled post {post.id} published for workspace {workspace.name}.")
+                    except Exception as e:
+                        logger.exception(f"Failed to publish scheduled post {post.id}: {e}")
+        except Exception as e:
+            logger.error(f"Error in publish_scheduled_posts for workspace {workspace.id}: {e}")
+            close_old_connections()
+            continue
 
 
 @shared_task

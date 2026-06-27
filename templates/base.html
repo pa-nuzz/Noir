@@ -36,23 +36,23 @@
 </head>
 <body class="bg-surface-raised text-ink font-sans min-h-screen flex flex-col overflow-x-hidden antialiased">
 
-<!-- ── NAV ── -->
+<!-- ── NAV (matches auth page style) ── -->
 <nav class="fixed top-0 left-0 w-full z-50 bg-white/95 backdrop-blur-xl border-b border-surface-border">
-  <div class="max-w-8xl mx-auto h-[60px] px-5 sm:px-8 flex items-center justify-between">
-    <a href="{% if user.is_authenticated %}{% url 'dashboard:dashboard' %}{% else %}{% url 'home' %}{% endif %}" class="flex-shrink-0">
-      <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="IDA" class="h-16 w-auto"/>
+  <div class="max-w-8xl mx-auto h-16 px-6 sm:px-10 flex items-center justify-between">
+    <a href="{% if user.is_authenticated %}{% url 'dashboard:dashboard' %}{% else %}{% url 'home' %}{% endif %}" class="flex-shrink-0 flex items-center">
+      <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="IDA" class="h-9 w-auto"/>
     </a>
-    <div class="hidden md:flex items-center gap-1">
-      <a href="#platform" class="px-4 py-2 text-sm font-medium text-ink-muted hover:text-ink hover:bg-surface-raised rounded-xl transition-all">Platform</a>
-      <a href="#features" class="px-4 py-2 text-sm font-medium text-ink-muted hover:text-ink hover:bg-surface-raised rounded-xl transition-all">Features</a>
-      <a href="#pricing" class="px-4 py-2 text-sm font-medium text-ink-muted hover:text-ink hover:bg-surface-raised rounded-xl transition-all">Pricing</a>
+    <div class="hidden md:flex items-center gap-2">
+      <a href="#platform" class="px-4 py-2 text-sm font-semibold text-ink-muted hover:text-ink hover:bg-surface-raised rounded-xl transition-all">Platform</a>
+      <a href="#features" class="px-4 py-2 text-sm font-semibold text-ink-muted hover:text-ink hover:bg-surface-raised rounded-xl transition-all">Features</a>
+
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-3">
       {% if user.is_authenticated %}
-      <a href="{% url 'dashboard:dashboard' %}" class="text-sm font-semibold text-ink border border-surface-border px-4 py-2 rounded-xl hover:border-primary hover:text-primary bg-white transition-all">Dashboard</a>
+      <a href="{% url 'dashboard:dashboard' %}" class="text-sm font-bold text-ink border-2 border-surface-border px-5 py-2 rounded-xl hover:border-primary hover:text-primary bg-white transition-all">Dashboard</a>
       <div class="relative group">
-        <button class="flex items-center p-0.5 rounded-full border border-surface-border hover:border-primary/40 transition-colors">
-          <div class="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center text-primary font-bold text-xs overflow-hidden">
+        <button class="flex items-center p-0.5 rounded-full border-2 border-surface-border hover:border-primary/40 transition-colors">
+          <div class="w-9 h-9 rounded-full bg-primary-light flex items-center justify-center text-primary font-bold text-sm overflow-hidden">
             {% if user.avatar %}<img src="{{ user.avatar.url }}" alt="{{ user.username }}" class="w-full h-full object-cover">{% else %}{{ user.username|first|upper }}{% endif %}
           </div>
         </button>
@@ -72,8 +72,8 @@
         </div>
       </div>
       {% else %}
-      <a href="{% url 'accounts:login' %}" class="text-sm font-medium text-ink-muted hover:text-ink px-3 py-2 transition-colors">Log In</a>
-      <a href="{% url 'accounts:register' %}" class="text-sm font-semibold bg-primary hover:bg-primary-hover text-white px-5 py-2 rounded-xl transition-all shadow-sm shadow-primary/20">Get started free</a>
+      <a href="{% url 'accounts:login' %}" class="text-sm font-bold text-ink-muted hover:text-ink px-4 py-2 transition-colors">Log In</a>
+      <a href="{% url 'accounts:register' %}" class="text-sm font-bold bg-gradient-to-r from-[#6D28D9] to-[#06B6D4] hover:from-[#5B21B6] hover:to-[#0891B2] text-white px-6 py-2.5 rounded-xl transition-all shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30">Get started free</a>
       {% endif %}
     </div>
   </div>

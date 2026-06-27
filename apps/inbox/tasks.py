@@ -10,9 +10,11 @@ logger = logging.getLogger(__name__)
 
 @shared_task
 def sync_inbox_task(inbox_id: int, password: str = '', workspace_id: int = None):
+    from django.db import close_old_connections
     from .models import EmailInbox
     from .services.sync import sync_inbox
 
+    close_old_connections()
     if workspace_id:
         try:
             workspace = Workspace.objects.get(pk=workspace_id)
@@ -60,26 +62,36 @@ def sync_inbox_task(inbox_id: int, password: str = '', workspace_id: int = None)
 
 @shared_task
 def sync_all_inboxes_task():
+    from django.db import close_old_connections
     from .models import EmailInbox
     from .services.sync import sync_inbox
 
-    for workspace in Workspace.objects.all():
-        with tenant_context(workspace):
-            inboxes = EmailInbox.objects.filter(is_active=True)
-            total = 0
-            for inbox in inboxes:
-                try:
-                    password = inbox.get_token()
-                    count = sync_inbox(inbox, password or '')
-                    total += count
-                    if count > 0:
-                        process_auto_replies_for_inbox.delay(
-                            inbox.id, workspace.id)
-                except Exception as e:
-                    logger.error(f"Error syncing inbox {inbox.id}: {e}")
+    close_old_connections()
+    total = 0
+    for workspace in Workspace.objects.all().only('id', 'name'):
+        try:
+            with tenant_context(workspace):
+                close_old_connections()
+                inboxes = EmailInbox.objects.filter(is_active=True)
+                ws_total = 0
+                for inbox in inboxes:
+                    try:
+                        password = inbox.get_token()
+                        count = sync_inbox(inbox, password or '')
+                        ws_total += count
+                        total += count
+                        if count > 0:
+                            process_auto_replies_for_inbox.delay(
+                                inbox.id, workspace.id)
+                    except Exception as e:
+                        logger.error(f"Error syncing inbox {inbox.id}: {e}")
 
-            logger.info(
-                f"Synced {inboxes.count()} inboxes: {total} new message(s) for workspace {workspace.name}")
+                logger.info(
+                    f"Synced {ws_total} new message(s) for workspace {workspace.name}")
+        except Exception as e:
+            logger.error(f"Error syncing inboxes for workspace {workspace.id}: {e}")
+            close_old_connections()
+            continue
     return total
 
 

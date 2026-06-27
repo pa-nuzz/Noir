@@ -68,12 +68,6 @@ class LinkedInPlatform(BaseSocialPlatform):
 
     def publish_post(self, content, media_urls=None, link_url=None, scheduled_at=None):
         author = self._get_author_urn()
-        
-        # If we have both media and a link, append the link to the text 
-        # since we can only attach media as the main content object.
-        if link_url and media_urls:
-            content = f"{content}\n\n{link_url}" if content else link_url
-
         commentary = (content or '').replace('\r\n', '\n').replace('\r', '\n').strip()
         logger.info("Publishing LinkedIn post with %s commentary characters and %s media item(s).", len(commentary), len(media_urls or []))
         payload = {

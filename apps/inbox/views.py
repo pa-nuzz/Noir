@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -169,16 +170,30 @@ def inbox_connect(request):
                     inbox.workspace_id = ws_id
 
             imap_password = form.cleaned_data.get('imap_password', '')
-            if imap_password:
-                inbox.set_token(imap_password)
+            try:
+                if imap_password:
+                    inbox.set_token(imap_password)
+            except Exception as token_err:
+                logger.error(f"Failed to encrypt token for inbox {email}: {token_err}")
+                if is_ajax:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Failed to store credentials securely. Please try again.',
+                    })
+                messages.error(request, 'Failed to store credentials securely. Please try again.')
+                return render(request, 'inbox/connect.html', {
+                    'form': form,
+                    'existing_inboxes': filter_by_context(request, EmailInbox.objects.all()),
+                    'reconnect_inbox': reconnect_inbox,
+                })
             inbox.last_sync_status = 'pending'
             inbox.last_sync_error = ''
             inbox.save()
 
             from .tasks import sync_inbox_task
             try:
-                sync_inbox_task.delay(
-                    inbox.id, workspace_id=inbox.workspace_id)
+                transaction.on_commit(lambda: sync_inbox_task.delay(
+                    inbox.id, workspace_id=inbox.workspace_id))
                 if reconnect_inbox:
                     messages.success(
                         request, f'{inbox.get_provider_display()} inbox reconnected. Sync started.')
@@ -271,7 +286,11 @@ def inbox_sync(request, inbox_id):
                'last_sync_error', 'last_synced_at'])
 
     try:
-        sync_inbox_task.delay(inbox.id, workspace_id=inbox.workspace_id)
+        transaction.on_commit(lambda: sync_inbox_task.delay(
+            inbox.id, workspace_id=inbox.workspace_id))
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'message': 'Sync started'})
+        messages.success(request, 'Sync started')
     except Exception as exc:
         logger.warning(
             "Celery unavailable, running sync synchronously for inbox %s", inbox.id)
@@ -375,6 +394,7 @@ def inbox_auto_reply(request, inbox_id):
             EmailDraft.objects.create(
                 thread=msg.thread,
                 user=request.user,
+                workspace=msg.thread.inbox.workspace,
                 original_message=msg,
                 ai_generated_body=draft_body,
                 edited_body=draft_body,
@@ -399,90 +419,6 @@ def bulk_auto_reply(request):
     """Auto-reply to selected messages."""
     import json
 
-    from apps.inbox.models import EmailMessage
-    
-    # Helper to build recent thread context (last 3 incoming messages)
-    def _get_recent_thread_context(message):
-        recent = EmailMessage.objects.filter(
-            thread=message.thread,
-            is_incoming=True
-        ).exclude(id=message.id).order_by('-received_at')[:3]
-        if not recent:
-            return ''
-        parts = []
-        for m in recent:
-            parts.append(f"From: {m.from_name or m.from_email}\nSubject: {m.subject}\nBody:\n{m.body_text or ''}\n---")
-        return "\n\n".join(parts)
-    
-    # Existing fetch of message
-    try:
-        msg = EmailMessage.objects.select_related('thread__inbox').get(id=message_id)
-    except EmailMessage.DoesNotExist:
-        logger.warning(f"Auto-reply: message {message_id} not found")
-        return False
-    
-    if not msg.is_incoming:
-        return False
-    
-    if not is_human_email(msg.from_email, msg.from_name, msg.subject):
-        logger.info(f"Auto-reply skipped: non-human sender {msg.from_email}")
-        return False
-    
-    existing_draft = EmailDraft.objects.filter(
-        thread=msg.thread,
-        user=msg.thread.inbox.user,
-        status__in=['pending_review', 'edited', 'approved'],
-    ).exists()
-    if existing_draft:
-        logger.info(f"Auto-reply skipped: existing draft for thread {msg.thread.id}")
-        return False
-    
-    importance, intent = classify_importance(
-        msg.subject or '',
-        msg.body_text or '',
-    )
-    
-    if importance == 'low':
-        logger.info(f"Auto-reply skipped: importance=low for message {message_id}")
-        return False
-    
-    thread_summary = msg.thread.ai_summary or ''
-    
-    tone = "urgent" if importance == "urgent" else "professional"
-    
-    # Gather recent thread context
-    thread_history = _get_recent_thread_context(msg)
-    
-    draft_body = generate_auto_reply(
-        subject=msg.subject or '',
-        body_text=msg.body_text or '',
-        thread_summary=thread_summary,
-        importance=importance,
-        intent=intent,
-        from_name=msg.from_name or '',
-        tone=tone,
-        thread_history=thread_history
-    )
-    
-    if not draft_body:
-        logger.warning(f"Auto-reply: empty draft for message {message_id}")
-        return False
-    
-    EmailDraft.objects.create(
-        thread=msg.thread,
-        user=msg.thread.inbox.user,
-        original_message=msg,
-        ai_generated_body=draft_body,
-        edited_body=draft_body,
-        status='pending_review',
-        final_body='',
-    )
-    
-    logger.info(
-        f"Auto-reply draft created for message {message_id} "
-        f"({msg.from_email}, importance={importance}, intent={intent}, tone={tone})"
-    )
-    return True
     try:
         data = json.loads(request.body)
         message_ids = data.get('message_ids', [])
@@ -543,7 +479,8 @@ def inbox_disconnect(request, inbox_id):
 @require_workspace_permission('inbox', 'read')
 def message_detail(request, message_id):
     msg = get_object_or_404(EmailMessage.objects.select_related(
-        'thread__inbox'), id=message_id, thread__inbox__user=request.user)
+        'thread__inbox'), id=message_id,
+        thread__inbox__in=filter_by_context(request, EmailInbox.objects.all()))
 
     # Mark as read
     if not msg.is_read:
@@ -591,7 +528,7 @@ def message_detail(request, message_id):
 @require_workspace_permission('inbox', 'read')
 def message_summarize(request, message_id):
     msg = get_object_or_404(EmailMessage, id=message_id,
-                            thread__inbox__user=request.user)
+                            thread__inbox__in=filter_by_context(request, EmailInbox.objects.all()))
     body = f"From: {msg.from_name or msg.from_email}\nSubject: {msg.subject}\n{msg.body_text}"
     try:
         summary = summarize_thread(body, msg.subject)
@@ -617,7 +554,7 @@ def message_summarize(request, message_id):
 def generate_draft(request, message_id):
     """Generate an AI draft reply. Supports both AJAX (JSON) and normal request."""
     msg = get_object_or_404(EmailMessage, id=message_id,
-                            thread__inbox__user=request.user)
+                            thread__inbox__in=filter_by_context(request, EmailInbox.objects.all()))
     thread = msg.thread
 
     # Get tone preference from AJAX header or default to professional
@@ -653,21 +590,25 @@ def generate_draft(request, message_id):
         draft.edited_body = draft_body
         draft.final_body = ''
         draft.status = 'pending_review'
+        draft.ai_generated = True
         draft.save(update_fields=[
             'ai_generated_body',
             'edited_body',
             'final_body',
             'status',
+            'ai_generated',
             'updated_at',
         ])
     else:
         draft = EmailDraft.objects.create(
             thread=thread,
             user=request.user,
+            workspace=thread.inbox.workspace,
             original_message=msg,
             ai_generated_body=draft_body,
             edited_body=draft_body,
             status='pending_review',
+            ai_generated=True,
         )
 
     # AJAX response
@@ -688,7 +629,7 @@ def generate_draft(request, message_id):
 @require_POST
 def message_delete(request, message_id):
     msg = get_object_or_404(EmailMessage, id=message_id,
-                            thread__inbox__user=request.user)
+                            thread__inbox__in=filter_by_context(request, EmailInbox.objects.all()))
     msg.is_deleted = True
     msg.deleted_at = timezone.now()
     msg.save(update_fields=['is_deleted', 'deleted_at'])
@@ -705,7 +646,7 @@ def message_delete(request, message_id):
 @require_workspace_permission('inbox', 'delete')
 @require_POST
 def draft_delete(request, draft_id):
-    draft = get_object_or_404(EmailDraft, id=draft_id, user=request.user)
+    draft = get_object_or_404(EmailDraft, id=draft_id, user=request.user, thread__inbox__in=filter_by_context(request, EmailInbox.objects.all()))
     draft.delete()
     messages.success(request, 'Draft deleted.')
     return redirect('inbox:dashboard')
@@ -716,7 +657,7 @@ def draft_delete(request, draft_id):
 @require_POST
 def message_restore(request, message_id):
     msg = get_object_or_404(EmailMessage, id=message_id,
-                            thread__inbox__user=request.user)
+                            thread__inbox__in=filter_by_context(request, EmailInbox.objects.all()))
     msg.is_deleted = False
     msg.save(update_fields=['is_deleted'])
     messages.success(request, 'Message restored from trash.')
@@ -790,7 +731,8 @@ def inbox_trash(request):
 @require_workspace_permission('inbox', 'read')
 def draft_detail(request, draft_id):
     draft = get_object_or_404(EmailDraft.objects.select_related(
-        'thread__inbox', 'original_message'), id=draft_id, user=request.user)
+        'thread__inbox', 'original_message'), id=draft_id, user=request.user,
+        thread__inbox__in=filter_by_context(request, EmailInbox.objects.all()))
     sender = filter_by_context(
         request, Sender.objects.filter(is_active=True)).first()
     return render(request, 'inbox/draft_detail.html', {'draft': draft, 'sender': sender})
@@ -799,7 +741,8 @@ def draft_detail(request, draft_id):
 @login_required
 @require_workspace_permission('inbox', 'edit')
 def draft_review(request, draft_id):
-    draft = get_object_or_404(EmailDraft, id=draft_id, user=request.user)
+    draft = get_object_or_404(EmailDraft, id=draft_id, user=request.user,
+        thread__inbox__in=filter_by_context(request, EmailInbox.objects.all()))
     if request.method == 'POST':
         form = EmailDraftReviewForm(request.POST, instance=draft)
         if form.is_valid():
@@ -826,7 +769,8 @@ def draft_review(request, draft_id):
 @login_required
 @require_workspace_permission('inbox', 'edit')
 def draft_approve(request, draft_id):
-    draft = get_object_or_404(EmailDraft, id=draft_id, user=request.user)
+    draft = get_object_or_404(EmailDraft, id=draft_id, user=request.user,
+        thread__inbox__in=filter_by_context(request, EmailInbox.objects.all()))
     body = request.POST.get('body', '').strip()
     if body:
         draft.edited_body = body
@@ -842,7 +786,8 @@ def draft_approve(request, draft_id):
 @login_required
 @require_workspace_permission('inbox', 'edit')
 def draft_send(request, draft_id):
-    draft = get_object_or_404(EmailDraft, id=draft_id, user=request.user)
+    draft = get_object_or_404(EmailDraft, id=draft_id, user=request.user,
+        thread__inbox__in=filter_by_context(request, EmailInbox.objects.all()))
     post_body = request.POST.get('body', '').strip()
     if post_body:
         draft.edited_body = post_body
@@ -864,20 +809,38 @@ def draft_send(request, draft_id):
             cc_addresses=request.POST.get('cc_addresses', ''),
             bcc_addresses=request.POST.get('bcc_addresses', ''),
         )
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'message': 'Draft sent successfully.',
+                'redirect': reverse('inbox:draft_detail', kwargs={'draft_id': draft.id})
+            })
         messages.success(request, 'Draft sent successfully.')
     except EmailSendError as exc:
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'error': exc.message
+            })
         messages.error(request, exc.message)
     except Exception as exc:
         logger.exception("Failed to send draft %s: %s", draft.id, exc)
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'error': 'Failed to send draft. Please try again.'
+            })
         messages.error(request, 'Failed to send draft. Please try again.')
     return redirect('inbox:draft_detail', draft_id=draft.id)
 
 
 @login_required
 @require_POST
+@require_workspace_permission('inbox', 'edit')
 def draft_send_test(request, draft_id):
     """Send a test copy of the draft to the user's own email."""
-    draft = get_object_or_404(EmailDraft, id=draft_id, user=request.user)
+    draft = get_object_or_404(EmailDraft, id=draft_id, user=request.user,
+        thread__inbox__in=filter_by_context(request, EmailInbox.objects.all()))
 
     post_body = request.POST.get('body', '').strip()
     if post_body:
@@ -893,18 +856,34 @@ def draft_send_test(request, draft_id):
     try:
         from .services.smtp import EmailSendError, send_test_draft
         result = send_test_draft(draft=draft, request=request, body=body)
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'message': f'Test email sent to {result.recipient}. Check your inbox!'
+            })
         messages.success(
             request, f'Test email sent to {result.recipient}. Check your inbox!')
     except EmailSendError as exc:
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'error': exc.message
+            })
         messages.error(request, exc.message)
     except Exception as exc:
         logger.exception("Failed to send test draft %s: %s", draft.id, exc)
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'error': 'Failed to send test email. Please try again.'
+            })
         messages.error(request, 'Failed to send test email. Please try again.')
 
     return redirect('inbox:draft_detail', draft_id=draft.id)
 
 
 @login_required
+@require_workspace_permission('inbox', 'read')
 @require_GET
 def sender_logo_proxy(request):
     """Proxy sender logos to bypass CSP/ad-blocker issues.
@@ -952,6 +931,7 @@ def sender_logo_proxy(request):
 
 
 @login_required
+@require_workspace_permission('inbox', 'read')
 @require_GET
 def proxy_email_image(request):
     """
@@ -970,7 +950,7 @@ def proxy_email_image(request):
                 from .models import EmailMessage
                 msg = EmailMessage.objects.filter(
                     body_html__contains=f'cid:{cid}',
-                    thread__inbox__user=request.user,
+                    thread__inbox__in=filter_by_context(request, EmailInbox.objects.all()),
                 ).order_by('-received_at').first()
                 if msg and msg.body_html:
                     # Look for data URI matching this CID in src attribute

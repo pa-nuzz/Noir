@@ -20,6 +20,7 @@ from django.http import JsonResponse
 from .forms import RegisterForm, LoginForm
 from django.contrib import messages
 from .models import User, PasswordResetCode
+from apps.workspaces.models import get_or_create_personal_workspace
 
 
 def _send_verification_email(request, user):
@@ -56,6 +57,8 @@ def register_view(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+            ws = get_or_create_personal_workspace(user)
+            request.session['active_workspace_id'] = ws.id
             try:
                 _send_verification_email(request, user)
                 messages.success(request, "Account created. Verification email sent — please verify your email.")
@@ -77,6 +80,8 @@ def login_view(request):
         if form.is_valid():
             user = form.get_user()
             login(request, user)
+            ws = get_or_create_personal_workspace(user)
+            request.session['active_workspace_id'] = ws.id
             next_url = request.POST.get('next') or request.GET.get('next') or '/dashboard/'
             from django.utils.http import url_has_allowed_host_and_scheme
             if url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):

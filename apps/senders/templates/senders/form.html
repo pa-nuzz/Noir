@@ -1,0 +1,96 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}{% if sender %}Edit{% else %}New{% endif %} Sender — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}{% if sender %}Edit Sender{% else %}New Sender Profile{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-2xl mx-auto space-y-6">
+  <div class="flex items-center gap-4">
+    <a href="{% url 'senders:list' %}" class="w-10 h-10 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:text-slate-700 hover:border-slate-300 transition-all">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    </a>
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">{% if sender %}Edit Sender{% else %}New Sender Profile{% endif %}</h1>
+      <p class="text-sm text-slate-500">Configure an SMTP provider to send emails through this workspace.</p>
+    </div>
+  </div>
+
+  <form method="post" class="glass-card p-6 space-y-6">
+    {% csrf_token %}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div class="md:col-span-2">
+        <label class="block text-sm font-semibold text-slate-700 mb-2">Display Name <span class="text-red-500">*</span></label>
+        <input type="text" name="display_name" required value="{{ sender.display_name|default:'' }}" class="auth-input" placeholder="e.g., Marketing Team" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">From Email <span class="text-red-500">*</span></label>
+        <input type="email" name="from_email" required value="{{ sender.from_email|default:'' }}" class="auth-input" placeholder="newsletter@yourdomain.com" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">Provider</label>
+        <select name="provider" class="auth-input">
+          <option value="gmail" {% if sender and sender.provider == 'gmail' %}selected{% endif %}>Gmail / Google Workspace</option>
+          <option value="outlook" {% if sender and sender.provider == 'outlook' %}selected{% endif %}>Outlook / Office 365</option>
+          <option value="custom" {% if sender and sender.provider == 'custom' or not sender %}selected{% endif %}>Custom SMTP</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">SMTP Host <span class="text-red-500">*</span></label>
+        <input type="text" name="smtp_host" required value="{{ sender.smtp_host|default:'smtp.gmail.com' }}" class="auth-input" placeholder="smtp.gmail.com" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">SMTP Port</label>
+        <input type="number" name="smtp_port" value="{{ sender.smtp_port|default:'587' }}" class="auth-input" min="1" max="65535" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">SMTP Username</label>
+        <input type="text" name="username" value="{{ sender.username|default:'' }}" class="auth-input" placeholder="Usually your email address" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">
+          SMTP Password {% if not sender %}<span class="text-red-500">*</span>{% endif %}
+          {% if sender %}<span class="text-xs text-slate-400 font-normal">(leave blank to keep current)</span>{% endif %}
+        </label>
+        <input type="password" name="password" {% if not sender %}required{% endif %} class="auth-input" placeholder="{% if sender %}New password (optional){% else %}App password{% endif %}" />
+      </div>
+
+      <div class="flex items-center gap-3 p-3 rounded-xl border border-slate-200">
+        <input type="checkbox" name="use_tls" id="use_tls" {% if sender.use_tls or not sender %}checked{% endif %} class="w-4 h-4 text-primary rounded border-gray-300" />
+        <label for="use_tls" class="text-sm font-medium text-slate-700 cursor-pointer">Use TLS (STARTTLS)</label>
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">Daily Limit</label>
+        <input type="number" name="daily_limit" value="{{ sender.daily_limit|default:'500' }}" class="auth-input" min="1" max="10000" />
+        <p class="mt-1 text-xs text-slate-400">Maximum emails per day for this sender</p>
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">Send Delay (seconds)</label>
+        <input type="number" name="send_delay_seconds" value="{{ sender.send_delay_seconds|default:'3.0' }}" class="auth-input" min="0.5" max="60" step="0.5" />
+        <p class="mt-1 text-xs text-slate-400">Delay between each email send (rate limiting)</p>
+      </div>
+
+      {% if sender %}
+      <div class="flex items-center gap-3 p-3 rounded-xl border border-slate-200">
+        <input type="checkbox" name="is_active" id="is_active" {% if sender.is_active %}checked{% endif %} class="w-4 h-4 text-primary rounded border-gray-300" />
+        <label for="is_active" class="text-sm font-medium text-slate-700 cursor-pointer">Active (available for campaigns)</label>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="pt-4 border-t border-slate-100 flex gap-3">
+      <a href="{% url 'senders:list' %}" class="px-6 py-3 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-semibold transition-colors">Cancel</a>
+      <button type="submit" class="px-6 py-3 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-indigo-500/30 flex-1">
+        {% if sender %}Save Changes{% else %}Create Sender{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

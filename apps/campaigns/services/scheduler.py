@@ -32,7 +32,7 @@ def run_scheduled_campaigns():
             sent_count, failed_count, _ = send_campaign_with_smtp(campaign, base_url)
             campaign.sent_count = (campaign.sent_count or 0) + sent_count
             campaign.bounce_count = (campaign.bounce_count or 0) + failed_count
-            campaign.status = 'sent' if campaign.sent_count > 0 else 'failed'
+            campaign.status = 'sent' if sent_count > 0 else 'failed'
             campaign.save(update_fields=['sent_count', 'bounce_count', 'status', 'updated_at'])
             sent += sent_count
             failed += failed_count

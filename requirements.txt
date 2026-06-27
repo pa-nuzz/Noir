@@ -1,8 +1,4 @@
 django-celery-beat==2.9.0
-tinycss2==1.5.1
-bleach==6.4.0 
-webencodings==0.5.1
-nh3==0.3.5
 Django==6.0.2
 PyJWT==2.9.0
 PyYAML==6.0.3
@@ -52,7 +48,6 @@ google-auth-httplib2==0.4.0
 google-auth-oauthlib==1.4.0
 google-auth==2.53.0
 googleapis-common-protos==1.75.0
-gunicorn==26.0.0
 h11==0.16.0
 hf-xet==1.4.2
 httpcore==1.0.9
@@ -73,7 +68,6 @@ markdown-it-py==4.0.0
 matplotlib==3.10.8
 mdurl==0.1.2
 nh3==0.3.5
-nepali-datetime==1.0.8.5
 numpy==2.4.6
 oauthlib==3.3.1
 packaging==26.0

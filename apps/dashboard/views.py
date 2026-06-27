@@ -16,6 +16,7 @@ from django.utils import timezone
 from .models import Notification as NotificationModel
 
 from apps.campaigns.models import Campaign, EmailEngagement
+from apps.inbox.models import EmailInbox, EmailDraft
 from apps.senders.forms import SenderForm
 from apps.senders.models import Sender
 
@@ -99,9 +100,17 @@ def dashboard_view(request):
     _, prev_week_end_next_dt = _day_bounds_static(prev_week_end, now)
 
     # ─── Email Campaign Core ───────────────────────────────────────────
-    user_campaigns = Campaign.objects.filter(user=user)
-    user_engagements = EmailEngagement.objects.filter(campaign__user=user)
-    senders = Sender.objects.filter(user=user, is_active=True)
+    # IMPORTANT: Use filter_by_context to ensure workspace isolation
+    # In workspace mode: shows only workspace data
+    # In personal mode: shows only personal data (workspace__isnull=True)
+    user_campaigns = filter_by_context(request, Campaign.objects.all())
+    user_engagements = EmailEngagement.objects.filter(campaign__in=user_campaigns)
+    senders = filter_by_context(request, Sender.objects.filter(is_active=True))
+    
+    # ─── Scoped Email QuerySets (reuse throughout dashboard) ───────────
+    # These ensure consistent workspace/personal scoping across all metrics
+    scoped_inboxes = filter_by_context(request, EmailInbox.objects.all())
+    scoped_drafts = filter_by_context(request, EmailDraft.objects.all()) if EmailDraft else None
 
     recent_campaigns = _safe_list(
         user_campaigns.select_related('sender').order_by('-created_at')[:5]
@@ -342,8 +351,6 @@ def dashboard_view(request):
     SocialPost = _safe_model('social_accounts', 'SocialPost')
     ContentItem = _safe_model('content_studio', 'ContentItem')
     MediaAsset = _safe_model('media_assets', 'MediaAsset')
-    EmailDraft = _safe_model('inbox', 'EmailDraft')
-    EmailInbox = _safe_model('inbox', 'EmailInbox')
     Workflow = _safe_model('automations', 'Workflow')
     Contact = _safe_model('contacts', 'Contact')
 
@@ -355,12 +362,12 @@ def dashboard_view(request):
     total_contacts = _safe_count(Contact.objects.filter(contact_list__user=user, is_active=True)) if Contact else 0
     pending_drafts = (
         _safe_count(
-            EmailDraft.objects.filter(user=user, status__in=['pending_review', 'edited'])
+            scoped_drafts.filter(status__in=['pending_review', 'edited'])
         )
-        if EmailDraft else 0
+        if scoped_drafts else 0
     )
     scheduled_campaigns = (
-        _safe_count(Campaign.objects.filter(user=user, status='scheduled'))
+        _safe_count(user_campaigns.filter(status='scheduled'))
     )
     scheduled_posts = (
         _safe_count(SocialPost.objects.filter(user=user, status='scheduled'))
@@ -369,8 +376,8 @@ def dashboard_view(request):
     scheduled_total = scheduled_campaigns + scheduled_posts
 
     connected_inboxes = (
-        _safe_count(EmailInbox.objects.filter(user=user, is_active=True))
-        if EmailInbox else 0
+        _safe_count(scoped_inboxes.filter(is_active=True))
+        if scoped_inboxes else 0
     )
 
     multi_kpis = [
@@ -426,7 +433,7 @@ def dashboard_view(request):
             'name': 'Email Campaigns',
             'desc': 'Compose, schedule, and track campaigns',
             'icon_bg': 'bg-indigo-50 text-indigo-600',
-            'count': _safe_count(Campaign.objects.filter(user=user)),
+            'count': _safe_count(user_campaigns),
             'count_label': 'campaigns',
             'href': _safe_reverse('campaigns:campaign_list'),
             'cta': 'Open campaigns',
@@ -561,7 +568,7 @@ def dashboard_view(request):
     # Upcoming scheduled content (email + social)
     upcoming_rows = []
     for c in _safe_list(
-        Campaign.objects.filter(user=user, status='scheduled', scheduled_at__isnull=False)
+        user_campaigns.filter(status='scheduled', scheduled_at__isnull=False)
         .order_by('scheduled_at')[:5]
     ):
         upcoming_rows.append(
@@ -598,7 +605,7 @@ def dashboard_view(request):
     # Recent activity feed — mix of recent items
     activity = []
     for c in _safe_list(
-        Campaign.objects.filter(user=user).order_by('-updated_at')[:4]
+        user_campaigns.order_by('-updated_at')[:4]
     ):
         activity.append(
             {
@@ -799,8 +806,11 @@ def platform_analytics(request):
     month_start = today - timedelta(days=30)
     month_start_dt, _ = _day_bounds_static(month_start, now)
 
-    user_campaigns = Campaign.objects.filter(user=user)
-    user_engagements = EmailEngagement.objects.filter(campaign__user=user)
+    # Reuse already-scoped querysets from earlier in the function
+    # user_campaigns and user_engagements already defined above with filter_by_context
+    # Just re-assign for clarity in this analytics section
+    scoped_campaigns = user_campaigns
+    scoped_engagements = user_engagements
 
     SocialAccount = _safe_model('social_accounts', 'SocialAccount')
     SocialPost = _safe_model('social_accounts', 'SocialPost')
@@ -809,28 +819,26 @@ def platform_analytics(request):
     Contact = _safe_model('contacts', 'Contact')
     Workflow = _safe_model('automations', 'Workflow')
     WorkflowEnrollment = _safe_model('automations', 'WorkflowEnrollment')
-    EmailDraft = _safe_model('inbox', 'EmailDraft')
-    EmailInbox = _safe_model('inbox', 'EmailInbox')
     MediaAsset = _safe_model('media_assets', 'MediaAsset')
     WorkspaceBilling = _safe_model('billing', 'WorkspaceBilling')
     StoragePlan = _safe_model('billing', 'StoragePlan')
 
     # ─── EMAIL ANALYTICS ────────────────────────────────────────────
-    total_campaigns = _safe_count(user_campaigns)
-    total_sent = _safe_count(user_engagements)
-    total_opened = _safe_count(user_engagements.filter(opened_at__isnull=False))
-    total_clicked = _safe_count(user_engagements.filter(clicked_at__isnull=False))
-    total_bounced = _safe_aggregate(user_campaigns, total=Sum('bounce_count'))['total'] or 0
+    total_campaigns = _safe_count(scoped_campaigns)
+    total_sent = _safe_count(scoped_engagements)
+    total_opened = _safe_count(scoped_engagements.filter(opened_at__isnull=False))
+    total_clicked = _safe_count(scoped_engagements.filter(clicked_at__isnull=False))
+    total_bounced = _safe_aggregate(scoped_campaigns, total=Sum('bounce_count'))['total'] or 0
     total_unsubscribes = _safe_count(
-        _safe_model('campaigns', 'EmailUnsubscribe').objects.filter(campaign__user=user)
+        _safe_model('campaigns', 'EmailUnsubscribe').objects.filter(campaign__in=scoped_campaigns)
         if _safe_model('campaigns', 'EmailUnsubscribe') else []
     )
 
-    weekly_sent = _safe_count(user_engagements.filter(sent_at__gte=week_start_dt, sent_at__lt=tomorrow_dt))
-    weekly_opened = _safe_count(user_engagements.filter(opened_at__gte=week_start_dt, opened_at__lt=tomorrow_dt))
-    weekly_clicked = _safe_count(user_engagements.filter(clicked_at__gte=week_start_dt, clicked_at__lt=tomorrow_dt))
+    weekly_sent = _safe_count(scoped_engagements.filter(sent_at__gte=week_start_dt, sent_at__lt=tomorrow_dt))
+    weekly_opened = _safe_count(scoped_engagements.filter(opened_at__gte=week_start_dt, opened_at__lt=tomorrow_dt))
+    weekly_clicked = _safe_count(scoped_engagements.filter(clicked_at__gte=week_start_dt, clicked_at__lt=tomorrow_dt))
     weekly_bounced = _safe_aggregate(
-        user_campaigns.filter(updated_at__gte=week_start_dt, updated_at__lt=tomorrow_dt),
+        scoped_campaigns.filter(updated_at__gte=week_start_dt, updated_at__lt=tomorrow_dt),
         total=Sum('bounce_count')
     )['total'] or 0
 
@@ -839,9 +847,9 @@ def platform_analytics(request):
     total_bounce_rate = round((total_bounced / total_sent * 100), 1) if total_sent else 0
     total_deliverability = round(((total_sent - total_bounced) / total_sent * 100), 1) if total_sent else 0
 
-    sent_campaigns = _safe_count(user_campaigns.filter(status='sent'))
+    sent_campaigns = _safe_count(scoped_campaigns.filter(status='sent'))
     avg_spam_score = _safe_aggregate(
-        user_campaigns.filter(spam_score__isnull=False),
+        scoped_campaigns.filter(spam_score__isnull=False),
         avg=Avg('spam_score')
     )['avg'] or 0
 
@@ -850,8 +858,8 @@ def platform_analytics(request):
     for offset in range(29, -1, -1):
         day = today - timedelta(days=offset)
         day_start, day_end = _day_bounds_static(day, now)
-        sent = _safe_count(user_engagements.filter(sent_at__gte=day_start, sent_at__lt=day_end))
-        opened = _safe_count(user_engagements.filter(opened_at__gte=day_start, opened_at__lt=day_end))
+        sent = _safe_count(scoped_engagements.filter(sent_at__gte=day_start, sent_at__lt=day_end))
+        opened = _safe_count(scoped_engagements.filter(opened_at__gte=day_start, opened_at__lt=day_end))
         email_chart.append({
             'date': day.strftime('%b %d'),
             'sent': sent,
@@ -953,13 +961,13 @@ def platform_analytics(request):
         )
 
     # ─── INBOX / AI AGENT ANALYTICS ────────────────────────────────
-    total_inboxes = _safe_count(EmailInbox.objects.filter(user=user, is_active=True)) if EmailInbox else 0
+    total_inboxes = _safe_count(scoped_inboxes.filter(is_active=True)) if scoped_inboxes else 0
     pending_drafts = _safe_count(
-        EmailDraft.objects.filter(user=user, status__in=['pending_review', 'edited'])
-    ) if EmailDraft else 0
+        scoped_drafts.filter(status__in=['pending_review', 'edited'])
+    ) if scoped_drafts else 0
     approved_drafts = _safe_count(
-        EmailDraft.objects.filter(user=user, status='approved')
-    ) if EmailDraft else 0
+        scoped_drafts.filter(status='approved')
+    ) if scoped_drafts else 0
 
     # ─── MEDIA ASSET ANALYTICS ─────────────────────────────────────
     total_media = _safe_count(MediaAsset.objects.filter(user=user)) if MediaAsset else 0
@@ -1149,9 +1157,11 @@ def settings_view(request):
             if sender_form.is_valid():
                 candidate = sender_form.save(commit=False)
                 normalized_email = (candidate.from_email or '').strip().lower()
+                ws_id = request.session.get('active_workspace_id')
                 existing_sender = Sender.objects.filter(
                     user=request.user,
                     from_email__iexact=normalized_email,
+                    workspace_id=ws_id,
                 ).first()
 
                 if existing_sender:
@@ -1165,6 +1175,9 @@ def settings_view(request):
                     existing_sender.daily_limit = candidate.daily_limit
                     existing_sender.send_delay_seconds = candidate.send_delay_seconds
                     existing_sender.is_active = True
+                    ws_id = request.session.get('active_workspace_id')
+                    if ws_id and not existing_sender.workspace_id:
+                        existing_sender.workspace_id = ws_id
 
                     raw_password = sender_form.cleaned_data.get('smtp_password')
                     if raw_password:
@@ -1178,6 +1191,9 @@ def settings_view(request):
                     sender.from_email = normalized_email
                     sender.is_active = True
                     sender.is_verified = True
+                    ws_id = request.session.get('active_workspace_id')
+                    if ws_id:
+                        sender.workspace_id = ws_id
                     raw_password = sender_form.cleaned_data['smtp_password']
                     sender.set_password(raw_password)
                     sender.save()

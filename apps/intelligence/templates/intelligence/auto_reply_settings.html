@@ -1,0 +1,99 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Auto-reply Settings — Intelligent Digital Automation (IDA){% endblock %}
+{% block page_title %}Auto-reply Settings{% endblock %}
+
+{% block content %}
+<div class="page-shell max-w-none mx-auto space-y-6">
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="px-4 sm:px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div class="flex items-center gap-3 min-w-0 w-full">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center text-sm font-bold shadow-sm shrink-0">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3"/></svg>
+        </div>
+        <div class="min-w-0">
+          <h1 class="text-base font-bold text-slate-900 break-words sm:truncate">Auto-reply Settings</h1>
+          <p class="text-xs text-slate-500 truncate">
+            Configure when and how the AI should automatically reply to emails.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-4 sm:px-6 py-6 space-y-6">
+      <form method="post" class="space-y-6">
+        {% csrf_token %}
+        
+        <div class="space-y-4">
+          <div class="flex items-center">
+            <input type="checkbox" id="enable_auto_reply" name="enable_auto_reply" {% if settings.enable_auto_reply %}checked{% endif %} class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
+            <label for="enable_auto_reply" class="ml-2 block text-sm font-medium text-slate-900">
+              Enable automatic replies
+            </label>
+          </div>
+          <p class="mt-1 text-xs text-slate-500">
+            When enabled, the AI will analyze incoming emails and generate draft replies for appropriate messages.
+          </p>
+        </div>
+
+        {% if settings.enable_auto_reply %}
+        <div class="border-t pt-6 space-y-6">
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label for="confidence_threshold" class="block text-sm font-medium text-slate-700 mb-2">
+                Confidence threshold
+              </label>
+              <input type="number" id="confidence_threshold" name="confidence_threshold" min="0" max="100"
+                     value="{{ settings.confidence_threshold }}"
+                     class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent sm:text-sm">
+              <p class="mt-1 text-xs text-slate-500">
+                Minimum confidence score (0-100) required to generate an auto-reply. Higher = more conservative.
+              </p>
+            </div>
+            <div>
+              <label for="spam_risk_threshold" class="block text-sm font-medium text-slate-700 mb-2">
+                Maximum spam risk allowed
+              </label>
+              <select id="spam_risk_threshold" name="spam_risk_threshold"
+                      class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent sm:text-sm">
+                <option value="Very Low" {% if settings.spam_risk_threshold == 'Very Low' %}selected{% endif %}>Very Low</option>
+                <option value="Low" {% if settings.spam_risk_threshold == 'Low' %}selected{% endif %}>Low</option>
+                <option value="Medium" {% if settings.spam_risk_threshold == 'Medium' %}selected{% endif %}>Medium</option>
+                <option value="High" {% if settings.spam_risk_threshold == 'High' %}selected{% endif %}>High</option>
+              </select>
+              <p class="mt-1 text-xs text-slate-500">
+                Only generate auto-replies for emails with spam risk at or below this level.
+              </p>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <label for="default_tone" class="block text-sm font-medium text-slate-700 mb-2">
+              Default reply tone
+            </label>
+            <select id="default_tone" name="default_tone"
+                    class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent sm:text-sm">
+              <option value="professional" {% if settings.default_tone == 'professional' %}selected{% endif %}>Professional</option>
+              <option value="friendly" {% if settings.default_tone == 'friendly' %}selected{% endif %}>Friendly</option>
+              <option value="formal" {% if settings.default_tone == 'formal' %}selected{% endif %}>Formal</option>
+              <option value="casual" {% if settings.default_tone == 'casual' %}selected{% endif %}>Casual</option>
+            </select>
+            <p class="mt-1 text-xs text-slate-500">
+              The tone used for auto-generated replies when importance is not urgent.
+            </p>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="flex items-center justify-end">
+          <button type="submit"
+                  class="px-5 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-all shadow-lg">
+            Save Settings
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

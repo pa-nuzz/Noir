@@ -1,0 +1,75 @@
+{% load static %}
+{# Auth notification toasts — include at end of <body> before closing </body> #}
+{# 1. Django messages on page load #}
+{% if messages %}
+<div id="auth-toast-container" class="fixed top-20 right-5 z-[999] flex flex-col gap-3" style="pointer-events:none">
+  {% for message in messages %}
+  <div class="auth-toast px-5 py-4 rounded-2xl shadow-2xl border border-white/30 flex items-center gap-3 pointer-events-auto"
+       style="background:rgba(255,255,255,0.92);backdrop-filter:blur(12px);animation:authToastIn .35s ease forwards;
+       {% if message.tags == 'success' %}color:#059669;{% elif message.tags == 'error' %}color:#dc2626;{% elif message.tags == 'warning' %}color:#d97706;{% else %}color:#475569;{% endif %}">
+    <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0
+      {% if message.tags == 'success' %}bg-emerald-100{% elif message.tags == 'error' %}bg-red-100{% elif message.tags == 'warning' %}bg-amber-100{% else %}bg-gray-100{% endif %}">
+      {% if message.tags == 'success' %}
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+      {% elif message.tags == 'error' %}
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      {% elif message.tags == 'warning' %}
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.2 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      {% else %}
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      {% endif %}
+    </div>
+    <span class="font-semibold text-sm flex-1">{{ message }}</span>
+    <button onclick="this.closest('.auth-toast').style.opacity='0';setTimeout(()=>this.closest('.auth-toast').remove(),350)"
+      class="opacity-40 hover:opacity-70 transition-opacity ml-2 shrink-0" style="pointer-events:auto">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# 2. Lightweight notification polling (only when user is authenticated) #}
+{% if user.is_authenticated %}
+<div id="auth-notif-poll" class="fixed top-20 right-5 z-[998] flex flex-col gap-3" style="pointer-events:none"></div>
+<script>
+(function(){
+  var accessible=false;
+  try{accessible=document.cookie.indexOf('sessionid')!==-1||document.cookie.indexOf('csrftoken')!==-1}catch(e){}
+  if(!accessible)return;
+  var container=document.getElementById('auth-notif-poll');
+  if(!container)return;
+  function getCSRF(){var m=document.cookie.match(/csrftoken=([^;]+)/);return m?m[1]:''}
+  var pollUrl='{% url "notifications:unread_count" %}';
+  var listUrl='{% url "notifications:list" %}';
+  var lastCount=0;
+  function poll(){
+    if(document.hidden){setTimeout(poll,15000);return}
+    fetch(pollUrl,{headers:{'X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'})
+      .then(function(r){if(!r.ok)throw new Error('not ok');return r.json()})
+      .then(function(d){
+        var count=d.unread_count||0;
+        if(count>lastCount&&lastCount>0){
+          fetch(listUrl+'?page_size=5',{headers:{'X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'})
+            .then(function(r){return r.json()})
+            .then(function(data){
+              (data.notifications||[]).forEach(function(n){
+                if(!n.read){
+                  var div=document.createElement('div');
+                  div.className='auth-toast px-5 py-4 rounded-2xl shadow-2xl border border-white/30 flex items-center gap-3 pointer-events-auto';
+                  div.style.cssText='background:rgba(255,255,255,0.92);backdrop-filter:blur(12px);animation:authToastIn .35s ease forwards;color:#475569;';
+                  div.innerHTML='<div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-primary-light"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><span class="font-semibold text-sm flex-1">'+(n.title||n.message||'New notification')+'</span><button onclick="this.closest(\'.auth-toast\').style.opacity=\'0\';setTimeout(()=>this.closest(\'.auth-toast\').remove(),350)" class="opacity-40 hover:opacity-70 transition-opacity ml-2 shrink-0" style="pointer-events:auto"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>';
+                  container.appendChild(div);
+                }
+              });
+            });
+        }
+        lastCount=count;
+      })
+      .catch(function(){});
+    setTimeout(poll,30000);
+  }
+  setTimeout(poll,2000);
+})();
+</script>
+{% endif %}

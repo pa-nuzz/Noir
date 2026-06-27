@@ -37,19 +37,22 @@
           </p>
         </div>
       </div>
-      <div class="flex items-center gap-2 shrink-0 w-full sm:w-auto">
-        {% if draft.status == 'pending_review' %}
-          {% include "components/badge.html" with label=draft.get_status_display variant="yellow" %}
-        {% elif draft.status == 'edited' %}
-          {% include "components/badge.html" with label=draft.get_status_display variant="purple" %}
-        {% elif draft.status == 'approved' %}
-          {% include "components/badge.html" with label=draft.get_status_display variant="green" %}
-        {% elif draft.status == 'sent' %}
-          {% include "components/badge.html" with label=draft.get_status_display variant="blue" %}
-        {% else %}
-          {% include "components/badge.html" with label=draft.get_status_display variant="gray" %}
-        {% endif %}
-      </div>
+       <div class="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+         {% if draft.status == 'pending_review' %}
+           {% include "components/badge.html" with label=draft.get_status_display variant="yellow" %}
+         {% elif draft.status == 'edited' %}
+           {% include "components/badge.html" with label=draft.get_status_display variant="purple" %}
+         {% elif draft.status == 'approved' %}
+           {% include "components/badge.html" with label=draft.get_status_display variant="green" %}
+         {% elif draft.status == 'sent' %}
+           {% include "components/badge.html" with label=draft.get_status_display variant="blue" %}
+         {% else %}
+           {% include "components/badge.html" with label=draft.get_status_display variant="gray" %}
+         {% endif %}
+         {% if draft.ai_generated %}
+           {% include "components/badge.html" with label="AI Draft" variant="indigo" %}
+         {% endif %}
+       </div>
     </div>
 
     <div class="grid grid-cols-1 xl:grid-cols-5 divide-y xl:divide-y-0 xl:divide-x divide-slate-100">
@@ -186,15 +189,15 @@
           Send to {{ draft.original_message.from_name|default:draft.original_message.from_email|default:'Recipient' }}
         </button>
       </form>
-      <form method="post" action="{% url 'inbox:draft_send_test' draft.id %}" class="inline w-full sm:w-auto" id="test-form">
-        {% csrf_token %}
-        <input type="hidden" name="body" id="test-body" value="">
-        <button type="button" onclick="DraftDetail.sendTest()"
-                class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-white hover:text-primary transition-all cursor-pointer w-full sm:w-auto">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-          Test to myself
-        </button>
-      </form>
+<form method="post" action="{% url 'inbox:draft_send_test' draft.id %}" class="inline w-full sm:w-auto" id="test-form">
+    {% csrf_token %}
+    <input type="hidden" name="body" id="test-body" value="">
+    <button type="button" id="send-test-btn" onclick="DraftDetail.sendTest()"
+            class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-white hover:text-primary transition-all cursor-pointer w-full sm:w-auto">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 002-2H5a2 2 0 002-2v10a2 2 0 002 2z"/></svg>
+        Test to myself
+    </button>
+</form>
     </div>
   </div>
 </div>
@@ -229,10 +232,10 @@
         </p>
       </div>
     </div>
-    <div class="px-6 py-4 bg-slate-50 flex items-center justify-end gap-3">
-      <button type="button" onclick="DraftDetail.closeSendModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-white transition-colors">Cancel</button>
-      <button type="button" onclick="DraftDetail.confirmSend()" class="px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover transition-colors shadow-sm">Send Now</button>
-    </div>
+<div class="px-6 py-4 bg-slate-50 flex items-center justify-end gap-3">
+  <button type="button" onclick="DraftDetail.closeSendModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-white transition-colors">Cancel</button>
+  <button type="button" id="confirm-send-btn" onclick="DraftDetail.confirmSend()" class="px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover transition-colors shadow-sm">Send Now</button>
+</div>
   </div>
 </div>
 {% endblock %}
@@ -619,17 +622,100 @@ var DraftDetail = {
     }
   },
 
-  confirmSend: function() {
-    this.syncAll();
-    this.closeSendModal();
-    var form = document.getElementById('send-form');
-    if (form) form.submit();
-  },
+   confirmSend: function() {
+     this.syncAll();
+     this.closeSendModal();
+     
+     var sendBtn = document.getElementById('confirm-send-btn');
+     if (sendBtn) {
+       sendBtn.disabled = true;
+       sendBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-1.5 h-3.5 w-3.5 inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Sending...';
+     }
+     
+     var csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+     var formData = new FormData();
+     formData.append('body', document.getElementById('send-body').value);
+     formData.append('to_address', document.getElementById('send-to').value);
+     formData.append('cc_addresses', document.getElementById('send-cc').value);
+     formData.append('bcc_addresses', document.getElementById('send-bcc').value);
+     
+     if (window.showToast) showToast('info', 'Sending email...');
+     
+     fetch('/inbox/draft/send/' + '{% if draft %}{{ draft.id }}{% endif %}' + '/', {
+       method: 'POST',
+       headers: {
+         'X-CSRFToken': csrf ? csrf.value : '',
+         'X-Requested-With': 'XMLHttpRequest',
+       },
+       body: formData
+     })
+     .then(function(r) { return r.json(); })
+     .then(function(data) {
+       if (data.success) {
+         if (window.showToast) showToast('success', data.message);
+         if (data.redirect) {
+           window.location.href = data.redirect;
+         }
+       } else {
+         if (window.showToast) showToast('error', data.error || 'Failed to send email');
+       }
+     })
+     .catch(function() {
+       if (window.showToast) showToast('error', 'Network error. Please try again.');
+     })
+     .finally(function() {
+       if (sendBtn) {
+         sendBtn.disabled = false;
+         sendBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> Send Now';
+       }
+     });
+   },
 
-  sendTest: function() {
-    this.syncAll();
-    if (window.showToast) showToast('info', 'Sending test...');
-    document.getElementById('test-form').submit();
+   sendTest: function() {
+     this.syncAll();
+     
+     var testBtn = document.getElementById('send-test-btn');
+     if (testBtn) {
+       testBtn.disabled = true;
+       testBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-1.5 h-3.5 w-3.5 inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Sending...';
+     }
+     
+     var csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+     var formData = new FormData();
+     formData.append('body', document.getElementById('test-body').value);
+     
+     if (window.showToast) showToast('info', 'Sending test email...');
+     
+     fetch('/inbox/draft/send-test/' + '{% if draft %}{{ draft.id }}{% endif %}' + '/', {
+       method: 'POST',
+       headers: {
+         'X-CSRFToken': csrf ? csrf.value : '',
+         'X-Requested-With': 'XMLHttpRequest',
+       },
+       body: formData
+     })
+     .then(function(r) { return r.json(); })
+     .then(function(data) {
+       if (data.success) {
+         if (window.showToast) showToast('success', data.message);
+       } else {
+         if (window.showToast) showToast('error', data.error || 'Failed to send test email');
+       }
+     })
+     .catch(function() {
+       if (window.showToast) showToast('error', 'Network error. Please try again.');
+     })
+     .finally(function() {
+       if (testBtn) {
+         testBtn.disabled = false;
+         testBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 002-2H5a2 2 0 002-2v10a2 2 0 002 2z"/></svg> Test to myself';
+       }
+     });
+   },
+     })
+     .catch(function() {
+       if (window.showToast) showToast('error', 'Network error. Please try again.');
+     });
   }
 };
 

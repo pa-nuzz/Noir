@@ -6,7 +6,6 @@ import random
 import time
 from urllib.parse import quote_plus
 from uuid import uuid4
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -167,8 +166,8 @@ def _build_variable_context(recipient_email: str, recipient_context: dict = None
     context.setdefault('client_name', 'Valued Customer')
     context.setdefault('voucher', 'your discount')
     context.setdefault('subject', 'Your Email')
-    context.setdefault('month', datetime.now().strftime('%B %Y'))
-    context.setdefault('year', str(datetime.now().year))
+    context.setdefault('month', timezone.now().strftime('%B %Y'))
+    context.setdefault('year', str(timezone.now().year))
     return context
 
 
@@ -443,6 +442,57 @@ def _build_mime_message(html_body, plain_text, subject, from_header, to_email, r
     return msg_root
 
 
+def _persist_sent_email(campaign, sender, recipient_email, body_text, subject):
+    """Persist a sent campaign email into the sender's inbox (Sent folder).
+    
+    Creates EmailMessage + EmailThread so the sent mail appears in the
+    AI Email Agent inbox sent section.
+    """
+    from uuid import uuid4
+    from django.utils import timezone
+    from apps.inbox.models import EmailInbox, EmailThread, EmailMessage
+
+    qs = EmailInbox.objects.filter(email_address=sender.from_email)
+    if campaign.workspace_id:
+        qs = qs.filter(workspace_id=campaign.workspace_id)
+    else:
+        qs = qs.filter(user_id=sender.user_id, workspace__isnull=True)
+    inbox = qs.first()
+
+    if not inbox:
+        logger.info(
+            f"No inbox found for sender {sender.from_email}. "
+            f"Skipping sent email persistence."
+        )
+        return
+
+    # Create or get thread for this recipient + campaign
+    thread_id = f"campaign-{campaign.id}-{recipient_email}"
+    thread, _ = EmailThread.objects.get_or_create(
+        inbox=inbox,
+        thread_id=thread_id,
+        defaults={
+            'subject': subject,
+            'last_message_at': timezone.now(),
+            'snippet': body_text[:120] if body_text else '(No content)',
+        },
+    )
+
+    # Create the sent message
+    EmailMessage.objects.create(
+        thread=thread,
+        message_id=f"sent-{str(uuid4())[:12]}",
+        from_email=sender.from_email,
+        from_name=sender.display_name or sender.from_email,
+        to_emails=[recipient_email],
+        subject=subject,
+        body_text=body_text or '',
+        received_at=timezone.now(),
+        is_incoming=False,  # Sent email (not incoming)
+        is_read=True,       # Sent emails are implicitly "read"
+    )
+
+
 def _get_smtp_connection(sender):
     if sender.smtp_port == 465:
         return smtplib.SMTP_SSL(sender.smtp_host, sender.smtp_port, timeout=20)
@@ -489,6 +539,10 @@ def _send_single_recipient(
             if variant_obj:
                 variant_obj.sent_count = models.F('sent_count') + 1
                 variant_obj.save(update_fields=['sent_count'])
+            
+            # Persist the sent email into the sender's inbox "Sent" folder
+            _persist_sent_email(campaign, sender, recipient, text_out, subject_rendered)
+            
             delay_seconds = max(float(sender.send_delay_seconds or 0), 1.0)
             time.sleep(delay_seconds)
             return True, None
@@ -584,7 +638,8 @@ def send_campaign_with_smtp(campaign, base_url: str, recipients_override=None):
     template = campaign.template
 
     sent_count = 0
-    failed_count = len(recipients) - len(jobs)
+    failed_count = 0
+    quota_skipped = len(recipients) - len(jobs)
     last_error = None
 
     for recipient, subj, body, variant_obj in jobs:

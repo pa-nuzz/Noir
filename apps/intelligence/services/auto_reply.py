@@ -1,7 +1,9 @@
 import logging
 import re
-from typing import Tuple
+from typing import Tuple, Optional
 from .llm_client import get_llm_client
+from .spam_analysis import analyze_spam_text
+from ..models import AutoReplySettings
 
 logger = logging.getLogger(__name__)
 
@@ -158,7 +160,7 @@ def generate_auto_reply(
 
 
 def process_auto_reply(message_id: int) -> bool:
-    """Process single message for auto-reply.
+    """Process single message for auto-reply with spam filtering and confidence threshold.
 
     Args:
         message_id: EmailMessage ID
@@ -190,18 +192,92 @@ def process_auto_reply(message_id: int) -> bool:
         logger.info(f"Auto-reply skipped: existing draft for thread {msg.thread.id}")
         return False
 
+    # Classify importance and intent
     importance, intent = classify_importance(
         msg.subject or '',
         msg.body_text or '',
     )
+    
+    # Populate intent and urgency on the message
+    msg.intent = intent
+    msg.urgency = importance
+    msg.save(update_fields=['intent', 'urgency'])
 
+    # Intents that warrant an AI draft reply
+    REPLY_WORTHY_INTENTS = {'question', 'support', 'complaint', 'meeting_request'}
+
+    # Skip if intent doesn't warrant a reply (other, newsletter-ish, automated content)
+    if intent not in REPLY_WORTHY_INTENTS:
+        logger.info(f"Auto-reply skipped: intent={intent} not reply-worthy for message {message_id}")
+        return False
+
+    # Intents that warrant an AI draft reply
+    REPLY_WORTHY_INTENTS = {'question', 'support', 'complaint', 'meeting_request'}
+
+    # Skip if intent doesn't warrant a reply (other, sales, feedback, introduction, automated)
+    if intent not in REPLY_WORTHY_INTENTS:
+        logger.info(f"Auto-reply skipped: intent={intent} not reply-worthy for message {message_id}")
+        return False
+
+    # Skip low importance emails
     if importance == 'low':
         logger.info(f"Auto-reply skipped: importance=low for message {message_id}")
         return False
 
+    # Get user's auto-reply settings
+    user = msg.thread.inbox.user
+    settings_obj, _ = AutoReplySettings.objects.get_or_create(
+        user=user,
+        defaults={
+            'enable_auto_reply': True,
+            'confidence_threshold': 80,
+            'spam_risk_threshold': 'Medium',
+            'default_tone': 'professional',
+        }
+    )
+    
+    if not settings_obj.enable_auto_reply:
+        logger.info(f"Auto-reply skipped: disabled by user settings for {user.email}")
+        return False
+
+    # Perform spam analysis to compute confidence
+    combined_text = f"{msg.subject or ''}\n{msg.body_text or ''}"
+    spam_result = analyze_spam_text(combined_text)
+    spam_score = spam_result.get('spam_score', 0)
+    risk_level = spam_result.get('risk_level', 'Low')
+    
+    # Map risk levels to numeric values for comparison
+    risk_order = {
+        'Very Low': 0,
+        'Low': 1,
+        'Medium': 2,
+        'High': 3,
+    }
+    user_risk_level = settings_obj.spam_risk_threshold
+    user_risk_value = risk_order.get(user_risk_level, 2)  # default Medium
+    current_risk_value = risk_order.get(risk_level, 2)
+    
+    # Calculate confidence (inverse of spam score)
+    confidence = 100 - spam_score
+    
+    # Check confidence threshold and spam risk
+    if confidence < settings_obj.confidence_threshold:
+        logger.info(
+            f"Auto-reply skipped: confidence {confidence} below threshold {settings_obj.confidence_threshold} "
+            f"for message {message_id}"
+        )
+        return False
+        
+    if current_risk_value > user_risk_value:
+        logger.info(
+            f"Auto-reply skipped: risk level {risk_level} exceeds threshold {user_risk_level} "
+            f"for message {message_id}"
+        )
+        return False
+
     thread_summary = msg.thread.ai_summary or ''
     
-    tone = "urgent" if importance == "urgent" else "professional"
+    tone = "urgent" if importance == "urgent" else settings_obj.default_tone
 
     draft_body = generate_auto_reply(
         subject=msg.subject or '',
@@ -220,15 +296,18 @@ def process_auto_reply(message_id: int) -> bool:
     EmailDraft.objects.create(
         thread=msg.thread,
         user=msg.thread.inbox.user,
+        workspace=msg.thread.inbox.workspace,
         original_message=msg,
         ai_generated_body=draft_body,
         edited_body=draft_body,
         status='pending_review',
         final_body='',
+        ai_generated=True,
     )
 
     logger.info(
         f"Auto-reply draft created for message {message_id} "
-        f"({msg.from_email}, importance={importance}, intent={intent}, tone={tone})"
+        f"({msg.from_email}, importance={importance}, intent={intent}, tone={tone}, "
+        f"confidence={confidence}, spam_score={spam_score}, risk={risk_level})"
     )
     return True

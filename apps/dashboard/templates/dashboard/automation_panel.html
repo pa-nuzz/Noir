@@ -42,7 +42,7 @@
     width: 6px; height: 6px; border-radius: 50%;
     background: #10B981; display: inline-block;
   }
-  .auto-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+  .auto-actions { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
   .auto-all-check { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 600; color: #64748B; cursor: pointer; }
   .auto-all-check input { width: 16px; height: 16px; accent-color: #6D28D9; cursor: pointer; }
 </style>
@@ -106,6 +106,7 @@
     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
     Save All Automation Rules
   </button>
+  <div id="auto-save-status" class="text-sm text-emerald-600 font-semibold hidden">Saved!</div>
 </div>
 
 {{ automation_rules_json|json_script:"auto-rules-data" }}
@@ -248,6 +249,9 @@ function updateActiveCount() {
 }
 
 function saveAutomationRules() {
+  var statusEl = document.getElementById('auto-save-status');
+  statusEl.classList.add('hidden');
+
   var rules = Object.values(autoRulesData).filter(function(r) { return r.is_active; });
 
   fetch('{% url "trending:save_automation_rules" %}', {
@@ -264,7 +268,9 @@ function saveAutomationRules() {
     showToast('success', data.count + ' rule(s) saved!');
   })
   .catch(function() {
-    showToast('error', 'Failed to save. Please try again.');
+    statusEl.textContent = 'Failed to save. Please try again.';
+    statusEl.className = 'text-sm text-red-600 font-semibold';
+    statusEl.classList.remove('hidden');
   });
 }
 

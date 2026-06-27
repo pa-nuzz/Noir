@@ -106,7 +106,7 @@ class Sender(AuditMixin):
         return self.emails_sent_today >= self.daily_limit
 
     class Meta:
-        unique_together = ('user', 'from_email')
+        unique_together = ('user', 'workspace', 'from_email')
 
     def save(self, *args, **kwargs):
         if self.from_email:

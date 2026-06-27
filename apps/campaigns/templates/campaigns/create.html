@@ -58,7 +58,7 @@
       <button type="button" onclick="goToStep({{ forloop.counter0 }})"
         class="step-btn flex items-center gap-2 {% if forloop.counter0 <= current_step %}text-slate-800{% else %}text-slate-400 cursor-not-allowed{% endif %} group transition-colors"
         data-step="{{ forloop.counter0 }}" {% if forloop.counter0 > current_step %}disabled{% endif %}>
-        <span class="step-circle w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all
+        <span class="step-circle w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all
           {% if forloop.counter0 < current_step %}bg-emerald-500 text-white{% elif forloop.counter0 == current_step %}bg-primary text-white ring-4 ring-primary/20{% else %}bg-slate-200 text-slate-500{% endif %}">
           {% if forloop.counter0 < current_step %}
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
@@ -66,7 +66,7 @@
           {{ forloop.counter }}
           {% endif %}
         </span>
-        <span class="text-xs font-semibold hidden sm:inline">{{ s }}</span>
+        <span class="text-sm font-semibold hidden sm:inline">{{ s }}</span>
       </button>
       {% if not forloop.last %}
       <div class="flex-1 h-px mx-2 {% if forloop.counter <= current_step %}bg-emerald-400{% else %}bg-slate-200{% endif %}"></div>
@@ -77,6 +77,17 @@
 
   <form method="post" id="campaign-form" enctype="multipart/form-data" class="grid grid-cols-1 gap-8 items-start">
     {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="col-span-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+      {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+    {% if form.errors %}
+    <div class="col-span-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+      <p class="font-semibold mb-1">Please fix the following errors:</p>
+      {{ form.errors }}
+    </div>
+    {% endif %}
     {% if selected_template %}<input type="hidden" name="template_id" value="{{ selected_template.id }}">{% endif %}
 
 
@@ -87,7 +98,7 @@
       <div id="step-0" class="step-panel">
         <div class="glass-card section-card font-sans">
           <div class="flex items-center gap-3 mb-6">
-            <div class="w-7 h-7 bg-primary text-white rounded-lg flex items-center justify-center text-xs font-bold font-sans">1</div>
+            <div class="w-9 h-9 bg-primary text-white rounded-lg flex items-center justify-center text-sm font-bold font-sans">1</div>
             <div>
               <h2 class="section-title">Choose Your Contacts</h2>
               <p class="section-subtitle">Pick a saved list, upload a CSV, or enter emails manually</p>
@@ -213,7 +224,7 @@
       <div id="step-1" class="step-panel hidden">
         <div class="glass-card section-card font-sans">
           <div class="flex items-center gap-3 mb-6">
-            <div class="w-7 h-7 bg-primary text-white rounded-lg flex items-center justify-center text-xs font-bold font-sans">2</div>
+            <div class="w-9 h-9 bg-primary text-white rounded-lg flex items-center justify-center text-sm font-bold font-sans">2</div>
             <div>
               <h2 class="section-title">Campaign Identity</h2>
               <p class="section-subtitle">How your campaign will appear to recipients</p>
@@ -235,7 +246,7 @@
 
             <div class="md:col-span-2">
               <label for="id_from_name" class="block text-sm font-semibold text-slate-700 mb-2">From Name</label>
-              {{ form.from_name|add_class:"auth-input"|attr:"placeholder:Mailexa Team" }}
+              {{ form.from_name|add_class:"auth-input"|attr:"placeholder:IDA Team" }}
               {% if form.from_name.errors %}<p class="mt-1 text-xs text-red-600">{{ form.from_name.errors.0 }}</p>{% endif %}
             </div>
 
@@ -275,7 +286,7 @@
       <div id="step-2" class="step-panel hidden">
         <div class="glass-card section-card font-sans">
           <div class="flex items-center gap-3 mb-6">
-            <div class="w-7 h-7 bg-primary text-white rounded-lg flex items-center justify-center text-xs font-bold font-sans">3</div>
+            <div class="w-9 h-9 bg-primary text-white rounded-lg flex items-center justify-center text-sm font-bold font-sans">3</div>
             <div>
               <h2 class="section-title">Message Content</h2>
               <p class="section-subtitle">Write your message in plain text</p>
@@ -420,7 +431,7 @@
       <div id="step-3" class="step-panel hidden">
         <div class="glass-card section-card font-sans">
           <div class="flex items-center gap-3 mb-6">
-            <div class="w-7 h-7 bg-emerald-600 text-white rounded-lg flex items-center justify-center text-xs font-bold font-sans">4</div>
+            <div class="w-9 h-9 bg-emerald-600 text-white rounded-lg flex items-center justify-center text-sm font-bold font-sans">4</div>
             <div>
               <h2 class="section-title">Delivery Settings</h2>
               <p class="section-subtitle">Configure sender, schedule, A/B test, and more</p>
@@ -446,7 +457,7 @@
             <details class="rounded-xl border border-slate-200 group mb-6" {% if campaign and campaign.is_ab_test %}open{% endif %}>
               <summary class="flex items-center gap-3 p-4 cursor-pointer select-none list-none">
                 <div class="flex items-center gap-3 flex-1">
-                  <div class="w-7 h-7 bg-slate-600 text-white rounded-lg flex items-center justify-center text-xs font-bold">
+                  <div class="w-9 h-9 bg-slate-600 text-white rounded-lg flex items-center justify-center text-sm font-bold">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
                   </div>
                   <span class="text-sm font-bold text-slate-900">Advanced Options</span>
@@ -457,7 +468,7 @@
                 <!-- A/B Testing -->
                 <div id="ab-testing-section" class="rounded-xl border border-slate-200 p-4">
                   <div class="flex items-center gap-3 mb-4">
-                    <div class="w-7 h-7 bg-violet-600 text-white rounded-lg flex items-center justify-center text-xs font-bold">A/B</div>
+                    <div class="w-9 h-9 bg-violet-600 text-white rounded-lg flex items-center justify-center text-sm font-bold">A/B</div>
                     <h3 class="text-sm font-bold text-slate-900 uppercase tracking-widest">A/B Testing</h3>
                   </div>
                   <label class="flex items-center gap-3 p-4 rounded-xl border border-slate-200 cursor-pointer hover:border-violet-300 transition-all {% if campaign and campaign.is_ab_test %}border-violet-300 bg-violet-50/50{% endif %}">
@@ -494,7 +505,7 @@
             <details class="rounded-xl border border-slate-200 group" {% if campaign and campaign.attachments.exists %}open{% endif %}>
               <summary class="flex items-center gap-3 p-4 cursor-pointer select-none list-none">
                 <div class="flex items-center gap-3 flex-1">
-                  <div class="w-7 h-7 bg-slate-600 text-white rounded-lg flex items-center justify-center text-xs font-bold">
+                  <div class="w-9 h-9 bg-slate-600 text-white rounded-lg flex items-center justify-center text-sm font-bold">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                   </div>
                   <h3 class="text-sm font-bold text-slate-900 uppercase tracking-widest">Attachments</h3>
@@ -538,7 +549,7 @@
             <details class="rounded-xl border border-slate-200 group">
               <summary class="flex items-center gap-3 p-4 cursor-pointer select-none list-none">
                 <div class="flex items-center gap-3 flex-1">
-                  <div class="w-7 h-7 bg-indigo-600 text-white rounded-lg flex items-center justify-center font-bold text-[9px] italic">AI</div>
+                  <div class="w-9 h-9 bg-indigo-600 text-white rounded-lg flex items-center justify-center text-sm font-bold">AI</div>
                   <h3 class="text-sm font-bold text-slate-900 uppercase tracking-widest">Spam Analysis</h3>
                 </div>
                 <svg class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -582,7 +593,7 @@
       <div id="step-4" class="step-panel hidden">
         <div class="glass-card section-card font-sans">
           <div class="flex items-center gap-3 mb-6">
-            <div class="w-7 h-7 bg-emerald-600 text-white rounded-lg flex items-center justify-center text-xs font-bold font-sans">
+            <div class="w-9 h-9 bg-emerald-600 text-white rounded-lg flex items-center justify-center text-sm font-bold font-sans">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
             <div>
@@ -627,7 +638,7 @@
 
           <div class="mt-6 flex flex-col gap-3">
             {% if not read_only %}
-            <button type="button" onclick="confirmCampaignSend('send_now')"
+            <button type="button" onclick="confirmCampaignSend()"
               class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-colors shadow-lg shadow-emerald-500/30">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"/></svg>
               Review & Send Now
@@ -640,7 +651,11 @@
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8m-18 8h18a2 2 0 002-2V8a2 2 0 00-2-2H3a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
               Send Test Email
             </button>
-  {% include 'campaigns/_button.html' with type='primary' text='Save Draft Only' button_type='submit' name='action' value='save_draft' %}
+  <button type="submit" name="action" value="save_draft"
+              class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary hover:bg-primary-hover text-white font-semibold transition-colors shadow-lg shadow-indigo-500/30">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+              Save Draft Only
+            </button>
             {% endif %}
             <a href="{% url 'campaigns:campaign_list' %}"
               class="w-full inline-flex items-center justify-center px-4 py-3 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors text-sm font-semibold">
@@ -839,10 +854,22 @@ function validateStep(step) {
     var nameField = document.getElementById('id_name');
     if (nameField && !nameField.value.trim()) { errors.push('Campaign Name is required'); nameField.focus(); }
   } else if (step === 2) {
-    var subjField = document.getElementById('id_subject');
-    var bodyField = document.getElementById('id_body_text');
-    if (subjField && !subjField.value.trim()) { errors.push('Subject is required'); subjField.focus(); }
-    else if (bodyField && !bodyField.value.trim()) { errors.push('Message body is required'); bodyField.focus(); }
+    var abChecked = document.getElementById('id_is_ab_test') && document.getElementById('id_is_ab_test').checked;
+    if (abChecked) {
+      var vaSubj = document.getElementById('id_variant_a_subject');
+      var vaBody = document.getElementById('id_variant_a_body');
+      var vbSubj = document.getElementById('id_variant_b_subject');
+      var vbBody = document.getElementById('id_variant_b_body');
+      if (vaSubj && !vaSubj.value.trim()) { errors.push('Variant A subject is required'); vaSubj.focus(); }
+      else if (vaBody && !vaBody.value.trim()) { errors.push('Variant A body is required'); vaBody.focus(); }
+      else if (vbSubj && !vbSubj.value.trim()) { errors.push('Variant B subject is required'); vbSubj.focus(); }
+      else if (vbBody && !vbBody.value.trim()) { errors.push('Variant B body is required'); vbBody.focus(); }
+    } else {
+      var subjField = document.getElementById('id_subject');
+      var bodyField = document.getElementById('id_body_text');
+      if (subjField && !subjField.value.trim()) { errors.push('Subject is required'); subjField.focus(); }
+      else if (bodyField && !bodyField.value.trim()) { errors.push('Message body is required'); bodyField.focus(); }
+    }
   } else if (step === 3) {
     var senderField = document.getElementById('id_sender');
     if (senderField && !senderField.value) { errors.push('Please select a sender profile'); senderField.focus(); }
@@ -870,17 +897,17 @@ function goToStep(step) {
     var circle = btn.querySelector('.step-circle');
     btn.disabled = idx > maxCompletedStep;
     if (idx < step) {
-      circle.className = 'step-circle w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all bg-emerald-500 text-white';
+      circle.className = 'step-circle w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all bg-emerald-500 text-white';
       circle.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>';
       btn.classList.remove('cursor-not-allowed', 'text-slate-400');
       btn.classList.add('text-slate-800');
     } else if (idx === step) {
-      circle.className = 'step-circle w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all bg-primary text-white ring-4 ring-primary/20';
+      circle.className = 'step-circle w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all bg-primary text-white ring-4 ring-primary/20';
       circle.textContent = idx + 1;
       btn.classList.remove('cursor-not-allowed', 'text-slate-400');
       btn.classList.add('text-slate-800');
     } else {
-      circle.className = 'step-circle w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all bg-slate-200 text-slate-500';
+      circle.className = 'step-circle w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all bg-slate-200 text-slate-500';
       circle.textContent = idx + 1;
       btn.classList.add('cursor-not-allowed', 'text-slate-400');
       btn.classList.remove('text-slate-800');
@@ -888,6 +915,7 @@ function goToStep(step) {
     if (idx <= maxCompletedStep) { btn.disabled = false; btn.classList.remove('cursor-not-allowed', 'text-slate-400'); btn.classList.add('text-slate-800'); }
   });
   currentStep = step;
+  if (step === 1) updateRecipientLiveStats();
   window.scrollTo({ top: 0, behavior: 'smooth' });
   updateReviewStep();
 }
@@ -1228,16 +1256,33 @@ function addAttachmentRow() { var template=document.getElementById('attachment-r
 })();
 
 // ── Recipient live stats ─────────────────────────────────────
-(function() {
+function updateRecipientLiveStats() {
   var recipField = document.getElementById('id_recipient_emails');
   var stats = document.getElementById('recipient-live-stats');
   if (!recipField || !stats) return;
-  recipField.addEventListener('input', function() {
-    var val = this.value;
-    var emails = val.split(/[,;\n]/).map(function(e) { return e.trim().toLowerCase(); }).filter(Boolean);
-    var unique = []; emails.forEach(function(e) { if (unique.indexOf(e) === -1) unique.push(e); });
-    stats.textContent = unique.length + ' unique recipients · ' + (emails.length - unique.length) + ' duplicates removed';
+  var emails = [];
+  emails = emails.concat(recipField.value.split(/[,;\n]/).map(function(e) { return e.trim().toLowerCase(); }).filter(Boolean));
+  var csvInput = document.getElementById('csv_emails_input');
+  if (csvInput && csvInput.value) {
+    emails = emails.concat(csvInput.value.split(',').map(function(e) { return e.trim().toLowerCase(); }).filter(Boolean));
+  }
+  document.querySelectorAll('input[name="contact_lists"]:checked').forEach(function(cb) {
+    var count = parseInt(cb.dataset.contactCount || '0', 10);
+    for (var i = 0; i < count; i++) emails.push('list-contact-' + cb.value + '-' + i);
   });
+  var unique = [];
+  emails.forEach(function(e) { if (unique.indexOf(e) === -1) unique.push(e); });
+  stats.textContent = unique.length + ' unique recipients \u00b7 ' + (emails.length - unique.length) + ' duplicates removed';
+}
+(function() {
+  var recipField = document.getElementById('id_recipient_emails');
+  if (recipField) recipField.addEventListener('input', updateRecipientLiveStats);
+  var csvFileInput = document.getElementById('csv-file-input');
+  if (csvFileInput) csvFileInput.addEventListener('change', function() { setTimeout(updateRecipientLiveStats, 100); });
+  document.querySelectorAll('input[name="contact_lists"]').forEach(function(cb) {
+    cb.addEventListener('change', updateRecipientLiveStats);
+  });
+  updateRecipientLiveStats();
 })();
 
 // ── Form Loading States ─────────────────────────────────────
@@ -1295,40 +1340,74 @@ function addAttachmentRow() { var template=document.getElementById('attachment-r
 goToStep({% if read_only %}4{% else %}0{% endif %});
 
 // ── Campaign Send Confirmation ─────────────────────────────────
-function confirmCampaignSend(action) {
-  // Get campaign info
+function confirmCampaignSend() {
+  var form = document.querySelector('#campaign-form');
+  if (!form) return;
+
   var campaignName = document.getElementById('review-name')?.textContent || 'Campaign';
   var recipientCount = parseInt(document.getElementById('review-recipients')?.textContent || '0');
   var senderSelect = document.querySelector('#id_sender');
-  var senderText = senderSelect?.options[senderSelect.selectedIndex]?.text || 'Sender';
-  
-  // Get quota info (would need to be passed from backend or fetched via AJAX)
-  // For now, show basic confirmation
-  if (recipientCount === 0) {
-    alert('Please add at least one recipient before sending.');
+  var senderText = senderSelect?.options[senderSelect.selectedIndex]?.text || '';
+  var senderId = senderSelect?.value || '';
+
+  if (!senderId) {
+    showInlineAlert('Please select a sender profile before sending. Go to the Delivery step to choose a sender.', 'error');
     return;
   }
-  
-  var estimatedMinutes = Math.ceil(recipientCount / 20); // 20 emails per minute
+
+  if (recipientCount === 0) {
+    showInlineAlert('Please add at least one recipient before sending. Go to Step 1 (Contacts) to add recipients.', 'error');
+    return;
+  }
+
+  var abChecked = document.getElementById('id_is_ab_test') && document.getElementById('id_is_ab_test').checked;
+  var hasSubject;
+  if (abChecked) {
+    hasSubject = (document.getElementById('id_variant_a_subject')?.value?.trim() && document.getElementById('id_variant_b_subject')?.value?.trim());
+  } else {
+    hasSubject = document.getElementById('id_subject')?.value?.trim();
+  }
+  if (!hasSubject) {
+    showInlineAlert('Please add a subject line before sending. Go to the Message step to add a subject.', 'error');
+    return;
+  }
+
+  var estimatedMinutes = Math.ceil(recipientCount / 20);
   var confirmMsg = 'Sending Campaign: ' + campaignName + '\n\n' +
                    'Recipients: ' + recipientCount + ' contacts\n' +
-                   'Sender: ' + senderText + '\n' +
-                   'Estimated time: ~' + estimatedMinutes + ' minutes\n\n' +
-                   '⚠️ This will send immediately to all recipients.\n\n' +
+                   'Sender: ' + senderText +
+                   '\nEstimated time: ~' + estimatedMinutes + ' minutes\n\n' +
+                   'This will send immediately to all recipients.\n\n' +
                    'Click OK to confirm sending.';
-  
+
   if (confirm(confirmMsg)) {
-    // Find the form and submit with the correct action
-    var form = document.querySelector('#campaign-form');
-    if (form) {
-      var hiddenInput = document.createElement('input');
-      hiddenInput.type = 'hidden';
-      hiddenInput.name = 'action';
-      hiddenInput.value = action;
-      form.appendChild(hiddenInput);
-      form.submit();
-    }
+    var hiddenInput = document.createElement('input');
+    hiddenInput.type = 'hidden';
+    hiddenInput.name = 'action';
+    hiddenInput.value = 'send_now';
+    form.appendChild(hiddenInput);
+    
+    // Trigger loading state manually since we're calling submit() directly
+    var submitButtons = form.querySelectorAll('button[type="submit"]');
+    submitButtons.forEach(function(btn) {
+      btn.disabled = true;
+      btn.dataset.originalHtml = btn.innerHTML;
+      btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Sending...';
+    });
+    
+    form.submit();
   }
+}
+
+function showInlineAlert(message, type) {
+  var existing = document.querySelector('.send-inline-alert');
+  if (existing) existing.remove();
+  var alertDiv = document.createElement('div');
+  alertDiv.className = 'send-inline-alert m-4 p-4 rounded-xl border ' + (type === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700');
+  alertDiv.innerHTML = '<p class="text-sm font-semibold">' + (type === 'error' ? '✗ Error' : '✓ Success') + ': ' + message + '</p>';
+  var form = document.querySelector('#campaign-form');
+  if (form) form.insertBefore(alertDiv, form.firstChild);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 </script>
 {% endblock %}

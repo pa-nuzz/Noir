@@ -9,12 +9,21 @@ from apps.senders.models import Sender
 from apps.workspaces.models import TeamInvitation
 
 
-def _build_notifications(user, dismissed_at):
+def _build_notifications(user, dismissed_at, request=None):
     notifications = []
     now = timezone.now()
 
-    senders_qs = Sender.objects.filter(user=user)
-    campaigns_qs = Campaign.objects.filter(user=user)
+    # IMPORTANT: Use filter_by_context if request is available for workspace isolation
+    # In workspace mode: shows only workspace notifications
+    # In personal mode: shows only personal notifications
+    if request:
+        from apps.workspaces.query_helpers import filter_by_context
+        senders_qs = filter_by_context(request, Sender.objects.all())
+        campaigns_qs = filter_by_context(request, Campaign.objects.all())
+    else:
+        # Fallback to user-based filtering if no request (backward compatibility)
+        senders_qs = Sender.objects.filter(user=user)
+        campaigns_qs = Campaign.objects.filter(user=user)
 
     active_senders_count = senders_qs.filter(is_active=True).count()
     total_senders = senders_qs.count()
@@ -161,7 +170,7 @@ def dashboard_notifications(request):
         except (TypeError, ValueError):
             dismissed_at = None
 
-    notifications = _build_notifications(request.user, dismissed_at)
+    notifications = _build_notifications(request.user, dismissed_at, request=request)
     persistent_notifications = Notification.objects.filter(
         user=request.user,
         is_read=False,

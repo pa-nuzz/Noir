@@ -1,331 +1,181 @@
-{% extends "base.html" %}
-{% load static widget_tweaks %}
-{% block title %}Create Account — Intelligent Digital Automation (IDA){% endblock %}
-{% block extra_head %}
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="color-scheme" content="light only">
+<style>body{background:#6D28D9}html{background:#6D28D9}.auth-card{overflow:hidden}.auth-wrap{opacity:0;animation:authFadeIn .25s ease forwards}@keyframes authFadeIn{to{opacity:1}}nav{background:rgba(255,255,255,0.95);border-bottom:1px solid #E2E8F0}nav a{color:#445B73;text-decoration:none}</style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Account — Intelligent Digital Automation (IDA)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/tailwind.css' %}?v={{ STATIC_VERSION }}">
+<link rel="stylesheet" href="{% static 'css/style.css' %}?v={{ STATIC_VERSION }}">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{fontFamily:{sans:['"Raleway"','system-ui','sans-serif'],serif:['"Raleway"','Georgia','serif']},colors:{primary:{DEFAULT:'#6D28D9',hover:'#5B21B6',light:'#EDE9FE'},secondary:{DEFAULT:'#06B6D4',light:'#ECFEFF'},ink:{DEFAULT:'#0A2540',muted:'#445B73',subtle:'#8FA5BC'},surface:{DEFAULT:'#FFFFFF',raised:'#F8FAFC',border:'#E2E8F0'}},maxWidth:{'8xl':'88rem'},borderRadius:{'2xl':'1rem','3xl':'1.25rem'}}}}</script>
 <style>
-  @keyframes logoPop {
-    0% { transform: scale(0.8); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-  }
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:'Raleway','Plus Jakarta Sans',system-ui,sans-serif;background:linear-gradient(135deg,#6D28D9 0%,#06B6D4 100%);min-height:100vh;display:flex;flex-direction:column}
+.auth-wrap{flex:1;display:flex;justify-content:center;align-items:center;padding:84px 20px 20px}
+.auth-card{position:relative;width:100%;max-width:960px;height:75vh;max-height:680px;min-height:500px;background:#fff;border-radius:24px;box-shadow:0 25px 50px rgba(0,0,0,0.2);overflow:hidden;z-index:1}
+.auth-card::before{content:"";position:absolute;height:2000px;width:2000px;top:-10%;right:48%;transform:translateY(-50%);background:linear-gradient(-45deg,#6D28D9 0%,#06B6D4 100%);transition:1.8s ease-in-out;border-radius:50%;z-index:1}
+.auth-card.sign-up-mode::before{transform:translate(100%,-50%);right:52%}
+.auth-forms{position:absolute;width:100%;height:100%;top:0;left:0}
+.forms-wrapper{position:absolute;top:50%;transform:translate(-50%,-50%);left:75%;width:50%;transition:1s 0.7s ease-in-out;display:grid;grid-template-columns:1fr;z-index:10}
+.auth-card.sign-up-mode .forms-wrapper{left:25%}
+.forms-wrapper form{display:flex;align-items:center;justify-content:center;flex-direction:column;padding:0 4rem;transition:all 0.2s 0.7s;overflow:hidden;grid-column:1/2;grid-row:1/2}
+.forms-wrapper form.sign-in-form{z-index:2}
+.forms-wrapper form.sign-up-form{opacity:0;z-index:1}
+.auth-card.sign-up-mode form.sign-in-form{opacity:0;z-index:1}
+.auth-card.sign-up-mode form.sign-up-form{opacity:1;z-index:2}
+.form-title{font-size:2.2rem;color:#444;margin-bottom:14px;font-weight:700}
+.input-field{max-width:380px;width:100%;background-color:#f0f0f0;margin:12px 0;height:52px;border-radius:55px;display:grid;grid-template-columns:15% 85%;padding:0 0.4rem;position:relative;transition:0.3s}
+.input-field:focus-within{background-color:#e8e8e8;box-shadow:0 0 0 2px #06B6D4}
+.input-field .f-icon{text-align:center;line-height:52px;color:#666;font-size:1.1rem;display:flex;align-items:center;justify-content:center}
+.input-field input{background:none;outline:none;border:none;line-height:1;font-weight:500;font-size:0.95rem;color:#333;width:100%;padding-right:2.5rem}
+.input-field input::placeholder{color:#aaa;font-weight:400}
+.input-field .eye-toggle{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:#888;cursor:pointer;padding:0;display:flex}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 36px;background:linear-gradient(90deg,#6D28D9 0%,#06B6D4 100%);border:none;border-radius:55px;color:#fff;font-size:0.9rem;font-weight:800;cursor:pointer;transition:0.3s;box-shadow:0 4px 12px rgba(109,40,217,0.3)}
+.btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 20px rgba(8,145,178,0.3)}
+.btn:disabled{opacity:0.6;cursor:not-allowed;transform:none;box-shadow:none}
+.btn:disabled{opacity:0.7;cursor:not-allowed}
+.forgot-row{max-width:380px;width:100%;text-align:right;margin-top:-4px;margin-bottom:4px}
+.forgot-row a{color:#445B73;font-size:0.85rem;font-weight:700;text-decoration:none;transition:0.2s}.forgot-row a:hover{color:#0A2540}
+.panels-container{position:absolute;height:100%;width:100%;top:0;left:0;display:grid;grid-template-columns:repeat(2,1fr)}
+.panel{display:flex;flex-direction:column;align-items:flex-end;justify-content:space-around;text-align:center;z-index:6}
+.left-panel{pointer-events:all;padding:3rem 17% 2rem 12%}
+.right-panel{pointer-events:none;padding:3rem 12% 2rem 17%}
+.panel .content{color:#fff;transition:transform 0.9s ease-in-out,opacity 0.9s ease-in-out,visibility 0.9s ease-in-out;transition-delay:0.6s}
+.panel h3{font-weight:600;line-height:1;font-size:1.5rem;margin-bottom:10px}
+.panel p{font-size:0.95rem;padding:0.7rem 0}
+.btn.transparent{margin:0;background:rgba(255,255,255,0.12);border:2px solid rgba(255,255,255,0.8);padding:8px 24px;border-radius:12px;color:#fff;font-size:0.8rem;font-weight:700;cursor:pointer;transition:0.3s;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;backdrop-filter:blur(4px)}
+.btn.transparent:hover{background:rgba(255,255,255,0.22);transform:translateY(-1px)}
+.right-panel .content{transform:translateX(800px);opacity:0;visibility:hidden}
+.auth-card.sign-up-mode .left-panel .content{transform:translateX(-800px);opacity:0;visibility:hidden}
+.auth-card.sign-up-mode .right-panel .content{transform:translateX(0%);opacity:1;visibility:visible}
+.auth-card.sign-up-mode .left-panel{pointer-events:none}
+.auth-card.sign-up-mode .right-panel{pointer-events:all}
+.social-section{max-width:380px;width:100%;text-align:center;opacity:0.35;pointer-events:none;user-select:none}
+.social-text{padding:0.7rem 0;font-size:1rem;color:#666}
+.social-media{display:flex;justify-content:center;gap:15px}
+.social-icon{height:46px;width:46px;display:flex;justify-content:center;align-items:center;border:1px solid #ddd;border-radius:50%;color:#06B6D4;font-size:1.2rem;transition:0.3s}
+.error-box{max-width:380px;width:100%;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:0.75rem 1rem;margin:12px 0;color:#b91c1c;font-size:0.85rem;font-weight:500;display:flex;align-items:center;gap:8px}
+.field-error{max-width:380px;width:100%;color:#dc2626;font-size:0.8rem;font-weight:500;margin-top:-6px;margin-bottom:4px}
+.strength-bar{max-width:380px;width:100%;display:flex;gap:6px;margin:2px 0}
+.strength-seg{height:5px;flex:1;border-radius:5px;background:#ddd;transition:background 0.3s}
+.strength-label{max-width:380px;width:100%;text-align:right;font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-bottom:2px}
+.match-indicator{max-width:380px;width:100%;font-size:0.78rem;font-weight:500;margin-top:-2px;margin-bottom:4px}
+.avail-indicator{position:absolute;right:50px;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:4px}
+.avail-indicator svg{width:16px;height:16px}
+.avail-indicator span{font-size:0.7rem;font-weight:500}
+.avail-hint{max-width:380px;width:100%;font-size:0.7rem;margin-top:-4px;margin-bottom:2px}
+.hidden{display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:870px){
+  .auth-card{height:90vh;max-height:none;max-width:100%;border-radius:0}
+  .forms-wrapper{width:100%;top:5%;transform:translate(-50%,0);transition:1s 0.8s ease-in-out}
+  .forms-wrapper,.auth-card.sign-up-mode .forms-wrapper{left:50%}
+  .panels-container{grid-template-columns:1fr;grid-template-rows:1fr 2fr 1fr}
+  .panel{flex-direction:row;justify-content:space-around;align-items:center;padding:2.5rem 8%;grid-column:1/2}
+  .right-panel{grid-row:3/4}.left-panel{grid-row:1/2}
+  .panel .content{padding-right:15%;transition:transform 0.9s ease-in-out;transition-delay:0.8s}
+  .panel h3{font-size:1.2rem}.panel p{font-size:0.7rem;padding:0.5rem 0}
+  .btn.transparent{width:110px;height:35px;font-size:0.7rem}
+  .auth-card::before{width:1500px;height:1500px;transform:translate(-50%,100%);left:30%;bottom:32%;right:initial;top:initial;transition:2s ease-in-out}
+  .auth-card.sign-up-mode::before{transform:translate(-50%,100%);bottom:32%;right:initial}
+  .left-panel .content{transform:translateY(-300px)}
+  .right-panel .content{transform:translateY(0px)}
+  .auth-card.sign-up-mode .left-panel .content{transform:translateY(-300px)}
+  .auth-card.sign-up-mode .right-panel .content{transform:translateY(0px)}
+  .forms-wrapper form{padding:0 1.5rem}
+}
+@media(max-width:570px){.forms-wrapper form{padding:0 1.5rem}.panel .content{padding:0.5rem 1rem}}
+@keyframes authToastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}.auth-toast{transition:opacity .35s ease}
 </style>
-{% endblock %}
-{% block content %}
-<div class="min-h-screen flex items-center justify-center px-4 py-8">
-  <div class="auth-card !max-w-[480px]">
-    <div class="text-center mb-6">
-      <div class="flex justify-center mb-5" style="animation: logoPop .5s ease-out both;">
-        <img src="{% static 'images/logo-mark.svg' %}?v={{ STATIC_VERSION }}" alt="Intelligent Digital Automation (IDA) Logo" class="w-10 h-10" />
-      </div>
-      <div class="flex justify-center">
-        <p class="eyebrow">Get started</p>
-      </div>
-      <h1 class="page-title mt-1">Create your account</h1>
-    </div>
-
-    {% if form.non_field_errors %}
-      <div class="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-red-700 text-sm font-medium flex items-center gap-3">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        {{ form.non_field_errors.0 }}
-      </div>
-    {% endif %}
-
-    <form method="post" action="{% url 'accounts:register' %}" class="space-y-4">
-      {% csrf_token %}
+</head>
+<body>
+<nav class="fixed top-0 left-0 w-full z-50 bg-white/95 backdrop-blur-xl border-b border-surface-border">
+  <div class="max-w-8xl mx-auto h-16 px-6 sm:px-10 flex items-center justify-between">
+    <a href="{% url 'home' %}" class="flex-shrink-0 flex items-center">
+      <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="IDA" class="h-9 w-auto"/>
+    </a>
+    <div class="hidden md:flex items-center gap-2">
+      <a href="/#platform" class="px-4 py-2 text-sm font-semibold text-ink-muted hover:text-ink hover:bg-surface-raised rounded-xl transition-all">Platform</a>
+      <a href="/#features" class="px-4 py-2 text-sm font-semibold text-ink-muted hover:text-ink hover:bg-surface-raised rounded-xl transition-all">Features</a>
       
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-2">First Name</label>
-          {{ form.first_name|add_class:"auth-input"|attr:"placeholder:John"|attr:"autofocus:autofocus" }}
-          {% if form.first_name.errors %}<p class="mt-2 text-sm text-red-600 font-medium">{{ form.first_name.errors.0 }}</p>{% endif %}
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-2">Last Name</label>
-          {{ form.last_name|add_class:"auth-input"|attr:"placeholder:Doe" }}
-          {% if form.last_name.errors %}<p class="mt-2 text-sm text-red-600 font-medium">{{ form.last_name.errors.0 }}</p>{% endif %}
-        </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="{% url 'accounts:login' %}" class="text-sm font-bold text-ink-muted hover:text-ink px-4 py-2 transition-colors">Log In</a>
+      <a href="{% url 'accounts:register' %}" class="text-sm font-bold bg-gradient-to-r from-[#6D28D9] to-[#06B6D4] hover:from-[#5B21B6] hover:to-[#0891B2] text-white px-6 py-2.5 rounded-xl transition-all shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30">Get started free</a>
+    </div>
+  </div>
+</nav>
+<div class="auth-wrap">
+  <div class="auth-card sign-up-mode" id="authCard">
+    <div class="auth-forms">
+      <div class="forms-wrapper" id="formsWrapper">
+        <form class="sign-in-form" method="POST" action="{% url 'accounts:login' %}" id="loginForm">
+          {% csrf_token %}<input type="hidden" name="next" value="{{ next }}" />
+          <h2 class="form-title">Sign in</h2>
+          {% if login_form.non_field_errors %}<div class="error-box"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>{{ login_form.non_field_errors.0 }}</div>{% endif %}
+          <div class="input-field"><div class="f-icon"><svg width="20" height="20" fill="none" stroke="#666" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 21v-1a4 4 0 00-4-4H8a4 4 0 00-4 4v1"/></svg></div><input type="text" name="username" id="lid_username" placeholder="Email or Username" value="{{ login_form.username.value|default:'' }}" required /></div>
+          {% if login_form.username.errors %}<div class="field-error">{{ login_form.username.errors.0 }}</div>{% endif %}
+          <div class="input-field"><div class="f-icon"><svg width="20" height="20" fill="none" stroke="#666" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg></div><input type="password" name="password" id="lid_password" placeholder="Password" required /><button type="button" class="eye-toggle" onclick="toggleEye('lid_password','rle1')"><svg id="rle1" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button></div>
+          {% if login_form.password.errors %}<div class="field-error">{{ login_form.password.errors.0 }}</div>{% endif %}
+          <div class="forgot-row"><a href="{% url 'accounts:password_reset_choice' %}">Forgot password?</a></div>
+          <button type="submit" id="loginBtn" class="btn"><span id="loginBtnText">Login</span></button>
+          <div class="social-section"><p class="social-text">Or sign in with social platforms</p><div class="social-media">
+            <a class="social-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg></a>
+            <a class="social-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
+            <a class="social-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="#1DA1F2"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg></a>
+            <a class="social-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="#0A66C2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg></a>
+          </div></div>
+        </form>
+        <form class="sign-up-form" method="POST" action="{% url 'accounts:register' %}" id="registerForm">
+          {% csrf_token %}<h2 class="form-title">Sign up</h2>
+          {% if form.non_field_errors %}<div class="error-box"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>{{ form.non_field_errors.0 }}</div>{% endif %}
+          <div class="input-field" style="position:relative;"><div class="f-icon"><svg width="20" height="20" fill="none" stroke="#666" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 21v-1a4 4 0 00-4-4H8a4 4 0 00-4 4v1"/></svg></div><input type="text" name="username" id="reg_username" placeholder="Username" value="{{ form.username.value|default:'' }}" required /><div id="u-avail-ind" class="avail-indicator hidden"><svg id="u-avail-ic" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"></svg><span id="u-avail-txt"></span></div></div>
+          {% if form.username.errors %}<div class="field-error">{{ form.username.errors.0 }}</div>{% endif %}<p id="u-avail-hint" class="avail-hint hidden"></p>
+          <div class="input-field" style="position:relative;"><div class="f-icon"><svg width="20" height="20" fill="none" stroke="#666" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></div><input type="email" name="email" id="reg_email" placeholder="Email" value="{{ form.email.value|default:'' }}" required /><div id="e-avail-ind" class="avail-indicator hidden"><svg id="e-avail-ic" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"></svg><span id="e-avail-txt"></span></div></div>
+          {% if form.email.errors %}<div class="field-error">{{ form.email.errors.0 }}</div>{% endif %}<p id="e-avail-hint" class="avail-hint hidden"></p>
+          <div class="input-field" style="position:relative;"><div class="f-icon"><svg width="20" height="20" fill="none" stroke="#666" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg></div><input type="password" name="password1" id="reg_password" placeholder="Password" required /><button type="button" class="eye-toggle" onclick="toggleEye('reg_password','p1')"><svg id="p1" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button></div>
+          {% if form.password1.errors %}<div class="field-error">{{ form.password1.errors.0 }}</div>{% endif %}
+          <div class="strength-bar"><div id="s1" class="strength-seg"></div><div id="s2" class="strength-seg"></div><div id="s3" class="strength-seg"></div><div id="s4" class="strength-seg"></div></div>
+          <div id="stLabel" class="strength-label">Enter a password</div>
+          <div class="input-field" style="position:relative;"><div class="f-icon"><svg width="20" height="20" fill="none" stroke="#666" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg></div><input type="password" name="password2" id="reg_confirm" placeholder="Confirm Password" required /><button type="button" class="eye-toggle" onclick="toggleEye('reg_confirm','p2')"><svg id="p2" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button></div>
+          {% if form.password2.errors %}<div class="field-error">{{ form.password2.errors.0 }}</div>{% endif %}<div id="mInd" class="match-indicator hidden"></div>
+          <button type="submit" id="regBtn" class="btn"><span id="regBtnText">Sign up</span></button>
+          <div class="social-section"><p class="social-text">Or sign up with social platforms</p><div class="social-media">
+            <a class="social-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg></a>
+            <a class="social-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
+            <a class="social-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="#1DA1F2"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg></a>
+            <a class="social-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="#0A66C2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg></a>
+          </div></div>
+        </form>
       </div>
-
-      <div>
-        <label class="block text-sm font-semibold text-slate-700 mb-2">Username</label>
-        <div class="relative">
-          {{ form.username|add_class:"auth-input"|attr:"placeholder:johndoe"|attr:"id:id_username" }}
-          <div id="username-availability-indicator" class="absolute right-3 top-1/2 -translate-y-1/2 hidden flex items-center gap-1.5">
-            <svg id="username-availability-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <span id="username-availability-text" class="text-xs font-medium"></span>
-          </div>
-        </div>
-        {% if form.username.errors %}<p class="mt-2 text-sm text-red-600 font-medium">{{ form.username.errors.0 }}</p>{% endif %}
-        <p id="username-availability-hint" class="mt-1 text-xs text-slate-400 hidden"></p>
-      </div>
-
-      <div>
-        <label class="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
-        <div class="relative">
-          {{ form.email|add_class:"auth-input"|attr:"placeholder:john@company.com"|attr:"id:id_email" }}
-          <div id="email-availability-indicator" class="absolute right-3 top-1/2 -translate-y-1/2 hidden flex items-center gap-1.5">
-            <svg id="email-availability-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <span id="email-availability-text" class="text-xs font-medium"></span>
-          </div>
-        </div>
-        {% if form.email.errors %}<p class="mt-2 text-sm text-red-600 font-medium">{{ form.email.errors.0 }}</p>{% endif %}
-        <p id="email-availability-hint" class="mt-1 text-xs text-slate-400 hidden"></p>
-      </div>
-
-      <div>
-        <label class="block text-sm font-semibold text-slate-700 mb-2">Password</label>
-        <div class="relative">
-          {{ form.password1|add_class:"auth-input pr-12"|attr:"id:reg_password"|attr:"placeholder:••••••••" }}
-          <button type="button" onclick="togglePassword('reg_password', 'p-eye-1')" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
-            <svg id="p-eye-1" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-          </button>
-        </div>
-        <div class="mt-3">
-          <div class="flex gap-1">
-            <div id="strength-seg-1" class="h-1.5 flex-1 rounded-full bg-gray-200 transition-colors duration-300"></div>
-            <div id="strength-seg-2" class="h-1.5 flex-1 rounded-full bg-gray-200 transition-colors duration-300"></div>
-            <div id="strength-seg-3" class="h-1.5 flex-1 rounded-full bg-gray-200 transition-colors duration-300"></div>
-            <div id="strength-seg-4" class="h-1.5 flex-1 rounded-full bg-gray-200 transition-colors duration-300"></div>
-          </div>
-          <p id="strength-text" class="text-[11px] font-bold uppercase tracking-wider text-gray-400 mt-2">Enter a password</p>
-        </div>
-        {% if form.password1.errors %}<p class="mt-2 text-sm text-red-600 font-medium">{{ form.password1.errors.0 }}</p>{% endif %}
-      </div>
-
-      <div>
-        <label class="block text-sm font-semibold text-slate-700 mb-2">Confirm Password</label>
-        <div class="relative">
-          {{ form.password2|add_class:"auth-input pr-12"|attr:"id:reg_confirm"|attr:"placeholder:••••••••" }}
-          <button type="button" onclick="togglePassword('reg_confirm', 'p-eye-2')" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
-            <svg id="p-eye-2" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-          </button>
-        </div>
-        <p id="password-match-indicator" class="mt-2 text-xs font-medium hidden"></p>
-        {% if form.password2.errors %}<p class="mt-2 text-sm text-red-600 font-medium">{{ form.password2.errors.0 }}</p>{% endif %}
-      </div>
-
-      <button type="submit" class="btn-primary w-full justify-center py-3">
-        Create Account
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9l3 3m0 0l-3 3m3-3H8m-4 -2a2 2 0 0 0 -2 2v1a2 2 0 0 0 2 2"/></svg>
-      </button>
-    </form>
-
-    <div class="mt-6 pt-5 border-t border-gray-100 text-center">
-      <p class="text-gray-600 text-sm">Already have an account? <a href="{% url 'accounts:login' %}" class="text-primary font-bold hover:underline">Sign In</a></p>
+    </div>
+    <div class="panels-container">
+      <div class="panel left-panel"><div class="content"><h3>New here?</h3><p>Join us today and discover a world of possibilities. Create your account in seconds!</p><button type="button" onclick="toggleMode()" class="btn transparent">Sign up</button></div></div>
+      <div class="panel right-panel"><div class="content"><h3>One of us?</h3><p>Welcome back! Sign in to continue your journey with us.</p><button type="button" onclick="toggleMode()" class="btn transparent">Sign in</button></div></div>
     </div>
   </div>
 </div>
-
 <script>
-  window.addEventListener('pageshow', function (event) {
-    if (event.persisted) window.location.reload();
-  });
-
-  function togglePassword(id, iconId) {
-    const input = document.getElementById(id);
-    const icon = document.getElementById(iconId);
-    if (input.type === 'password') {
-      input.type = 'text';
-      icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/>';
-    } else {
-      input.type = 'password';
-      icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>';
-    }
-  }
-
-  const passInput = document.getElementById('reg_password');
-  const segments = [
-    document.getElementById('strength-seg-1'),
-    document.getElementById('strength-seg-2'),
-    document.getElementById('strength-seg-3'),
-    document.getElementById('strength-seg-4'),
-  ];
-  const text = document.getElementById('strength-text');
-  const confirmInput = document.getElementById('reg_confirm');
-  const matchIndicator = document.getElementById('password-match-indicator');
-
-  function paintSegments(count, colorClass) {
-    segments.forEach((seg, index) => {
-      seg.className = 'h-1.5 flex-1 rounded-full transition-colors duration-300 ' + (index < count ? colorClass : 'bg-gray-200');
-    });
-  }
-
-  passInput.addEventListener('input', () => {
-    const val = passInput.value;
-    let strength = 0;
-    if (val.length > 5) strength += 25;
-    if (val.length > 8) strength += 25;
-    if (/[A-Z]/.test(val)) strength += 25;
-    if (/[0-9]/.test(val) || /[^A-Za-z0-9]/.test(val)) strength += 25;
-
-    if (strength === 0) {
-      paintSegments(0, 'bg-gray-200');
-      text.innerText = 'Enter a password';
-      text.className = 'text-[11px] font-bold uppercase tracking-wider text-gray-400 mt-2';
-    } else if (strength <= 24) {
-      paintSegments(1, 'bg-red-400');
-      text.innerText = 'Weak';
-      text.className = 'text-[11px] font-bold uppercase tracking-wider text-red-500 mt-2';
-    } else if (strength <= 49) {
-      paintSegments(2, 'bg-amber-400');
-      text.innerText = 'Good';
-      text.className = 'text-[11px] font-bold uppercase tracking-wider text-yellow-600 mt-2';
-    } else if (strength <= 74) {
-      paintSegments(3, 'bg-emerald-400');
-      text.innerText = 'Strong';
-      text.className = 'text-[11px] font-bold uppercase tracking-wider text-emerald-600 mt-2';
-    } else {
-      paintSegments(4, 'bg-emerald-400');
-      text.innerText = 'Very Strong';
-      text.className = 'text-[11px] font-bold uppercase tracking-wider text-emerald-600 mt-2';
-    }
-
-    updatePasswordMatch();
-  });
-
-  function updatePasswordMatch() {
-    const passVal = passInput.value;
-    const confirmVal = confirmInput.value;
-
-    if (!confirmVal) {
-      matchIndicator.classList.add('hidden');
-      matchIndicator.textContent = '';
-      return;
-    }
-
-    matchIndicator.classList.remove('hidden');
-
-    if (passVal === confirmVal) {
-      matchIndicator.className = 'mt-2 text-xs font-medium text-emerald-600';
-      matchIndicator.textContent = '✓ Passwords match';
-    } else {
-      matchIndicator.className = 'mt-2 text-xs font-medium text-red-600';
-      matchIndicator.textContent = '✕ Passwords don\'t match';
-    }
-  }
-
-  confirmInput.addEventListener('input', updatePasswordMatch);
-  passInput.addEventListener('input', updatePasswordMatch);
-
-  document.addEventListener('DOMContentLoaded', function () {
-    const firstNameInput = document.getElementById('id_first_name');
-    if (firstNameInput) {
-      firstNameInput.focus();
-    }
-
-    function checkAvailability(inputElement, indicatorId, iconId, textId, hintId, fieldType) {
-      const input = inputElement;
-      const indicator = document.getElementById(indicatorId);
-      const icon = document.getElementById(iconId);
-      const textEl = document.getElementById(textId);
-      const hint = document.getElementById(hintId);
-      let checkTimeout = null;
-
-      function showInvalid(message) {
-        indicator.classList.remove('hidden');
-        hint.classList.remove('hidden');
-        icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>';
-        icon.className = 'w-5 h-5 text-red-500';
-        textEl.textContent = 'Invalid';
-        textEl.className = 'text-xs font-medium text-red-600';
-        hint.textContent = message;
-        hint.className = 'mt-1 text-xs text-red-500';
-      }
-
-      function check(value) {
-        const val = value.trim();
-        if (fieldType === 'username' && /\s/.test(val)) {
-          showInvalid('Username must be one word with no spaces');
-          return;
-        }
-        if (fieldType === 'email' && val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
-          showInvalid('Enter a valid email address');
-          return;
-        }
-        if (!val || (fieldType === 'email' && !val.includes('@')) || (fieldType === 'username' && val.length < 2)) {
-          indicator.classList.add('hidden');
-          hint.classList.add('hidden');
-          return;
-        }
-
-        hint.classList.remove('hidden');
-        hint.textContent = 'Checking...';
-        hint.className = 'mt-1 text-xs text-slate-400';
-
-        clearTimeout(checkTimeout);
-        checkTimeout = setTimeout(() => {
-          fetch(`{% url 'accounts:check_availability' %}?field=${encodeURIComponent(val)}&type=${encodeURIComponent(fieldType)}`)
-            .then(response => response.json())
-            .then(data => {
-              if (input.value.trim() !== val) return;
-              indicator.classList.remove('hidden');
-              hint.classList.remove('hidden');
-
-              if (data.available) {
-                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>';
-                icon.className = 'w-5 h-5 text-emerald-500';
-                textEl.textContent = 'Available';
-                textEl.className = 'text-xs font-medium text-emerald-600';
-                hint.textContent = data.message;
-                hint.className = 'mt-1 text-xs text-emerald-500';
-              } else {
-                const message = (data.message || '').toLowerCase();
-                const isDuplicate = message.includes('taken') || message.includes('registered');
-                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>';
-                icon.className = 'w-5 h-5 text-red-500';
-                textEl.textContent = isDuplicate ? 'Taken' : 'Invalid';
-                textEl.className = 'text-xs font-medium text-red-600';
-                hint.textContent = data.message;
-                hint.className = 'mt-1 text-xs text-red-500';
-              }
-            })
-            .catch(() => {
-              indicator.classList.add('hidden');
-              hint.classList.add('hidden');
-            });
-        }, 300);
-      }
-
-      return check;
-    }
-
-    const emailCheck = checkAvailability(
-      document.getElementById('id_email'),
-      'email-availability-indicator',
-      'email-availability-icon',
-      'email-availability-text',
-      'email-availability-hint',
-      'email'
-    );
-
-    const usernameCheck = checkAvailability(
-      document.getElementById('id_username'),
-      'username-availability-indicator',
-      'username-availability-icon',
-      'username-availability-text',
-      'username-availability-hint',
-      'username'
-    );
-
-    if (document.getElementById('id_email')) {
-      document.getElementById('id_email').addEventListener('input', (e) => {
-        emailCheck(e.target.value.trim());
-      });
-    }
-
-    if (document.getElementById('id_username')) {
-      const usernameInput = document.getElementById('id_username');
-      usernameInput.addEventListener('keydown', (e) => {
-        if (/\s/.test(e.key)) e.preventDefault();
-      });
-      usernameInput.addEventListener('input', (e) => {
-        const compacted = e.target.value.replace(/\s+/g, '');
-        if (e.target.value !== compacted) {
-          e.target.value = compacted;
-        }
-        usernameCheck(e.target.value);
-      });
-    }
-  });
+function toggleMode(){var c=document.getElementById('authCard');c.classList.toggle('sign-up-mode');var p=new URLSearchParams(location.search);if(c.classList.contains('sign-up-mode')){p.set('mode','signup')}else{p.delete('mode')}var u=location.pathname+(p.toString()?'?'+p.toString():'');history.replaceState({},'',u)}
+function toggleEye(id,iid){var e=document.getElementById(id),ic=document.getElementById(iid);if(e.type==='password'){e.type='text';ic.innerHTML='<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/>';}else{e.type='password';ic.innerHTML='<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>';}}
+document.getElementById('loginForm').addEventListener('submit',function(){var b=document.getElementById('loginBtn'),t=document.getElementById('loginBtnText');b.disabled=true;t.innerHTML='<span style="display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;"></span>';});
+var pi=document.getElementById('reg_password'),segs=[document.getElementById('s1'),document.getElementById('s2'),document.getElementById('s3'),document.getElementById('s4')],sl=document.getElementById('stLabel'),ci=document.getElementById('reg_confirm'),mi=document.getElementById('mInd');
+function ps(n,c){segs.forEach(function(s,i){s.style.background=i<n?c:'#ddd'})}
+if(pi){pi.addEventListener('input',function(){var v=pi.value,s=0;if(v.length>5)s+=25;if(v.length>8)s+=25;if(/[A-Z]/.test(v))s+=25;if(/[0-9]/.test(v)||/[^A-Za-z0-9]/.test(v))s+=25;if(s===0){ps(0,'#ddd');sl.innerText='Enter a password';sl.style.color='#999'}else if(s<=24){ps(1,'#f87171');sl.innerText='Weak';sl.style.color='#ef4444'}else if(s<=49){ps(2,'#fbbf24');sl.innerText='Good';sl.style.color='#d97706'}else if(s<=74){ps(3,'#34d399');sl.innerText='Strong';sl.style.color='#059669'}else{ps(4,'#34d399');sl.innerText='Very Strong';sl.style.color='#059669'}um()})}
+function um(){var c=ci.value;if(!c||!mi){mi&&mi.classList.add('hidden');return}mi.classList.remove('hidden');mi.style.color=pi.value===c?'#059669':'#dc2626';mi.textContent=pi.value===c?'\u2713 Passwords match':'\u2715 Passwords don\'t match'}
+if(ci){ci.addEventListener('input',um)}
+document.getElementById('registerForm').addEventListener('submit',function(){var b=document.getElementById('regBtn'),t=document.getElementById('regBtnText');b.disabled=true;t.innerHTML='<span style="display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;"></span>'});
+function ca(el,ii,ixi,txi,hi,ty){var id=document.getElementById(ii),ix=document.getElementById(ixi),tx=document.getElementById(txi),h=document.getElementById(hi),tm=null;function ck(v){v=v.trim();if(ty==='username'&&/\s/.test(v)){id.classList.remove('hidden');h.classList.remove('hidden');ix.innerHTML='<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>';ix.style.color='#ef4444';tx.textContent='Invalid';tx.style.color='#ef4444';h.textContent='No spaces allowed';h.style.color='#ef4444';return}if(ty==='email'&&v&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)){id.classList.remove('hidden');h.classList.remove('hidden');ix.innerHTML='<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>';ix.style.color='#ef4444';tx.textContent='Invalid';tx.style.color='#ef4444';h.textContent='Enter a valid email';h.style.color='#ef4444';return}if(!v||(ty==='email'&&!v.includes('@'))||(ty==='username'&&v.length<2)){id.classList.add('hidden');h.classList.add('hidden');return}h.classList.remove('hidden');h.textContent='Checking...';h.style.color='#999';clearTimeout(tm);tm=setTimeout(function(){fetch('{% url "accounts:check_availability" %}?field='+encodeURIComponent(v)+'&type='+encodeURIComponent(ty)).then(function(r){return r.json()}).then(function(d){if(el.value.trim()!==v)return;id.classList.remove('hidden');if(d.available){ix.innerHTML='<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>';ix.style.color='#059669';tx.textContent='Available';tx.style.color='#059669';h.textContent=d.message;h.style.color='#059669'}else{var m=(d.message||'').toLowerCase();ix.innerHTML='<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>';ix.style.color='#ef4444';tx.textContent=(m.indexOf('taken')!==-1||m.indexOf('registered')!==-1)?'Taken':'Invalid';tx.style.color='#ef4444';h.textContent=d.message;h.style.color='#ef4444'}}).catch(function(){id.classList.add('hidden');h.classList.add('hidden')})},300)}return ck}
+function setupAvail(){var ue=document.getElementById('reg_username'),ee=document.getElementById('reg_email');if(ue){var uc=ca(ue,'u-avail-ind','u-avail-ic','u-avail-txt','u-avail-hint','username');ue.addEventListener('keydown',function(e){if(/\s/.test(e.key))e.preventDefault()});ue.addEventListener('input',function(e){var c=e.target.value.replace(/\s+/g,'');if(e.target.value!==c)e.target.value=c;uc(e.target.value)})}if(ee){var ec=ca(ee,'e-avail-ind','e-avail-ic','e-avail-txt','e-avail-hint','email');ee.addEventListener('input',function(e){ec(e.target.value.trim())})}}
+setupAvail();(function(){var p=new URLSearchParams(location.search);if(p.get('mode')==='signup'){document.getElementById('authCard').classList.add('sign-up-mode')}})();
 </script>
-{% endblock %}
-</div>
+{% include "auth/_auth_toasts.html" %}
+</body>
+</html>

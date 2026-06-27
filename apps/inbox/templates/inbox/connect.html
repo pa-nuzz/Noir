@@ -227,13 +227,24 @@
       },
       body: formData,
     })
-    .then(function(r) { return r.json(); })
+    .then(function(r) {
+      if (!r.ok) {
+        throw new Error('Server error: ' + r.status + ' ' + r.statusText);
+      }
+      return r.text();
+    })
+    .then(function(text) {
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        throw new Error('Received invalid response from server. Please try again or refresh the page.');
+      }
+    })
     .then(function(data) {
       if (data.success) {
         showToast('success', 'Inbox connected! Syncing messages...');
         window.location.href = data.redirect_url;
       } else {
-        // Show errors
         if (data.field_errors) {
           Object.keys(data.field_errors).forEach(function(field) {
             var errEl = document.querySelector('.field-error[data-field="' + field + '"]');
@@ -250,7 +261,7 @@
       }
     })
     .catch(function(err) {
-      errorDiv.textContent = 'Network error: ' + err.message;
+      errorDiv.textContent = err.message || 'Network error. Please check your connection and try again.';
       errorDiv.classList.remove('hidden');
       btn.disabled = false;
       label.textContent = 'Try Again';
