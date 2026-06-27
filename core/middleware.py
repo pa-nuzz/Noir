@@ -70,7 +70,7 @@ class CSPMiddleware:
             "style-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net 'unsafe-inline'; "
             "font-src 'self' https://fonts.gstatic.com; "
             "img-src 'self' data: blob: https:; "
-            "connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:* https://unpkg.com https://cdn.jsdelivr.net https://api.openai.com https://cdnjs.cloudflare.com; "
+            "connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:* https://unpkg.com https://cdn.jsdelivr.net https://api.openai.com https://cdnjs.cloudflare.com https://ai.api.nvidia.com; "
             "frame-src 'self' https://www.youtube.com https://youtube.com; "
             "object-src 'none'; "
             "base-uri 'self'; "

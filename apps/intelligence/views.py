@@ -4,7 +4,7 @@ Provides API endpoints for analyzing email content and calculating spam risk sco
 """
 
 from django.http import JsonResponse
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 from django.views.decorators.csrf import csrf_protect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -240,3 +240,159 @@ def api_trigger_auto_reply(request, message_id):
     except Exception as e:
         logger.error(f"Manual auto-reply trigger failed: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_GET
+def generate_page(request):
+    all_models = getattr(settings, 'NVIDIA_MODELS', {})
+
+    image_models = []
+    video_models = []
+    text_models = []
+
+    for key, cfg in all_models.items():
+        entry = {
+            'key': key,
+            'label': key.replace('-', ' ').replace('.', ' ').title(),
+            'modality': cfg.get('modality', 'image'),
+            'tier': cfg.get('tier', ''),
+            'available': cfg.get('available', False),
+            'unavailable_reason': cfg.get('unavailable_reason', 'Not available'),
+            'description': cfg.get('description', ''),
+            'endpoint': cfg.get('endpoint', ''),
+            'params': cfg.get('params', {}),
+            'size_presets': cfg.get('size_presets', []),
+            'input_type': cfg.get('input_type', ''),
+        }
+        modality = cfg.get('modality', 'image')
+        if modality == 'image':
+            image_models.append(entry)
+        elif modality == 'video':
+            video_models.append(entry)
+        elif modality == 'text':
+            text_models.append(entry)
+        elif modality == 'image_edit':
+            image_models.append(entry)
+
+    return render(request, 'intelligence/generate.html', {
+        'image_models': image_models,
+        'video_models': video_models,
+        'text_models': text_models,
+    })
+
+
+@login_required
+@csrf_protect
+@require_POST
+def api_generate(request):
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+
+    prompt = (data.get('prompt') or '').strip()
+    if not prompt:
+        return JsonResponse({'success': False, 'error': 'Prompt is required'}, status=400)
+
+    model_key = data.get('model', '')
+    modality = data.get('modality', 'image')
+    image_url = data.get('image_url', '')
+    async_mode = data.get('async', False)
+    size = data.get('size', '1024x1024')
+    duration = data.get('duration', 5)
+    fps = data.get('fps', 24)
+    seed = data.get('seed')
+
+    all_models = getattr(settings, 'NVIDIA_MODELS', {})
+    model_cfg = all_models.get(model_key)
+
+    if not model_cfg:
+        return JsonResponse({'success': False, 'error': f'Unknown model: {model_key}'}, status=400)
+
+    if not model_cfg.get('available', False):
+        reason = model_cfg.get('unavailable_reason', 'Model is not available')
+        return JsonResponse({
+            'success': False,
+            'error': f'{model_key} is not available: {reason}',
+            'model': model_key,
+            'available': False,
+        }, status=422)
+
+    kwargs = {'size': size}
+    if modality == 'video':
+        kwargs = {'duration': duration, 'fps': fps}
+    if seed is not None:
+        try:
+            kwargs['seed'] = int(seed)
+        except (ValueError, TypeError):
+            pass
+
+    task_type_map = {
+        'image': 'image_generation',
+        'video': 'video_generation',
+        'text': 'text_generation',
+        'image_edit': 'image_editing',
+    }
+    task_type = task_type_map.get(modality, 'image_generation')
+
+    if async_mode:
+        from .tasks import async_generate_content
+        job = async_generate_content.delay(
+            prompt=prompt,
+            model=model_key,
+            modality=modality,
+            task_type=task_type,
+            image_url=image_url,
+            user_id=request.user.id,
+            workspace_id=request.session.get('active_workspace_id'),
+            **kwargs,
+        )
+        return JsonResponse({
+            'success': True,
+            'mode': 'async',
+            'task_id': job.id,
+        })
+
+    from .services.generation import get_generation_engine
+    engine = get_generation_engine()
+    if not engine.is_configured():
+        return JsonResponse(
+            {'success': False, 'error': 'Generation service not configured'},
+            status=503,
+        )
+
+    result = engine.generate(
+        prompt=prompt,
+        model=model_key,
+        modality=modality,
+        task_type=task_type,
+        image_url=image_url,
+        **kwargs,
+    )
+    if not result.get('success'):
+        status = 502 if 'API error' in result.get('error', '') else 400
+        return JsonResponse(result, status=status)
+
+    return JsonResponse(result)
+
+
+@login_required
+@require_GET
+def api_generate_status(request):
+    task_id = request.GET.get('task_id', '')
+    if not task_id:
+        return JsonResponse({'success': False, 'error': 'task_id required'}, status=400)
+
+    from core.celery import app as celery_app
+    result = celery_app.AsyncResult(task_id)
+    response = {
+        'success': True,
+        'task_id': task_id,
+        'state': result.state,
+    }
+    if result.state == 'SUCCESS':
+        response['result'] = result.result
+    elif result.state == 'FAILURE':
+        response['error'] = str(result.result)
+    return JsonResponse(response)

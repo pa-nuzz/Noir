@@ -317,6 +317,7 @@ CELERY_TASK_ROUTES = {
     'apps.locks.tasks.release_expired_locks': {'queue': 'default'},
 
     # queue_low — thumbnail generation, auto-tagging, AI content
+    'apps.intelligence.tasks.async_generate_content': {'queue': 'low'},
     'apps.media_assets.tasks.generate_thumbnail': {'queue': 'low'},
     'apps.media_assets.tasks.cleanup_unused_media': {'queue': 'low'},
     'apps.content_studio.tasks.generate_ai_content_task': {'queue': 'low'},
@@ -418,6 +419,169 @@ GEMINI_API_KEY = config('GEMINI_API_KEY', default=LLM_API_KEY)
 
 # DeepSeek AI
 DEEPSEEK_API_KEY = config('DEEPSEEK_API_KEY', default='')
+
+# NVIDIA NIM — image & video generation
+NVIDIA_API_KEY = config('NVIDIA_API_KEY', default='')
+NVIDIA_NIM_BASE_URL = config('NVIDIA_NIM_BASE_URL', default='https://ai.api.nvidia.com/v1')
+
+NVIDIA_NIM_BASE_URL = config('NVIDIA_NIM_BASE_URL', default='https://ai.api.nvidia.com/v1')
+NVIDIA_INTEGRATE_URL = 'https://integrate.api.nvidia.com/v1'
+
+NVIDIA_MODELS = {
+    # ── Image Generation ──────────────────────────────────────────────
+    'flux-dev': {
+        'modality': 'image',
+        'tier': 'premium',
+        'api_type': 'nim',
+        'endpoint': '/genai/black-forest-labs/flux.1-dev',
+        'available': True,
+        'params': {'steps': 30, 'cfg_scale': 7.0, 'width': 1024, 'height': 1024},
+        'description': 'Highest quality for detailed artwork and photorealistic images',
+        'size_presets': ['1024x1024', '1344x768', '768x1344', '1152x896', '896x1152', '1216x832', '832x1216'],
+    },
+    'flux-schnell': {
+        'modality': 'image',
+        'tier': 'fast',
+        'api_type': 'nim',
+        'endpoint': '/genai/black-forest-labs/flux.1-schnell',
+        'available': True,
+        'params': {'steps': 4, 'cfg_scale': 0, 'width': 1024, 'height': 1024},
+        'description': 'Lightning fast generation in just 4 steps for quick previews',
+        'size_presets': ['1024x1024', '1344x768', '768x1344', '1152x896', '896x1152', '1216x832', '832x1216'],
+    },
+    'flux-klein': {
+        'modality': 'image',
+        'tier': 'fast',
+        'api_type': 'nim',
+        'endpoint': '/genai/black-forest-labs/flux.2-klein-4b',
+        'available': True,
+        'params': {'steps': 4, 'cfg_scale': 1.0, 'width': 1024, 'height': 1024},
+        'description': 'Lightweight 4B model — great quality at incredible speed',
+        'size_presets': ['1024x1024', '1344x768', '768x1344', '1152x896', '896x1152', '1216x832', '832x1216'],
+    },
+    # ── Image Editing (image-to-image) ──────────────────────────────────
+    'flux-dev-edit': {
+        'modality': 'image_edit',
+        'tier': 'premium',
+        'api_type': 'nim',
+        'endpoint': '/genai/black-forest-labs/flux.1-dev',
+        'available': True,
+        'params': {'steps': 30, 'cfg_scale': 7.0},
+        'description': 'Edit or transform existing images with Flux Dev quality',
+        'supports_image_input': True,
+        'size_presets': ['1024x1024', '1344x768', '768x1344', '1152x896', '896x1152', '1216x832', '832x1216'],
+    },
+    'flux-schnell-edit': {
+        'modality': 'image_edit',
+        'tier': 'fast',
+        'api_type': 'nim',
+        'endpoint': '/genai/black-forest-labs/flux.1-schnell',
+        'available': True,
+        'params': {'steps': 4, 'cfg_scale': 0},
+        'description': 'Quick image editing and transformations',
+        'supports_image_input': True,
+        'size_presets': ['1024x1024', '1344x768', '768x1344', '1152x896', '896x1152', '1216x832', '832x1216'],
+    },
+    # ── Text / LLM (OpenAI-compatible /v1/chat/completions) ───────────
+    'llama-3.1-8b': {
+        'modality': 'text',
+        'tier': 'fast',
+        'api_type': 'openai_compat',
+        'endpoint': '/chat/completions',
+        'model_name': 'meta/llama-3.1-8b-instruct',
+        'available': True,
+        'params': {'max_tokens': 1024, 'temperature': 0.6},
+        'description': 'Fast and capable instruction-following, great for code and text tasks',
+    },
+    'llama-3.1-70b': {
+        'modality': 'text',
+        'tier': 'premium',
+        'api_type': 'openai_compat',
+        'endpoint': '/chat/completions',
+        'model_name': 'meta/llama-3.1-70b-instruct',
+        'available': True,
+        'params': {'max_tokens': 2048, 'temperature': 0.6},
+        'description': 'High-quality reasoning and complex text generation with 70B parameters',
+    },
+    'deepseek-v4-flash': {
+        'modality': 'text',
+        'tier': 'fast',
+        'api_type': 'openai_compat',
+        'endpoint': '/chat/completions',
+        'model_name': 'deepseek-ai/deepseek-v4-flash',
+        'available': True,
+        'params': {'max_tokens': 2048, 'temperature': 0.7},
+        'description': 'Fast reasoning and high-quality text generation',
+    },
+    'nemotron-nano-9b': {
+        'modality': 'text',
+        'tier': 'fast',
+        'api_type': 'openai_compat',
+        'endpoint': '/chat/completions',
+        'model_name': 'nvidia/nvidia-nemotron-nano-9b-v2',
+        'available': True,
+        'params': {'max_tokens': 1024, 'temperature': 0.5},
+        'description': 'NVIDIA\'s efficient 9B model optimized for dialogue and instruction tasks',
+    },
+    # ── Unavailable Models ───────────────────────────────────────────
+    'stable-video-diffusion': {
+        'modality': 'video',
+        'tier': 'premium',
+        'api_type': 'nim',
+        'endpoint': '/genai/stabilityai/stable-video-diffusion',
+        'available': False,
+        'unavailable_reason': 'Function not provisioned for this account. Contact NVIDIA for access.',
+        'description': 'Transform a static image into a dynamic video with realistic motion',
+        'input_type': 'image_to_video',
+        'size_presets': ['1024x576'],
+    },
+    'cosmos-predict1-7b': {
+        'modality': 'video',
+        'tier': 'premium',
+        'api_type': 'nim',
+        'endpoint': '/genai/nvidia/cosmos-predict1-7b',
+        'available': False,
+        'unavailable_reason': 'Endpoint returns 404 — not on current API tier.',
+        'description': 'Text-to-video generation with physically accurate motion',
+        'input_type': 'text_to_video',
+        'size_presets': ['1280x720'],
+    },
+    'flux-kontext': {
+        'modality': 'image_edit',
+        'tier': 'edit',
+        'api_type': 'nim',
+        'endpoint': '/genai/black-forest-labs/flux.1-kontext-dev',
+        'available': False,
+        'unavailable_reason': 'Requires example_id (NVIDIA playground reference images only).',
+        'description': 'In-context image editing without complex workflows',
+        'size_presets': ['1024x1024'],
+    },
+    'stable-diffusion-3.5-large': {
+        'modality': 'image',
+        'tier': 'premium',
+        'api_type': 'nim',
+        'endpoint': '/genai/stabilityai/stable-diffusion-3.5-large',
+        'available': False,
+        'unavailable_reason': 'Endpoint returns 404 — model may need different account tier.',
+        'description': '8B artistic base model with fine-tuning flexibility',
+        'size_presets': ['1024x1024', '1344x768', '768x1344'],
+    },
+    'qwen-3.5-122b': {
+        'modality': 'text',
+        'tier': 'premium',
+        'api_type': 'openai_compat',
+        'endpoint': '/chat/completions',
+        'model_name': 'qwen/qwen3-5-122b-a10b',
+        'available': False,
+        'unavailable_reason': 'Model reached end of life (410 Gone) on 2026-05-12.',
+        'description': 'Massive 122B parameter model for complex reasoning',
+    },
+}
+
+NVIDIA_GENERATION_MODELS = {
+    key: cfg for key, cfg in NVIDIA_MODELS.items()
+    if cfg.get('modality') in ('image', 'image_edit')
+}
 
 # Silencing django-ratelimit strict cache checks for development
 SILENCED_SYSTEM_CHECKS = ['django_ratelimit.E003']

@@ -5,6 +5,7 @@ from django.views.generic import TemplateView, RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
 from core.views import landing_view
+from apps.intelligence.views import generate_page
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
 urlpatterns = static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) + [
@@ -16,6 +17,7 @@ urlpatterns = static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) + [
     path('accounts/', include('apps.accounts.urls', namespace='accounts')),
     path('dashboard/', include('apps.dashboard.urls', namespace='dashboard')),
     path('intelligence/', include('apps.intelligence.urls', namespace='intelligence')),
+    path('generate/', generate_page, name='generate'),
     path('automations/', include('apps.automations.urls', namespace='automations')),
     path('inbox/', include('apps.inbox.urls', namespace='inbox')),
     path('social/', include('apps.social.urls', namespace='social')),
