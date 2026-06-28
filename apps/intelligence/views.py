@@ -302,6 +302,12 @@ def api_generate(request):
     if not prompt:
         return JsonResponse({'success': False, 'error': 'Prompt is required'}, status=400)
 
+    import re
+    prompt = re.sub(r'\s*--[\w:]+(?:\s+[\w:\.]+)*', '', prompt)
+    prompt = re.sub(r'\s*\[.*?\]', '', prompt)
+    prompt = re.sub(r'\s*\{.*?\}', '', prompt)
+    prompt = re.sub(r'\s+', ' ', prompt).strip()
+
     model_key = data.get('model', '')
     modality = data.get('modality', 'image')
     image_b64 = data.get('image_b64', '')

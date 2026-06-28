@@ -273,19 +273,27 @@ class GenerationEngine:
 
         images = []
         for artifact in data.get("artifacts", []):
-            if artifact.get("base64"):
-                images.append({"type": "base64", "data": artifact["base64"]})
+            b64 = artifact.get("base64")
+            if b64:
+                decoded = base64.b64decode(b64)
+                if len(decoded) < 10000:
+                    continue
+                images.append({"type": "base64", "data": b64})
 
         for item in data.get("data", []):
-            if item.get("b64_json"):
-                images.append({"type": "base64", "data": item["b64_json"]})
+            b64_json = item.get("b64_json")
+            if b64_json:
+                decoded = base64.b64decode(b64_json)
+                if len(decoded) < 10000:
+                    continue
+                images.append({"type": "base64", "data": b64_json})
             elif item.get("url"):
                 images.append({"type": "url", "data": item["url"]})
 
         if images:
             return {"success": True, "images": images, "text": ""}
 
-        return {"success": False, "error": "No content in response", "raw": str(data)[:200]}
+        return {"success": False, "error": "No valid image in response", "raw": str(data)[:200]}
 
 
 _engine = None
