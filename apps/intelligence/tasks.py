@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 @shared_task(bind=True, max_retries=2, default_retry_delay=30)
 def async_generate_content(self, prompt, model="", task_type="",
-                           image_url="", user_id=None, workspace_id=None,
+                           image_b64="", image_url="", user_id=None, workspace_id=None,
                            **kwargs):
     close_old_connections()
 
@@ -18,6 +18,7 @@ def async_generate_content(self, prompt, model="", task_type="",
         prompt=prompt,
         model=model,
         task_type=task_type,
+        image_b64=image_b64,
         image_url=image_url,
         **kwargs,
     )

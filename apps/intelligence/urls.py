@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     analyze_spam, generate_copilot_content, auto_reply_settings,
     api_auto_reply_rules, api_auto_reply_rule_detail, api_trigger_auto_reply,
-    generate_page, api_generate, api_generate_status,
+    generate_page, generate_edit_page, api_generate, api_generate_status,
 )
 
 app_name = "intelligence"
@@ -15,6 +15,7 @@ urlpatterns = [
     path('api/rules/<int:rule_id>/', api_auto_reply_rule_detail, name='api_auto_reply_rule_detail'),
     path('api/trigger/<int:message_id>/', api_trigger_auto_reply, name='api_trigger_auto_reply'),
     path('generate/', generate_page, name='generate'),
+    path('generate/edit/', generate_edit_page, name='generate_edit'),
     path('api/generate/', api_generate, name='api_generate'),
     path('api/generate/status/', api_generate_status, name='api_generate_status'),
 ]

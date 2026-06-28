@@ -243,7 +243,7 @@ def api_trigger_auto_reply(request, message_id):
 
 
 @login_required
-@require_GET
+@require_workspace_permission('workspace', 'read')
 def generate_page(request):
     all_models = getattr(settings, 'NVIDIA_MODELS', {})
 
@@ -253,9 +253,10 @@ def generate_page(request):
     for key, cfg in all_models.items():
         if not cfg.get('available', False):
             continue
+        label = cfg.get('label', key.replace('-', ' ').replace('.', ' ').title())
         entry = {
             'key': key,
-            'label': key.replace('-', ' ').replace('.', ' ').title(),
+            'label': label,
             'modality': cfg.get('modality', 'image'),
             'tier': cfg.get('tier', ''),
             'available': True,
@@ -264,7 +265,7 @@ def generate_page(request):
             'size_presets': cfg.get('size_presets', []),
         }
         modality = cfg.get('modality', 'image')
-        if modality in ('image', 'image_edit'):
+        if modality == 'image':
             image_models.append(entry)
         elif modality == 'text':
             text_models.append(entry)
@@ -272,6 +273,19 @@ def generate_page(request):
     return render(request, 'intelligence/generate.html', {
         'image_models': image_models,
         'text_models': text_models,
+    })
+
+
+@login_required
+@require_workspace_permission('workspace', 'read')
+def generate_edit_page(request):
+    image_b64 = request.GET.get('image_b64', '')
+    image_data_url = ''
+    if image_b64:
+        image_data_url = f'data:image/png;base64,{image_b64}'
+    return render(request, 'intelligence/generate_edit.html', {
+        'image_b64': image_b64,
+        'image_data_url': image_data_url,
     })
 
 
@@ -290,11 +304,10 @@ def api_generate(request):
 
     model_key = data.get('model', '')
     modality = data.get('modality', 'image')
+    image_b64 = data.get('image_b64', '')
     image_url = data.get('image_url', '')
     async_mode = data.get('async', False)
     size = data.get('size', '1024x1024')
-    duration = data.get('duration', 5)
-    fps = data.get('fps', 24)
     seed = data.get('seed')
 
     all_models = getattr(settings, 'NVIDIA_MODELS', {})
@@ -313,8 +326,6 @@ def api_generate(request):
         }, status=422)
 
     kwargs = {'size': size}
-    if modality == 'video':
-        kwargs = {'duration': duration, 'fps': fps}
     if seed is not None:
         try:
             kwargs['seed'] = int(seed)
@@ -323,8 +334,8 @@ def api_generate(request):
 
     task_type_map = {
         'image': 'image_generation',
-        'video': 'video_generation',
         'text': 'text_generation',
+        'vision_edit': 'vision_edit',
         'image_edit': 'image_editing',
     }
     task_type = task_type_map.get(modality, 'image_generation')
@@ -336,6 +347,7 @@ def api_generate(request):
             model=model_key,
             modality=modality,
             task_type=task_type,
+            image_b64=image_b64,
             image_url=image_url,
             user_id=request.user.id,
             workspace_id=request.session.get('active_workspace_id'),
@@ -360,6 +372,7 @@ def api_generate(request):
         model=model_key,
         modality=modality,
         task_type=task_type,
+        image_b64=image_b64,
         image_url=image_url,
         **kwargs,
     )

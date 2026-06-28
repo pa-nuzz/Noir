@@ -799,6 +799,10 @@ input:checked + .slider::before { transform: translateX(16px); background: var(-
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                   Remix
                 </button>
+                <button class="action-btn" id="btnEdit">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                  Edit
+                </button>
               </div>
             </div>
           </div>
@@ -934,7 +938,7 @@ input:checked + .slider::before { transform: translateX(16px); background: var(-
   function hide(el){ el.style.display = 'none'; }
 
   /* ── Image tab setup ── */
-  var selectedImageModel = 'flux-dev';
+  var selectedImageModel = 'ida-vision-dev';
   var selectedSize = '1024x1024';
   var selectedSizePresets = '1024x1024,1344x768,768x1344,1152x896,896x1152,1216x832,832x1216';
   var currentImageData = null;
@@ -1131,8 +1135,14 @@ input:checked + .slider::before { transform: translateX(16px); background: var(-
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
+  $('btnEdit').addEventListener('click', function() {
+    if (!currentImageData) return;
+    var editUrl = '{% url "intelligence:generate_edit" %}?image_b64=' + encodeURIComponent(currentImageData);
+    window.location.href = editUrl;
+  });
+
   /* ── Text tab setup ── */
-  var selectedTextModel = 'llama-3.1-8b';
+  var selectedTextModel = 'ida-chat';
   var currentTextContent = null;
 
   document.querySelectorAll('#textModelList .model-item:not(.unavailable)').forEach(function(item) {
