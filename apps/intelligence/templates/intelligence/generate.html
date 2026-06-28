@@ -701,17 +701,10 @@ input:checked + .slider::before { transform: translateX(16px); background: var(-
       <button class="tab-btn active" data-tab="image">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
         Image
-        <span class="tab-count">3</span>
       </button>
       <button class="tab-btn" data-tab="text">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
         Text
-        <span class="tab-count">4</span>
-      </button>
-      <button class="tab-btn disabled-tab" data-tab="video">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-        Video
-        <span class="tab-count" style="background:var(--gray-100);color:var(--gray-500)">Soon</span>
       </button>
     </div>
 
@@ -726,28 +719,21 @@ input:checked + .slider::before { transform: translateX(16px); background: var(-
             </div>
             <div class="model-list" id="imageModelList">
               {% for m in image_models %}
-              {% if m.modality == 'image' %}
-              <div class="model-item{% if not m.available %} unavailable{% endif %}{% if forloop.first %} selected{% endif %}"
-                   data-key="{{ m.key }}" data-available="{{ m.available|lower }}" data-sizes="{{ m.size_presets|join:"," }}">
+              <div class="model-item{% if forloop.first %} selected{% endif %}"
+                   data-key="{{ m.key }}" data-sizes="{{ m.size_presets|join:"," }}">
                 <div class="model-item-header">
                   <span class="model-name">{{ m.label }}</span>
                   <div class="model-tags">
                     {% if m.tier == 'premium' %}<span class="tag premium">★ {{ m.tier|title }}</span>
                     {% elif m.tier == 'fast' %}<span class="tag fast">⚡ {{ m.tier|title }}</span>{% endif %}
-                    {% if not m.available %}<span class="tag unavail">Unavailable</span>{% endif %}
                   </div>
                 </div>
                 <div class="model-desc">{{ m.description }}</div>
-                {% if m.available %}
                 <div class="model-stats">
                   <div class="model-stat">Steps <span>{{ m.params.steps }}</span></div>
                   <div class="model-stat">CFG <span>{{ m.params.cfg_scale }}</span></div>
                 </div>
-                {% else %}
-                <div class="unavail-note">{{ m.unavailable_reason }}</div>
-                {% endif %}
               </div>
-              {% endif %}
               {% endfor %}
             </div>
           </div>
@@ -851,22 +837,16 @@ input:checked + .slider::before { transform: translateX(16px); background: var(-
             </div>
             <div class="model-list text-model-list" id="textModelList">
               {% for m in text_models %}
-              <div class="model-item{% if not m.available %} unavailable{% endif %}{% if forloop.first %} selected{% endif %}"
-                   data-key="{{ m.key }}" data-available="{{ m.available|lower }}">
+              <div class="model-item{% if forloop.first %} selected{% endif %}"
+                   data-key="{{ m.key }}">
                 <div class="model-item-header">
                   <span class="model-name">{{ m.label }}</span>
                   <div class="model-tags">
                     {% if m.tier == 'premium' %}<span class="tag premium">★ {{ m.tier|title }}</span>
                     {% elif m.tier == 'fast' %}<span class="tag fast">⚡ {{ m.tier|title }}</span>{% endif %}
-                    {% if not m.available %}
-                      <span class="tag eol">EOL</span>
-                    {% endif %}
                   </div>
                 </div>
                 <div class="model-desc">{{ m.description }}</div>
-                {% if not m.available %}
-                <div class="unavail-note">{{ m.unavailable_reason }}</div>
-                {% endif %}
               </div>
               {% endfor %}
             </div>

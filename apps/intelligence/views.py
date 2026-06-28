@@ -248,36 +248,29 @@ def generate_page(request):
     all_models = getattr(settings, 'NVIDIA_MODELS', {})
 
     image_models = []
-    video_models = []
     text_models = []
 
     for key, cfg in all_models.items():
+        if not cfg.get('available', False):
+            continue
         entry = {
             'key': key,
             'label': key.replace('-', ' ').replace('.', ' ').title(),
             'modality': cfg.get('modality', 'image'),
             'tier': cfg.get('tier', ''),
-            'available': cfg.get('available', False),
-            'unavailable_reason': cfg.get('unavailable_reason', 'Not available'),
+            'available': True,
             'description': cfg.get('description', ''),
-            'endpoint': cfg.get('endpoint', ''),
             'params': cfg.get('params', {}),
             'size_presets': cfg.get('size_presets', []),
-            'input_type': cfg.get('input_type', ''),
         }
         modality = cfg.get('modality', 'image')
-        if modality == 'image':
+        if modality in ('image', 'image_edit'):
             image_models.append(entry)
-        elif modality == 'video':
-            video_models.append(entry)
         elif modality == 'text':
             text_models.append(entry)
-        elif modality == 'image_edit':
-            image_models.append(entry)
 
     return render(request, 'intelligence/generate.html', {
         'image_models': image_models,
-        'video_models': video_models,
         'text_models': text_models,
     })
 
