@@ -727,7 +727,7 @@ input:checked + .slider::before { transform: translateX(16px); background: var(-
             <div class="model-list" id="imageModelList">
               {% for m in image_models %}
               {% if m.modality == 'image' %}
-              <div class="model-item{{ m.available|yesno:"":" unavailable" }}{% if forloop.first %} selected{% endif %}"
+              <div class="model-item{% if not m.available %} unavailable{% endif %}{% if forloop.first %} selected{% endif %}"
                    data-key="{{ m.key }}" data-available="{{ m.available|lower }}" data-sizes="{{ m.size_presets|join:"," }}">
                 <div class="model-item-header">
                   <span class="model-name">{{ m.label }}</span>
@@ -851,7 +851,7 @@ input:checked + .slider::before { transform: translateX(16px); background: var(-
             </div>
             <div class="model-list text-model-list" id="textModelList">
               {% for m in text_models %}
-              <div class="model-item{{ m.available|yesno:"":" unavailable" }}{% if forloop.first %} selected{% endif %}"
+              <div class="model-item{% if not m.available %} unavailable{% endif %}{% if forloop.first %} selected{% endif %}"
                    data-key="{{ m.key }}" data-available="{{ m.available|lower }}">
                 <div class="model-item-header">
                   <span class="model-name">{{ m.label }}</span>
@@ -859,7 +859,7 @@ input:checked + .slider::before { transform: translateX(16px); background: var(-
                     {% if m.tier == 'premium' %}<span class="tag premium">★ {{ m.tier|title }}</span>
                     {% elif m.tier == 'fast' %}<span class="tag fast">⚡ {{ m.tier|title }}</span>{% endif %}
                     {% if not m.available %}
-                      <span class="tag {{ m.unavailable_reason|slice:"0:3"|lower == "end" }}">{{ m.unavailable_reason|slice:"0:3" }}</span>
+                      <span class="tag eol">EOL</span>
                     {% endif %}
                   </div>
                 </div>
