@@ -33,7 +33,7 @@ class GenerationEngine:
         self.integrate_base = getattr(settings, "NVIDIA_INTEGRATE_URL", "https://integrate.api.nvidia.com/v1")
         self.nvcf_base = "https://api.nvcf.nvidia.com/v2/nvcf/assets"
         self.models = getattr(settings, "NVIDIA_MODELS", {})
-        self.timeout = 180.0
+        self.timeout = 240.0
         self.max_retries = 3
 
     def is_configured(self) -> bool:
@@ -44,6 +44,41 @@ class GenerationEngine:
 
     def get_modality(self, model: str) -> str:
         return self.models.get(model, {}).get("modality", "image")
+
+    def _select_auto_model(self, modality: str, task_type: str) -> tuple[str, dict]:
+        """Auto-select the best available model for the given modality.
+        Priority: premium > fast (for image), fast > premium (for text).
+        Returns (model_key, model_cfg).
+        """
+        candidates = []
+        for key, cfg in self.models.items():
+            if not cfg.get("available", False):
+                continue
+            cfg_modality = cfg.get("modality", "image")
+            if modality == "image" and cfg_modality == "image":
+                candidates.append((key, cfg, cfg.get("tier") == "premium", 1))
+            elif modality == "text" and cfg_modality == "text":
+                candidates.append((key, cfg, cfg.get("tier") == "fast", 1))
+        if not candidates:
+            for key, cfg in self.models.items():
+                if cfg.get("available") and cfg.get("modality") == modality:
+                    candidates.append((key, cfg, cfg.get("tier") == "premium", 2))
+        if not candidates:
+            raise ValueError(f"No available model for modality: {modality}")
+        candidates.sort(key=lambda x: (x[2], x[3]), reverse=True)
+        return candidates[0][0], candidates[0][1]
+
+    REPHRASE_PROMPTS = [
+        "Photorealistic, ultra detailed, 8k: {}",
+        "Masterpiece, best quality, hyperrealistic: {}",
+        "Professional photography, cinematic: {}",
+        "{} detailed, high resolution",
+    ]
+
+    def _rephrase_prompt(self, prompt: str, attempt: int) -> str:
+        """Enhance prompt to get better generation results."""
+        rephrase = self.REPHRASE_PROMPTS[attempt % len(self.REPHRASE_PROMPTS)]
+        return rephrase.format(prompt)
 
     def _classify_task(self, modality: str) -> str:
         return {
@@ -71,32 +106,82 @@ class GenerationEngine:
         if not self.is_configured():
             return {"success": False, "error": "NVIDIA API key not configured"}
 
-        if not model:
-            return {"success": False, "error": "Model is required"}
-
-        cfg = self.models.get(model, {})
-        if not cfg:
-            return {"success": False, "error": f"Unknown model: {model}"}
-
-        if not self.is_available(model):
-            return {
-                "success": False,
-                "error": f"{model} is not available",
-                "available": False,
-            }
-
-        modality = modality or cfg.get("modality", "image")
-        task_type = task_type or self._classify_task(modality)
         prompt = prompt.strip()
+        if not prompt:
+            return {"success": False, "error": "Prompt is required"}
+
+        actual_model = model
+        cfg = None
+
+        if not model or model == "auto":
+            try:
+                actual_modality = modality or "image"
+                actual_model, cfg = self._select_auto_model(actual_modality, task_type)
+                logger.info("Auto-selected model: %s for modality: %s", actual_model, actual_modality)
+            except ValueError as e:
+                return {"success": False, "error": str(e)}
+        else:
+            cfg = self.models.get(actual_model, {})
+            if not cfg:
+                return {"success": False, "error": f"Unknown model: {actual_model}"}
+            if not self.is_available(actual_model):
+                return {"success": False, "error": f"{actual_model} is not available", "available": False}
+
+        actual_modality = modality or cfg.get("modality", "image")
+        actual_task_type = task_type or self._classify_task(actual_modality)
 
         api_type = cfg.get("api_type", "nim")
 
-        if task_type == self.TASK_VISION_EDIT:
-            return self._generate_vision_edit(prompt, model, cfg, image_b64, **kwargs)
-        elif api_type == "openai_compat":
-            return self._generate_text(prompt, model, cfg, task_type, **kwargs)
-        else:
-            return self._generate_image(prompt, model, cfg, task_type, image_b64, image_url, **kwargs)
+        attempts_info = []
+        last_error = None
+
+        for retry_round in range(self.max_retries):
+            current_prompt = self._rephrase_prompt(prompt, retry_round) if retry_round > 0 else prompt
+
+            if actual_task_type == self.TASK_VISION_EDIT:
+                result = self._generate_vision_edit(current_prompt, actual_model, cfg, image_b64, **kwargs)
+            elif api_type == "openai_compat":
+                result = self._generate_text(current_prompt, actual_model, cfg, actual_task_type, **kwargs)
+            else:
+                result = self._generate_image(current_prompt, actual_model, cfg, actual_task_type, image_b64, image_url, **kwargs)
+
+            attempts_info.append({
+                "attempt": retry_round + 1,
+                "prompt": current_prompt,
+                "model": actual_model,
+                "success": result.get("success", False),
+                "error": result.get("error", ""),
+            })
+
+            if result.get("success") and result.get("images") and len(result.get("images", [])) > 0:
+                result["model_used"] = actual_model
+                result["model_label"] = cfg.get("label", actual_model)
+                result["attempts"] = attempts_info
+                result["rephrased"] = retry_round > 0
+                return result
+
+            last_error = result.get("error", "Generation failed")
+
+            if result.get("error") and "rate" in result.get("error", "").lower():
+                wait = 5 + retry_round * 5
+                logger.warning("Rate limit hit, waiting %ss before retry", wait)
+                time.sleep(wait)
+            elif result.get("error") and any(x in result.get("error", "") for x in ["429", "500", "502", "503"]):
+                wait = 3 + retry_round * 3
+                logger.warning("Transient error, waiting %ss before retry", wait)
+                time.sleep(wait)
+            else:
+                if retry_round < self.max_retries - 1:
+                    logger.info("Retrying with rephrased prompt (attempt %s)", retry_round + 2)
+                    time.sleep(2)
+
+        return {
+            "success": False,
+            "error": f"Failed after {self.max_retries} attempts: {last_error}",
+            "model_used": actual_model,
+            "model_label": cfg.get("label", actual_model) if cfg else actual_model,
+            "attempts": attempts_info,
+        }
 
     def _generate_image(self, prompt: str, model: str, cfg: dict, task_type: str,
                         image_b64: str, image_url: str, **kwargs) -> dict:

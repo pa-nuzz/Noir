@@ -308,7 +308,7 @@ def api_generate(request):
     prompt = re.sub(r'\s*\{.*?\}', '', prompt)
     prompt = re.sub(r'\s+', ' ', prompt).strip()
 
-    model_key = data.get('model', '')
+    model_key = data.get('model', 'auto')
     modality = data.get('modality', 'image')
     image_b64 = data.get('image_b64', '')
     image_url = data.get('image_url', '')
@@ -316,20 +316,18 @@ def api_generate(request):
     size = data.get('size', '1024x1024')
     seed = data.get('seed')
 
-    all_models = getattr(settings, 'NVIDIA_MODELS', {})
-    model_cfg = all_models.get(model_key)
-
-    if not model_cfg:
-        return JsonResponse({'success': False, 'error': f'Unknown model: {model_key}'}, status=400)
-
-    if not model_cfg.get('available', False):
-        reason = model_cfg.get('unavailable_reason', 'Model is not available')
-        return JsonResponse({
-            'success': False,
-            'error': f'{model_key} is not available: {reason}',
-            'model': model_key,
-            'available': False,
-        }, status=422)
+    if model_key and model_key != 'auto':
+        all_models = getattr(settings, 'NVIDIA_MODELS', {})
+        model_cfg = all_models.get(model_key)
+        if not model_cfg:
+            return JsonResponse({'success': False, 'error': f'Unknown model: {model_key}'}, status=400)
+        if not model_cfg.get('available', False):
+            return JsonResponse({
+                'success': False,
+                'error': f'{model_key} is not available',
+                'model': model_key,
+                'available': False,
+            }, status=422)
 
     kwargs = {'size': size}
     if seed is not None:

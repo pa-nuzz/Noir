@@ -714,27 +714,45 @@ input:checked + .slider::before { transform: translateX(16px); background: var(-
         <div class="gen-sidebar">
           <div class="sidebar-card">
             <div class="sidebar-label">
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
               Model
             </div>
-            <div class="model-list" id="imageModelList">
-              {% for m in image_models %}
-              <div class="model-item{% if forloop.first %} selected{% endif %}"
-                   data-key="{{ m.key }}" data-sizes="{{ m.size_presets|join:"," }}">
-                <div class="model-item-header">
-                  <span class="model-name">{{ m.label }}</span>
-                  <div class="model-tags">
-                    {% if m.tier == 'premium' %}<span class="tag premium">★ {{ m.tier|title }}</span>
-                    {% elif m.tier == 'fast' %}<span class="tag fast">⚡ {{ m.tier|title }}</span>{% endif %}
+            <div class="toggle-row" id="autoModeRow">
+              <div class="toggle-label">
+                <span class="toggle-name">Auto Mode</span>
+                <span class="toggle-sub">Pick best available</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="autoModeCheck" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div id="manualModelSection" style="display:none; margin-top:.875rem;">
+              <div class="model-list" id="imageModelList">
+                {% for m in image_models %}
+                <div class="model-item{% if forloop.first %} selected{% endif %}"
+                     data-key="{{ m.key }}" data-sizes="{{ m.size_presets|join:"," }}">
+                  <div class="model-item-header">
+                    <span class="model-name">{{ m.label }}</span>
+                    <div class="model-tags">
+                      {% if m.tier == 'premium' %}<span class="tag premium">★</span>
+                      {% elif m.tier == 'fast' %}<span class="tag fast">⚡</span>{% endif %}
+                    </div>
+                  </div>
+                  <div class="model-desc">{{ m.description }}</div>
+                  <div class="model-stats">
+                    <div class="model-stat">Steps <span>{{ m.params.steps }}</span></div>
+                    <div class="model-stat">CFG <span>{{ m.params.cfg_scale }}</span></div>
                   </div>
                 </div>
-                <div class="model-desc">{{ m.description }}</div>
-                <div class="model-stats">
-                  <div class="model-stat">Steps <span>{{ m.params.steps }}</span></div>
-                  <div class="model-stat">CFG <span>{{ m.params.cfg_scale }}</span></div>
-                </div>
+                {% endfor %}
               </div>
-              {% endfor %}
+            </div>
+
+            <div id="autoModelNote" style="margin-top:.75rem; padding:.5rem; background:var(--violet-bg); border-radius:.5rem; text-align:center;">
+              <span style="font-size:.65rem; font-weight:700; color:var(--violet);">★ Auto Mode Active</span>
+              <div style="font-size:.58rem; color:var(--violet-light); margin-top:.2rem;">Best model selected automatically</div>
             </div>
           </div>
 
@@ -937,8 +955,29 @@ input:checked + .slider::before { transform: translateX(16px); background: var(-
   function show(el){ el.style.display = ''; }
   function hide(el){ el.style.display = 'none'; }
 
+  /* ── Auto mode toggle ── */
+  var autoMode = true;
+
+  function updateAutoModeUI() {
+    var manualSection = $('manualModelSection');
+    var autoNote = $('autoModelNote');
+    if (autoMode) {
+      show(autoNote);
+      if (manualSection) hide(manualSection);
+    } else {
+      hide(autoNote);
+      if (manualSection) show(manualSection);
+    }
+  }
+
+  $('autoModeCheck').addEventListener('change', function() {
+    autoMode = this.checked;
+    updateAutoModeUI();
+  });
+  updateAutoModeUI();
+
   /* ── Image tab setup ── */
-  var selectedImageModel = 'ida-vision-dev';
+  var selectedImageModel = 'auto';
   var selectedSize = '1024x1024';
   var selectedSizePresets = '1024x1024,1344x768,768x1344,1152x896,896x1152,1216x832,832x1216';
   var currentImageData = null;
