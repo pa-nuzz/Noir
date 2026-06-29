@@ -104,7 +104,7 @@ def generate_creative_content(
     category: str = "full_campaign",
     temperature: float = 0.85,
     max_tokens: int = 2048,
-    use_multi_agent: bool = True,
+    use_multi_agent: bool = False,
 ) -> dict:
     """
     Generate creative content using an iterative multi-agent process (Ideator -> Critic -> Refiner).

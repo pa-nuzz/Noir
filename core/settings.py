@@ -545,12 +545,19 @@ YOUTUBE_REDIRECT_URI = config('YOUTUBE_REDIRECT_URI', default='')
 
 STORAGES = {
     "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "BACKEND": "apps.media_assets.minio_storage.MinIODjangoStorage",
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
+
+# Media files are now stored in MinIO only - no local filesystem storage
+# All uploaded files use MinIODjangoStorage which:
+# - Stores files in MinIO bucket
+# - Generates public URLs via MINIO_PUBLIC_BASE_URL or presigned URLs
+# - Works in both DEBUG=True and DEBUG=False
+# - No fallback to local filesystem under any circumstance
 
 # --- Storage backends ---
 

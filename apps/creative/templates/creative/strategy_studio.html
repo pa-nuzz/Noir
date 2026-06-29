@@ -230,10 +230,13 @@
     <!-- Input Area -->
     <div class="p-5 bg-white border-t border-slate-100 shadow-[0_-10px_30px_rgba(0,0,0,0.02)] relative z-10" id="chatbot-input-area">
       <div class="flex gap-3 items-center">
-        <input type="text" id="chatbot-input" placeholder="Type your response..." class="w-full px-5 py-3.5 bg-slate-100 border-none rounded-2xl text-slate-700 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all hidden shadow-inner" onkeydown="if(event.key==='Enter')chatInputSubmit()">
+        <input type="text" id="chatbot-input" placeholder="Type your response..." class="w-full px-5 py-3.5 bg-slate-100 border-none rounded-2xl text-slate-700 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all hidden shadow-inner" onkeydown="if(event.key==='Enter')chatInputSubmit()" oninput="updateCharCounter()">
         <button id="chatbot-input-btn" class="hidden px-5 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold text-sm transition-colors shadow-md shadow-indigo-200 hover:shadow-lg hover:shadow-indigo-300" onclick="chatInputSubmit()">
           Send
         </button>
+      </div>
+      <div class="flex justify-end mt-1.5 px-1">
+        <span id="char-counter" class="text-[11px] font-medium text-slate-400 hidden"></span>
       </div>
     </div>
 
@@ -385,7 +388,7 @@ function selectStrategyType(key, label) {
         chatState.extraSteps = d.schema.steps.filter(function(s) { return s.extra; });
         var total = chatState.coreSteps.length + (chatState.extraSteps.length > 0 ? 0 : 0) + 1;
         document.getElementById('chatbot-step-label').textContent = 'Step 2 of ' + total;
-        chatAsk(1);
+        chatAsk(0);
       } else {
         showChatError('No input schema found for this strategy type.');
       }
@@ -605,17 +608,32 @@ function renderExtraInputsStep() {
       });
       row.appendChild(mg);
     } else if (es.type === 'input' || es.type === 'textarea') {
+      var maxLen = es.max_length || 0;
       var inp = document.createElement(es.type === 'textarea' ? 'textarea' : 'input');
       inp.className = 'w-full px-3 py-2.5 rounded-lg text-sm border border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all';
       inp.placeholder = es.placeholder || '';
       inp.value = chatState.data[es.key] || '';
+      var extraCounter = document.createElement('div');
+      extraCounter.className = 'text-[11px] font-medium text-right mt-0.5 ' + (maxLen ? 'text-slate-400' : 'hidden');
+      extraCounter.id = 'ec-' + es.key;
+      extraCounter.textContent = (inp.value.length || 0) + '/' + maxLen;
       inp.oninput = function() {
+        var raw = inp.value;
+        if (maxLen && raw.length > maxLen) {
+          inp.value = raw.substring(0, maxLen);
+        }
         chatState.data[es.key] = inp.value.trim();
         extraFilledCount.value = chatState.extraSteps.filter(function(s) {
           var v = chatState.data[s.key];
           return v && !(Array.isArray(v) && v.length === 0);
         }).length;
         updateExtraLabel();
+        if (maxLen) {
+          var l = inp.value.length;
+          extraCounter.textContent = l + '/' + maxLen;
+          extraCounter.classList.toggle('text-red-500', l > maxLen);
+          extraCounter.classList.toggle('text-slate-400', l <= maxLen);
+        }
       };
       if (es.type === 'textarea') {
         inp.rows = 2;
@@ -624,6 +642,7 @@ function renderExtraInputsStep() {
         inp.type = 'text';
       }
       row.appendChild(inp);
+      row.appendChild(extraCounter);
     } else if (es.type === 'datetime') {
       var inp = document.createElement('input');
       inp.type = 'datetime-local';
@@ -723,17 +742,39 @@ function showInput(stepIdx, s) {
   inp.placeholder = s.placeholder || 'Type your answer...';
   inp.value = chatState.data[s.key] || '';
   inp.dataset.step = stepIdx;
+  inp.dataset.maxLength = s.max_length || '';
   inp.focus();
+  updateCharCounter();
+}
+
+function updateCharCounter() {
+  var inp = document.getElementById('chatbot-input');
+  var counter = document.getElementById('char-counter');
+  var max = parseInt(inp.dataset.maxLength);
+  if (max) {
+    var len = inp.value.length;
+    counter.textContent = len + '/' + max;
+    counter.classList.remove('hidden');
+    counter.classList.toggle('text-red-500', len > max);
+    counter.classList.toggle('text-slate-400', len <= max);
+  } else {
+    counter.classList.add('hidden');
+  }
 }
 
 function chatInputSubmit() {
   var inp = document.getElementById('chatbot-input');
   var btn = document.getElementById('chatbot-input-btn');
   var stepIdx = parseInt(inp.dataset.step);
+  var max = parseInt(inp.dataset.maxLength);
   var val = inp.value.trim();
   if (!val) return;
+  if (max && val.length > max) {
+    val = val.substring(0, max);
+  }
   inp.classList.add('hidden');
   btn.classList.add('hidden');
+  document.getElementById('char-counter').classList.add('hidden');
   chatAnswer(stepIdx, val);
 }
 

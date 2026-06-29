@@ -5,13 +5,16 @@ from datetime import datetime
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from apps.media_assets.models import MediaAsset, MediaFolder
-from apps.media_assets.services import MediaService
+from apps.media_assets.services import MediaService, StorageService
+from apps.workspaces.models import get_or_create_personal_workspace
+from core.tenant import tenant_context
 
 from .services.creative_service import CreativeServiceError, generate_creative_content
 from .services.schemas import get_strategy_schema, get_all_strategy_schemas
@@ -33,10 +36,12 @@ def _strategies_qs(user, ws_id, status=None):
 
 
 def _attach_asset_urls(assets, request):
-    service = MediaService(request.user)
     for a in assets:
-        a.display_url = service.get_asset_url(a)
-        a.display_thumbnail_url = service.get_thumbnail_url(a) or a.display_url
+        a.display_url = reverse('creative:serve_asset', args=[a.id, 'original'])
+        if a.thumbnail_path:
+            a.display_thumbnail_url = reverse('creative:serve_asset', args=[a.id, 'thumbnail'])
+        else:
+            a.display_thumbnail_url = a.display_url
     return list(assets)
 
 
@@ -53,20 +58,30 @@ def _get_workspace_context(request):
     return context
 
 
-def _build_folder_tree(user, parent=None, _connectors=None):
+def _build_folder_tree(user, ws_id, parent=None, _connectors=None):
     if _connectors is None:
         _connectors = []
-    folders = list(MediaFolder.objects.filter(parent=parent, user=user).order_by('name'))
+    filter_kw = {'parent': parent, 'user': user}
+    if ws_id:
+        filter_kw['workspace_id'] = ws_id
+    else:
+        filter_kw['workspace__isnull'] = True
+    folders = list(MediaFolder.objects.filter(**filter_kw).order_by('name'))
     tree = []
     for idx, f in enumerate(folders):
         is_last = idx == len(folders) - 1
-        children_count = MediaAsset.objects.filter(folder=f, user=user).count()
+        acnt_filter = {'folder': f, 'user': user}
+        if ws_id:
+            acnt_filter['workspace_id'] = ws_id
+        else:
+            acnt_filter['workspace__isnull'] = True
+        children_count = MediaAsset.objects.filter(**acnt_filter).count()
         child_connectors = _connectors + [not is_last]
         tree.append({
             'id': f.id,
             'name': f.name,
             'asset_count': children_count,
-            'children': _build_folder_tree(user, f, child_connectors),
+            'children': _build_folder_tree(user, ws_id, f, child_connectors),
             'has_children': False,
             'is_last': is_last,
             'connectors': _connectors,
@@ -86,6 +101,13 @@ def media_library(request):
     file_type = request.GET.get('type', '')
     folder_id = request.GET.get('folder', '')
     query = request.GET.get('q', '').strip()
+    ws_id = request.session.get('active_workspace_id')
+
+    # Workspace-scoped filter helper
+    if ws_id:
+        ws_filter = {'workspace_id': ws_id}
+    else:
+        ws_filter = {'workspace__isnull': True}
 
     # Handle folder CRUD via POST
     if request.method == 'POST':
@@ -97,10 +119,10 @@ def media_library(request):
             if name:
                 parent = None
                 if parent_id and parent_id.isdigit():
-                    parent = get_object_or_404(MediaFolder, id=int(parent_id), user=user)
+                    parent = get_object_or_404(MediaFolder, id=int(parent_id), user=user, **ws_filter)
                 MediaFolder.objects.get_or_create(
                     name=name, parent=parent, user=user,
-                    defaults={'workspace_id': request.session.get('active_workspace_id')},
+                    defaults={'workspace_id': ws_id},
                 )
                 messages.success(request, f'Folder "{name}" created.')
             return redirect('creative:media_library')
@@ -108,7 +130,7 @@ def media_library(request):
         if action == 'delete_folder':
             fid = request.POST.get('folder_id', '')
             if fid and fid.isdigit():
-                folder = get_object_or_404(MediaFolder, id=int(fid), user=user)
+                folder = get_object_or_404(MediaFolder, id=int(fid), user=user, **ws_filter)
                 folder.delete()
                 messages.success(request, 'Folder deleted.')
             return redirect('creative:media_library')
@@ -117,7 +139,7 @@ def media_library(request):
             fid = request.POST.get('folder_id', '')
             name = request.POST.get('name', '').strip()
             if fid and fid.isdigit() and name:
-                folder = get_object_or_404(MediaFolder, id=int(fid), user=user)
+                folder = get_object_or_404(MediaFolder, id=int(fid), user=user, **ws_filter)
                 folder.name = name
                 folder.save()
                 messages.success(request, 'Folder renamed.')
@@ -127,7 +149,7 @@ def media_library(request):
             asset_id = request.POST.get('asset_id', '')
             notes = request.POST.get('context_notes', '').strip()
             if asset_id and asset_id.isdigit():
-                asset = get_object_or_404(MediaAsset, id=int(asset_id), user=user)
+                asset = get_object_or_404(MediaAsset, id=int(asset_id), user=user, **ws_filter)
                 asset.description = notes
                 asset.save(update_fields=['description'])
                 messages.success(request, 'Notes saved.')
@@ -151,7 +173,7 @@ def media_library(request):
                     parsed = datetime.fromisoformat(scheduled_raw)
                     if timezone.is_naive(parsed):
                         parsed = timezone.make_aware(parsed)
-                    asset = MediaAsset.objects.get(id=int(asset_id), user=user)
+                    asset = MediaAsset.objects.get(id=int(asset_id), user=user, **ws_filter)
                     link = CreativeStrategyAsset.objects.filter(asset=asset).first()
                     if link:
                         link.platform = platform
@@ -169,13 +191,18 @@ def media_library(request):
             return redirect('creative:media_library')
 
     # GET — build folder tree + assets
-    folder_tree = _build_folder_tree(user)
-    all_folders = MediaFolder.objects.filter(user=user)
-    assets = MediaAsset.objects.filter(user=user).select_related('folder').order_by('-created_at')
+    folder_tree = _build_folder_tree(user, ws_id)
+    all_folders = MediaFolder.objects.filter(user=user, **ws_filter)
+    assets = MediaAsset.objects.filter(user=user, **ws_filter).select_related('folder').order_by('-created_at')
 
     if query:
-        service = MediaService(user)
-        assets = service.search_assets(query)
+        from django.db.models import Q
+        assets = assets.filter(
+            Q(title__icontains=query)
+            | Q(original_filename__icontains=query)
+            | Q(description__icontains=query)
+            | Q(tags__name__icontains=query)
+        ).distinct()
     if file_type:
         assets = assets.filter(file_type=file_type)
     if folder_id and folder_id.isdigit():
@@ -200,14 +227,16 @@ def media_library(request):
     if selected_id and selected_id.isdigit():
         from contextlib import suppress
         with suppress(MediaAsset.DoesNotExist):
-            selected_asset = MediaAsset.objects.get(id=int(selected_id), user=user)
+            selected_asset = MediaAsset.objects.get(id=int(selected_id), user=user, **ws_filter)
 
     assets = _attach_asset_urls(assets, request)
 
     if selected_asset:
-        svc = MediaService(user)
-        selected_asset.display_url = svc.get_asset_url(selected_asset)
-        selected_asset.display_thumbnail_url = svc.get_thumbnail_url(selected_asset)
+        selected_asset.display_url = reverse('creative:serve_asset', args=[selected_asset.id, 'original'])
+        if selected_asset.thumbnail_path:
+            selected_asset.display_thumbnail_url = reverse('creative:serve_asset', args=[selected_asset.id, 'thumbnail'])
+        else:
+            selected_asset.display_thumbnail_url = selected_asset.display_url
 
     return render(request, 'creative/media_library.html', {
         'assets': assets,
@@ -219,9 +248,10 @@ def media_library(request):
         'selected_asset': selected_asset,
         'current_type': file_type,
         'current_folder': folder_id,
+        'current_folder_id': int(folder_id) if folder_id and folder_id.isdigit() else None,
         'query': query,
         'strategies': CreativeStrategy.objects.filter(
-            user=user, status__in=['approved', 'active'],
+            user=user, **ws_filter, status__in=['approved', 'active'],
         ).order_by('-created_at')[:20],
     })
 
@@ -576,6 +606,14 @@ def api_chat_generate(request):
     # ── Load schema for this strategy type ─────────────────────────────────
     schema = get_strategy_schema(strategy_type)
 
+    # ── Server-side truncation: enforce max_length from schema ─────────────
+    if schema:
+        for step in schema.get('steps', []):
+            max_len = step.get('max_length')
+            key = step['key']
+            if max_len and key in data and isinstance(data[key], str):
+                data[key] = data[key][:max_len]
+
     # ── Extract common fields from dynamic payload ──────────────────────────
     # Map known field keys to model/context fields
     FIELD_MAP = {
@@ -779,3 +817,180 @@ def api_strategy_inputs(request, strategy_type=None):
         return JsonResponse({'schema': schema, 'strategy_type': strategy_type})
     schemas = get_all_strategy_schemas()
     return JsonResponse({'schemas': schemas})
+
+
+# ---------------------------------------------------------------------------
+# Custom Media Asset Serve and Upload (workspace-isolated)
+# ---------------------------------------------------------------------------
+
+@login_required
+def serve_creative_asset(request, asset_id, file_type='original'):
+    """
+    Serve media asset via proxy with correct workspace prefix.
+    Uses asset.workspace (FK) to determine MinIO prefix, falling back to personal workspace.
+    Passes user=request.user to StorageService.for_workspace() to ensure prefix matches upload.
+    """
+    asset = get_object_or_404(MediaAsset, id=asset_id, user=request.user)
+    
+    # Determine workspace from asset (FK) or fall back to personal
+    if asset.workspace:
+        workspace = asset.workspace
+    else:
+        workspace = get_or_create_personal_workspace(request.user)
+    
+    # Get storage service with BOTH user and workspace to ensure correct prefix
+    storage = StorageService.for_workspace(workspace, user=request.user)
+    
+    # Select path based on file_type
+    path = asset.thumbnail_path if file_type == 'thumbnail' else asset.storage_path
+    if not path:
+        return HttpResponse(status=404)
+    
+    try:
+        buffer = storage.open(path)
+        content = buffer.read()
+        if file_type == 'thumbnail':
+            content_type = 'image/webp'
+        else:
+            # Guess content type from original filename
+            import mimetypes
+            content_type, _ = mimetypes.guess_type(asset.original_filename)
+            content_type = content_type or 'application/octet-stream'
+        return HttpResponse(content, content_type=content_type)
+    except FileNotFoundError:
+        return HttpResponse(status=404)
+    except Exception:
+        logger.exception('Failed to serve asset %s (%s)', asset_id, file_type)
+        return HttpResponse(status=500)
+
+
+@login_required
+def upload_media(request):
+    """
+    Handle media upload with correct workspace isolation.
+    Supports both regular form POST (redirect) and XHR (JSON response).
+    Uses active workspace from session (or personal) for storage and asset record.
+    """
+    logger.info('Entering upload_media view')
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=400)
+    
+    user = request.user
+    uploaded_file = request.FILES.get('file')
+    folder_id = request.POST.get('folder_id')
+    title = request.POST.get('title', '').strip()
+    is_xhr = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
+    if not uploaded_file:
+        if is_xhr:
+            return JsonResponse({'success': False, 'error': 'No file selected.'}, status=400)
+        messages.error(request, 'Please select a file to upload.')
+        return redirect('creative:media_library')
+    
+    try:
+        # Resolve workspace from session (active workspace) or fall back to personal
+        ws_id = request.session.get('active_workspace_id')
+        if ws_id:
+            from apps.workspaces.models import Workspace
+            try:
+                workspace = Workspace.objects.get(id=ws_id)
+            except Workspace.DoesNotExist:
+                workspace = get_or_create_personal_workspace(user)
+        else:
+            workspace = get_or_create_personal_workspace(user)
+        
+        # Create media service with correct workspace storage
+        from apps.media_assets.services import MediaService
+        service = MediaService(user)
+        # Override the storage service to use the correct workspace
+        service.storage = StorageService.for_workspace(workspace, user=user)
+        logger.info(f'Upload workspace: {workspace.id}, storage prefix: {service.storage.backend.prefix}')
+        
+        # Prepare folder if specified
+        folder = None
+        if folder_id:
+            try:
+                folder = MediaFolder.objects.get(
+                    id=int(folder_id), 
+                    user=user,
+                    **({'workspace_id': ws_id} if ws_id else {'workspace__isnull': True})
+                )
+            except (MediaFolder.DoesNotExist, ValueError):
+                folder = None
+        
+        # Perform upload with correct tenant context to ensure workspace consistency
+        with tenant_context(workspace):
+            asset = service.upload(uploaded_file, folder_id=folder.id if folder else None, title=title or None)
+        logger.info(f'Upload successful: asset_id={asset.id}, storage_path={asset.storage_path}, storage_backend={asset.storage_backend}')
+        
+        if is_xhr:
+            return JsonResponse({
+                'success': True,
+                'asset_id': asset.id,
+                'title': asset.title or asset.original_filename,
+                'file_type': asset.file_type,
+                'url': reverse('creative:serve_asset', args=[asset.id, 'original']),
+                'thumbnail_url': reverse('creative:serve_asset', args=[asset.id, 'thumbnail']) if asset.thumbnail_path else None,
+            })
+        
+        messages.success(request, f'"{asset.original_filename}" uploaded.')
+        # Redirect back to media library with current folder preserved
+        redirect_url = reverse('creative:media_library')
+        if folder_id:
+            redirect_url += f'?folder={folder_id}'
+        return redirect(redirect_url)
+        
+    except Exception as e:
+        logger.exception("Upload failed")
+        if is_xhr:
+            return JsonResponse({'success': False, 'error': f'Upload failed: {str(e)}'}, status=500)
+        messages.error(request, f'Upload failed: {str(e)}')
+        return redirect('creative:media_library')
+
+
+# ---------------------------------------------------------------------------
+# Serve General Media Files (Avatars, etc.) from MinIO
+# Replaces Django static() for production use
+# ---------------------------------------------------------------------------
+
+def serve_media_file(request, path):
+    """
+    Serve media files from MinIO storage.
+    
+    This view replaces Django's static() URL handler for media files,
+    ensuring they work in both DEBUG=True and DEBUG=False.
+    
+    URL pattern: /media/<path_to_file>
+    Examples:
+        /media/avatars/user123.jpg
+        /media/media_assets/2026/06/22/image.png
+    """
+    from apps.media_assets.minio_storage import MinIODjangoStorage
+    import mimetypes
+    
+    try:
+        storage = MinIODjangoStorage(prefix='media')
+        key = path
+        
+        if not storage.exists(key):
+            logger.warning(f'Media file not found in MinIO: {key}')
+            return HttpResponse(status=404)
+        
+        buffer = storage.open(key)
+        content = buffer.read()
+        
+        # Guess content type from the path
+        content_type, _ = mimetypes.guess_type(path)
+        content_type = content_type or 'application/octet-stream'
+        
+        response = HttpResponse(content, content_type=content_type)
+        response['Content-Length'] = len(content)
+        response['Cache-Control'] = 'public, max-age=86400'
+        return response
+        
+    except FileNotFoundError:
+        logger.warning(f'Media file not found: {path}')
+        return HttpResponse(status=404)
+    except Exception as e:
+        logger.exception(f'Failed to serve media file {path}: {e}')
+        return HttpResponse(status=500)

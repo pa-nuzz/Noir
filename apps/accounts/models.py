@@ -1,5 +1,7 @@
+import os
 import random
 import string
+import uuid
 from datetime import timedelta
 
 from django.conf import settings
@@ -10,11 +12,17 @@ from django.utils import timezone
 from core.models import AuditMixin
 
 
+def avatar_upload_to(instance, filename):
+    ext = os.path.splitext(filename)[1]
+    uid = instance.id or 'new'
+    return f'avatars/user_{uid}_{uuid.uuid4().hex}{ext}'
+
+
 class User(AuditMixin, AbstractUser):
     email = models.EmailField(unique=True)
     company = models.CharField(max_length=255, blank=True)
     bio = models.TextField(blank=True)
-    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    avatar = models.ImageField(upload_to=avatar_upload_to, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     email_verified = models.BooleanField(default=False)
 

@@ -17,4 +17,7 @@ urlpatterns = [
     path('api/strategy-update/', views.api_strategy_update, name='api_strategy_update'),
     path('api/strategy-inputs/', views.api_strategy_inputs, name='api_strategy_inputs'),
     path('api/strategy-inputs/<str:strategy_type>/', views.api_strategy_inputs, name='api_strategy_inputs_detail'),
+    # Media asset serve and upload (workspace-isolated)
+    path('serve-asset/<int:asset_id>/<str:file_type>/', views.serve_creative_asset, name='serve_asset'),
+    path('upload-media/', views.upload_media, name='upload_media'),
 ]

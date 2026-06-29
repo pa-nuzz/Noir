@@ -104,10 +104,10 @@
         <div class="grid grid-cols-3 gap-3">
           {% for link in strategy.linked_assets.all %}
           <div class="group relative aspect-square rounded-xl overflow-hidden bg-slate-100 hover:ring-2 hover:ring-primary transition-all">
-            {% if link.asset.thumbnail %}
-            <img src="{{ link.asset.thumbnail }}" alt="{{ link.asset.title|default:link.asset.original_filename }}" class="w-full h-full object-cover">
+            {% if link.asset.thumbnail_path %}
+            <img src="{% url 'creative:serve_asset' link.asset.id 'thumbnail' %}" alt="{{ link.asset.title|default:link.asset.original_filename }}" class="w-full h-full object-cover">
             {% elif link.asset.file_type == 'image' %}
-            <img src="{{ link.asset.file.url }}" alt="{{ link.asset.title|default:link.asset.original_filename }}" class="w-full h-full object-cover">
+            <img src="{% url 'creative:serve_asset' link.asset.id 'original' %}" alt="{{ link.asset.title|default:link.asset.original_filename }}" class="w-full h-full object-cover">
             {% else %}
             <div class="flex items-center justify-center h-full text-slate-400">
               <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>

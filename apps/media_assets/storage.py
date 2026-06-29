@@ -53,22 +53,6 @@ def _slugify(value):
     return value or 'untitled'
 
 
-def _compute_storage_prefix(user, workspace):
-    user_part = str(user.id)
-    company_part = _slugify(user.company or 'default')
-
-    from apps.workspaces.models import WorkspaceMembership
-    member_count = WorkspaceMembership.objects.filter(workspace=workspace).count()
-    is_personal = member_count <= 1
-
-    if is_personal:
-        workspace_part = 'personal'
-    else:
-        workspace_part = _slugify(workspace.name)
-
-    return f"{user_part}/{company_part}/{workspace_part}"
-
-
 class BaseStorage(ABC):
     backend_name = 'base'
 
@@ -139,7 +123,7 @@ class LocalStorage(BaseStorage):
         else:
             data = content
         name = _safe_filename(getattr(content, 'name', os.path.basename(path)))
-        full_path = os.path.join(path, name) if path and not path.endswith(name) else (path or name)
+        full_path = f"{path}/{name}" if path and not path.endswith(name) else (path or name)
         if default_storage.exists(full_path):
             base, ext = os.path.splitext(full_path)
             counter = 1
@@ -387,7 +371,7 @@ class S3CompatibleStorage(BaseStorage):
             data = content if isinstance(content, (bytes, bytearray)) else content.read()
             name = _safe_filename(os.path.basename(path))
 
-        full_key = self._key(os.path.join(path, name)) if path and not path.endswith(name) else self._key(path or name)
+        full_key = self._key(f"{path}/{name}") if path and not path.endswith(name) else self._key(path or name)
 
         base, ext = os.path.splitext(full_key)
         counter = 1
@@ -544,7 +528,7 @@ class DiaS3Storage(BaseStorage):
             data = content if isinstance(content, (bytes, bytearray)) else content.read()
             name = _safe_filename(os.path.basename(path))
 
-        full_key = self._key(os.path.join(path, name)) if path and not path.endswith(name) else self._key(path or name)
+        full_key = self._key(f"{path}/{name}") if path and not path.endswith(name) else self._key(path or name)
 
         base, ext = os.path.splitext(full_key)
         counter = 1
@@ -632,6 +616,11 @@ class DiaS3Storage(BaseStorage):
             return False, str(exc)
 
 
+def _compute_storage_prefix(user, workspace):
+    prefix = (_clean_value(settings.MINIO_PATH_PREFIX) or 'media').rstrip('/')
+    return f"{prefix}/workspace_{workspace.id}"
+
+
 class MinIOStorage(BaseStorage):
     backend_name = 'minio'
 
@@ -701,7 +690,8 @@ class MinIOStorage(BaseStorage):
             data = content if isinstance(content, (bytes, bytearray)) else content.read()
             name = _safe_filename(os.path.basename(path))
 
-        full_key = self._key(os.path.join(path, name)) if path and not path.endswith(name) else self._key(path or name)
+        full_key = self._key(f"{path}/{name}") if path and not path.endswith(name) else self._key(path or name)
+        full_key = full_key.replace('\\', '/')
 
         base, ext = os.path.splitext(full_key)
         counter = 1
@@ -833,15 +823,17 @@ class StorageService:
             defaults={'backend': WorkspaceStorageConfig.BACKEND_MINIO},
         )
 
-        if config.backend == WorkspaceStorageConfig.BACKEND_MINIO:
-            if not settings.MINIO_BUCKET:
-                logger.warning("MinIO selected but MINIO_BUCKET is not set in .env, falling back to local")
-                return cls(LocalStorage(), config=config)
-            storage = MinIOStorage(user=user, workspace=workspace)
-            ok, err = storage.test_connection()
-            if ok:
-                return cls(storage, config=config)
-            logger.warning("MinIO unavailable (%s), falling back to local", err)
-            return cls(LocalStorage(), config=config)
+        # Enforce MinIO only - auto-migrate old configs
+        if config.backend != WorkspaceStorageConfig.BACKEND_MINIO:
+            config.backend = WorkspaceStorageConfig.BACKEND_MINIO
+            config.save(update_fields=['backend'])
 
-        return cls(LocalStorage(), config=config)
+        if not settings.MINIO_BUCKET:
+            raise ValueError("MINIO_BUCKET must be set in .env for MinIO storage")
+
+        storage = MinIOStorage(user=user, workspace=workspace)
+        ok, err = storage.test_connection()
+        if not ok:
+            raise ConnectionError(f"MinIO connection failed: {err}. Check your MinIO configuration.")
+
+        return cls(storage, config=config)
