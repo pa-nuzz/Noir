@@ -54,8 +54,8 @@ input:checked+.slider::before { transform:translateX(16px); background:var(--v);
 
 .main-area { display:flex; flex-direction:column; gap:.75rem; }
 .prompt-card { background:var(--w); border:1px solid var(--g200); border-radius:1rem; padding:1rem; box-shadow:0 1px 3px rgba(0,0,0,.04); }
-#promptInput, #promptInputText { width:100%; background:var(--g50); border:1.5px solid var(--g200); border-radius:.6rem; padding:.65rem .8rem; color:var(--g800); font-family:'Raleway',sans-serif; font-size:.8rem; line-height:1.5; resize:none; min-height:80px; transition:border-color .2s; }
-#promptInput:focus, #promptInputText:focus { outline:none; border-color:var(--v); background:var(--w); }
+#imgPrompt, #txtPrompt { width:100%; background:var(--g50); border:1.5px solid var(--g200); border-radius:.6rem; padding:.65rem .8rem; color:var(--g800); font-family:'Raleway',sans-serif; font-size:.8rem; line-height:1.5; resize:none; min-height:140px; transition:border-color .2s; }
+#imgPrompt:focus, #txtPrompt:focus { outline:none; border-color:var(--v); background:var(--w); }
 
 .btn-gen { width:100%; padding:.75rem 1.25rem; border-radius:.75rem; background:linear-gradient(135deg,var(--v),var(--vl)); color:#fff; font-family:'Raleway',sans-serif; font-size:.8rem; font-weight:700; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:.4rem; transition:all .2s; box-shadow:0 4px 16px rgba(109,40,217,.3); }
 .btn-gen:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 6px 24px rgba(109,40,217,.4); }
@@ -359,11 +359,11 @@ input:checked+.slider::before { transform:translateX(16px); background:var(--v);
         img.src = 'data:image/png;base64,' + data.images[0].data;
         body.appendChild(img);
         actions.style.display = 'flex';
-        opts.imageData = data.images[0].data;
+        currImgData = data.images[0].data;
       } else if(data.text){
         body.innerHTML = '<div class="gen-text">' + escapeHtml(data.text) + '</div>';
         actions.style.display = 'flex';
-        opts.textData = data.text;
+        currText = data.text;
       }
     }
 

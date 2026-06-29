@@ -42,6 +42,7 @@ drf-spectacular==0.29.0
 filelock==3.25.2
 fonttools==4.62.1
 fsspec==2026.2.0
+gevent==25.4.2
 google-api-core==2.31.0
 google-api-python-client==2.197.0
 google-auth-httplib2==0.4.0
