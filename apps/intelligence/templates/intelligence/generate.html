@@ -5,696 +5,97 @@
 
 {% block extra_head %}
 <style>
-:root {
-  --violet: #6D28D9;
-  --violet-light: #8B5CF6;
-  --violet-bg: #F5F3FF;
-  --cyan: #06B6D4;
-  --cyan-bg: #ECFEFF;
-  --white: #FFFFFF;
-  --gray-50: #F9FAFB;
-  --gray-100: #F3F4F6;
-  --gray-200: #E5E7EB;
-  --gray-300: #D1D5DB;
-  --gray-400: #9CA3AF;
-  --gray-500: #6B7280;
-  --gray-600: #4B5563;
-  --gray-700: #374151;
-  --gray-800: #1F2937;
-  --gray-900: #111827;
-}
-
 * { box-sizing: border-box; }
-
-.page-gen {
-  background: var(--gray-50);
-  min-height: 100vh;
-  font-family: 'Raleway', sans-serif;
-  color: var(--gray-800);
-}
-
-.gen-wrap {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1.5rem 4rem;
-}
-
-/* ── Hero header ── */
-.gen-header {
-  text-align: center;
-  margin-bottom: 2.5rem;
-}
-
-.gen-header .eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: .4rem;
-  background: var(--violet-bg);
-  color: var(--violet);
-  font-size: .65rem;
-  font-weight: 700;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  padding: .35rem .875rem;
-  border-radius: 9999px;
-  border: 1px solid rgba(109,40,217,.12);
-}
-
-.gen-header h1 {
-  font-size: 2rem;
-  font-weight: 800;
-  letter-spacing: -.025em;
-  color: var(--gray-900);
-  margin-top: .875rem;
-}
-
-.gen-header p {
-  color: var(--gray-500);
-  font-size: .875rem;
-  margin-top: .4rem;
-}
-
-/* ── Two-column layout ── */
-.gen-layout {
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 1.5rem;
-  align-items: start;
-}
-
-@media (max-width: 900px) {
-  .gen-layout { grid-template-columns: 1fr; }
-}
-
-/* ── Left sidebar card ── */
-.gen-sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.sidebar-card {
-  background: var(--white);
-  border: 1px solid var(--gray-200);
-  border-radius: 1.125rem;
-  padding: 1.125rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,.04);
-}
-
-.sidebar-label {
-  font-size: .58rem;
-  font-weight: 700;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--gray-400);
-  margin-bottom: .75rem;
-  display: flex;
-  align-items: center;
-  gap: .4rem;
-}
-
-.sidebar-label svg { opacity: .4; }
-
-/* ── Tab bar ── */
-.tab-bar {
-  display: flex;
-  background: var(--gray-100);
-  border: 1px solid var(--gray-200);
-  border-radius: .875rem;
-  padding: .25rem;
-  gap: .2rem;
-}
-
-.tab-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: .35rem;
-  padding: .5rem .5rem;
-  border-radius: .625rem;
-  border: none;
-  background: transparent;
-  color: var(--gray-500);
-  font-family: 'Raleway', sans-serif;
-  font-size: .72rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all .2s;
-}
-
-.tab-btn:hover { color: var(--gray-700); }
-
-.tab-btn.active {
-  background: var(--white);
-  color: var(--gray-900);
-  box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
-}
-
-.tab-count {
-  font-size: .52rem;
-  font-weight: 700;
-  padding: .1rem .38rem;
-  border-radius: 9999px;
-  background: var(--violet-bg);
-  color: var(--violet);
-}
-
-.tab-btn.active .tab-count { background: var(--violet-bg); }
-
-.tab-btn.disabled-tab { opacity: .45; cursor: default; }
-
-/* ── Model list ── */
-.model-list { display: flex; flex-direction: column; gap: .4rem; }
-
-.model-item {
-  background: var(--gray-50);
-  border: 1.5px solid var(--gray-200);
-  border-radius: .875rem;
-  padding: .75rem .875rem;
-  cursor: pointer;
-  transition: all .18s;
-}
-
-.model-item:hover:not(.unavailable) {
-  border-color: var(--violet-light);
-  background: var(--white);
-  transform: translateY(-1px);
-  box-shadow: 0 3px 12px rgba(109,40,217,.08);
-}
-
-.model-item.selected {
-  border-color: var(--violet);
-  background: var(--violet-bg);
-  box-shadow: 0 0 0 3px rgba(109,40,217,.08);
-}
-
-.model-item.unavailable {
-  opacity: .45;
-  cursor: not-allowed;
-  border-style: dashed;
-  border-color: var(--gray-200);
-}
-
-.model-item-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: .2rem;
-}
-
-.model-name {
-  font-size: .8rem;
-  font-weight: 700;
-  color: var(--gray-800);
-}
-
-.model-tags { display: flex; gap: .3rem; align-items: center; }
-
-.tag {
-  font-size: .52rem;
-  font-weight: 700;
-  letter-spacing: .05em;
-  text-transform: uppercase;
-  padding: .18rem .45rem;
-  border-radius: 9999px;
-}
-
-.tag.premium { background: rgba(251,191,36,.12); color: #D97706; }
-.tag.fast { background: var(--cyan-bg); color: #0891B2; }
-.tag.edit { background: rgba(168,85,247,.1); color: #7C3AED; }
-.tag.unavail { background: var(--gray-100); color: var(--gray-500); }
-.tag.eol { background: rgba(239,68,68,.08); color: #DC2626; }
-
-.model-desc {
-  font-size: .65rem;
-  color: var(--gray-500);
-  line-height: 1.4;
-}
-
-.model-stats {
-  display: flex;
-  gap: .75rem;
-  margin-top: .4rem;
-}
-
-.model-stat {
-  display: flex;
-  align-items: center;
-  gap: .2rem;
-  font-size: .6rem;
-  color: var(--gray-400);
-}
-
-.model-stat span { color: var(--gray-600); font-weight: 600; }
-
-.unavail-note {
-  font-size: .58rem;
-  color: #DC2626;
-  margin-top: .35rem;
-  font-style: italic;
-}
-
-/* ── Size grid ── */
-.size-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: .35rem;
-}
-
-.size-btn {
-  background: var(--gray-50);
-  border: 1.5px solid var(--gray-200);
-  border-radius: .5rem;
-  padding: .5rem .25rem;
-  cursor: pointer;
-  text-align: center;
-  transition: all .15s;
-  color: var(--gray-400);
-  font-size: .58rem;
-  font-weight: 600;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: .25rem;
-}
-
-.size-btn:hover { border-color: var(--violet-light); color: var(--gray-600); background: var(--white); }
-
-.size-btn.selected {
-  border-color: var(--violet);
-  background: var(--violet-bg);
-  color: var(--violet);
-}
-
-.size-icon {
-  border: 1.5px solid currentColor;
-  border-radius: 2px;
-  opacity: .7;
-}
-
-.size-icon.sq { width: 16px; height: 16px; }
-.size-icon.ls { width: 20px; height: 13px; }
-.size-icon.ps { width: 13px; height: 20px; }
-
-/* ── Toggle row ── */
-.toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: .625rem .875rem;
-  background: var(--gray-50);
-  border: 1px solid var(--gray-200);
-  border-radius: .75rem;
-}
-
-.toggle-label { display: flex; flex-direction: column; gap: .05rem; }
-
-.toggle-name {
-  font-size: .8rem;
-  font-weight: 600;
-  color: var(--gray-700);
-}
-
-.toggle-sub {
-  font-size: .6rem;
-  color: var(--gray-400);
-}
-
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 36px;
-  height: 20px;
-}
-
-.switch input { opacity: 0; width: 0; height: 0; }
-
-.slider {
-  position: absolute;
-  inset: 0;
-  background: var(--gray-300);
-  border-radius: 9999px;
-  cursor: pointer;
-  transition: .2s;
-}
-
-.slider::before {
-  content: '';
-  position: absolute;
-  height: 14px;
-  width: 14px;
-  left: 3px;
-  bottom: 3px;
-  background: white;
-  border-radius: 50%;
-  transition: .2s;
-  box-shadow: 0 1px 2px rgba(0,0,0,.15);
-}
-
-input:checked + .slider { background: rgba(109,40,217,.3); }
-input:checked + .slider::before { transform: translateX(16px); background: var(--violet); }
-
-/* ── Main content ── */
-.gen-main {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-/* ── Prompt area ── */
-.prompt-card {
-  background: var(--white);
-  border: 1px solid var(--gray-200);
-  border-radius: 1.125rem;
-  padding: 1.25rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,.04);
-}
-
-.prompt-label {
-  font-size: .58rem;
-  font-weight: 700;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--gray-400);
-  margin-bottom: .6rem;
-}
-
-#promptInput {
-  width: 100%;
-  background: var(--gray-50);
-  border: 1.5px solid var(--gray-200);
-  border-radius: .75rem;
-  padding: .75rem .875rem;
-  color: var(--gray-800);
-  font-family: 'Raleway', sans-serif;
-  font-size: .85rem;
-  line-height: 1.6;
-  resize: none;
-  min-height: 96px;
-  transition: border-color .2s, box-shadow .2s;
-}
-
-#promptInput::placeholder { color: var(--gray-400); }
-
-#promptInput:focus {
-  outline: none;
-  border-color: var(--violet);
-  box-shadow: 0 0 0 3px rgba(109,40,217,.08);
-  background: var(--white);
-}
-
-.prompt-hint {
-  font-size: .6rem;
-  color: var(--gray-400);
-  margin-top: .4rem;
-  text-align: right;
-}
-
-/* ── Generate button ── */
-.btn-gen {
-  width: 100%;
-  padding: .875rem 1.5rem;
-  border-radius: .875rem;
-  background: linear-gradient(135deg, var(--violet) 0%, var(--violet-light) 100%);
-  color: #fff;
-  font-family: 'Raleway', sans-serif;
-  font-size: .875rem;
-  font-weight: 700;
-  letter-spacing: .03em;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: .5rem;
-  transition: all .2s;
-  box-shadow: 0 4px 16px rgba(109,40,217,.3);
-}
-
-.btn-gen:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 24px rgba(109,40,217,.4);
-}
-
-.btn-gen:active { transform: translateY(0); }
-.btn-gen:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
-
-/* ── Output card ── */
-.output-card {
-  background: var(--white);
-  border: 1px solid var(--gray-200);
-  border-radius: 1.125rem;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,.04);
-}
-
-.output-header {
-  padding: .875rem 1.125rem;
-  border-bottom: 1px solid var(--gray-100);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.output-title {
-  font-size: .58rem;
-  font-weight: 700;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--gray-400);
-}
-
-.output-badges { display: flex; gap: .3rem; }
-
-.badge-val {
-  font-size: .58rem;
-  font-weight: 600;
-  padding: .18rem .5rem;
-  border-radius: .375rem;
-  background: var(--violet-bg);
-  color: var(--violet);
-  font-family: monospace;
-}
-
-.output-body {
-  padding: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 260px;
-}
-
-/* ── Empty state ── */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: .625rem;
-  color: var(--gray-400);
-  text-align: center;
-}
-
-.empty-icon {
-  width: 48px;
-  height: 48px;
-  background: var(--gray-100);
-  border: 1px solid var(--gray-200);
-  border-radius: .875rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.empty-state p { font-size: .72rem; line-height: 1.5; max-width: 180px; }
-
-/* ── Generated image ── */
-.gen-img {
-  max-width: 100%;
-  max-height: 420px;
-  border-radius: .75rem;
-  box-shadow: 0 4px 24px rgba(0,0,0,.12);
-  animation: imgIn .4s ease-out;
-}
-
-@keyframes imgIn {
-  from { opacity: 0; transform: scale(.96); }
-  to   { opacity: 1; transform: scale(1); }
-}
-
-/* ── Generated text ── */
-.gen-text {
-  width: 100%;
-  background: var(--gray-50);
-  border: 1px solid var(--gray-200);
-  border-radius: .75rem;
-  padding: 1rem 1.125rem;
-  font-size: .875rem;
-  line-height: 1.7;
-  color: var(--gray-700);
-  white-space: pre-wrap;
-  max-height: 320px;
-  overflow-y: auto;
-  animation: imgIn .4s ease-out;
-}
-
-.gen-text::-webkit-scrollbar { width: 6px; }
-.gen-text::-webkit-scrollbar-track { background: transparent; }
-.gen-text::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 3px; }
-
-/* ── Output actions ── */
-.output-actions {
-  padding: .75rem 1.125rem;
-  border-top: 1px solid var(--gray-100);
-  display: flex;
-  gap: .5rem;
-}
-
-.action-btn {
-  flex: 1;
-  padding: .5rem;
-  border-radius: .625rem;
-  border: 1px solid var(--gray-200);
-  background: var(--gray-50);
-  color: var(--gray-600);
-  font-size: .7rem;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: .3rem;
-  transition: all .15s;
-  font-family: 'Raleway', sans-serif;
-}
-
-.action-btn:hover {
-  border-color: var(--violet-light);
-  color: var(--violet);
-  background: var(--violet-bg);
-}
-
-/* ── Loading ── */
-.loading-card {
-  background: var(--white);
-  border: 1px solid var(--gray-200);
-  border-radius: 1.125rem;
-  padding: 3rem;
-  text-align: center;
-  box-shadow: 0 1px 3px rgba(0,0,0,.04);
-}
-
-.loading-rings {
-  position: relative;
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 1.25rem;
-}
-
-.loading-ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 2px solid transparent;
-}
-
-.loading-ring:nth-child(1) {
-  border-top-color: var(--violet);
-  animation: spin .9s linear infinite;
-}
-
-.loading-ring:nth-child(2) {
-  inset: 6px;
-  border-right-color: rgba(109,40,217,.25);
-  animation: spin 1.4s linear infinite reverse;
-}
-
-.loading-ring:nth-child(3) {
-  inset: 12px;
-  border-bottom-color: var(--cyan);
-  animation: spin 1.9s linear infinite;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.loading-msg {
-  font-size: .85rem;
-  font-weight: 700;
-  color: var(--gray-700);
-  margin-bottom: .25rem;
-}
-
-.loading-sub { font-size: .7rem; color: var(--gray-400); }
-
-/* ── Error ── */
-.error-card {
-  background: var(--white);
-  border: 1px solid rgba(239,68,68,.25);
-  border-radius: 1.125rem;
-  padding: 1rem 1.125rem;
-  display: flex;
-  gap: .75rem;
-  align-items: flex-start;
-}
-
-.error-icon {
-  width: 32px;
-  height: 32px;
-  background: rgba(239,68,68,.08);
-  border-radius: .625rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.err-title {
-  font-size: .8rem;
-  font-weight: 700;
-  color: #DC2626;
-  margin-bottom: .2rem;
-}
-
-.err-msg {
-  font-size: .7rem;
-  color: var(--gray-600);
-  line-height: 1.5;
-}
-
-/* ── Tab panels ── */
-.tab-panel { display: none; }
-.tab-panel.active { display: block; }
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.sidebar-card { animation: fadeUp .35s ease-out both; }
-.gen-main > * { animation: fadeUp .35s ease-out both; }
-
-.sidebar-card:nth-child(2) { animation-delay: .06s; }
-.sidebar-card:nth-child(3) { animation-delay: .12s; }
-
-.prompt-card { animation-delay: .05s; }
-.btn-gen { animation-delay: .1s; }
-
-/* ── Text tab specific ── */
-.text-model-list { display: flex; flex-direction: column; gap: .4rem; }
+:root {
+  --v: #6D28D9; --vl: #8B5CF6; --vb: #F5F3FF;
+  --c: #06B6D4; --cb: #ECFEFF;
+  --w: #FFF; --g50: #F9FAFB; --g100: #F3F4F6; --g200: #E5E7EB;
+  --g300: #D1D5DB; --g400: #9CA3AF; --g500: #6B7280; --g600: #4B5563; --g700: #374151; --g800: #1F2937;
+}
+.page-gen { background: var(--g50); min-height: 100vh; font-family: 'Raleway', sans-serif; color: var(--g800); }
+.gen-wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+.gen-header { text-align: center; margin-bottom: 2rem; }
+.gen-header h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -.025em; color: var(--g900); margin: 0; }
+.gen-header p { color: var(--g500); font-size: .85rem; margin-top: .3rem; }
+.tab-bar { display: flex; background: var(--g100); border: 1px solid var(--g200); border-radius: .75rem; padding: .25rem; gap: .2rem; }
+.tab-btn { flex:1; display:flex; align-items:center; justify-content:center; gap:.3rem; padding:.5rem; border-radius:.6rem; border:none; background:transparent; color:var(--g500); font-family:'Raleway',sans-serif; font-size:.7rem; font-weight:700; cursor:pointer; transition:all .2s; }
+.tab-btn:hover { color: var(--g700); }
+.tab-btn.active { background: var(--w); color: var(--g900); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.gen-layout { display: grid; grid-template-columns: 240px 1fr; gap: 1.25rem; align-items: start; margin-top: 1.25rem; }
+@media (max-width: 768px) { .gen-layout { grid-template-columns: 1fr; } }
+.sidebar { display: flex; flex-direction: column; gap: .75rem; }
+.card { background: var(--w); border: 1px solid var(--g200); border-radius: 1rem; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+.card-label { font-size:.55rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--g400); margin-bottom:.6rem; display:flex; align-items:center; gap:.35rem; }
+.card-label svg { opacity:.4; }
+.toggle-row { display:flex; align-items:center; justify-content:space-between; padding:.5rem .75rem; background:var(--g50); border:1px solid var(--g200); border-radius:.6rem; }
+.toggle-name { font-size:.78rem; font-weight:600; color:var(--g700); }
+.toggle-sub { font-size:.58rem; color:var(--g400); }
+.switch { position:relative; display:inline-block; width:34px; height:18px; }
+.switch input { opacity:0; width:0; height:0; }
+.slider { position:absolute; inset:0; background:var(--g300); border-radius:999px; cursor:pointer; transition:.2s; }
+.slider::before { content:''; position:absolute; height:12px; width:12px; left:3px; bottom:3px; background:white; border-radius:50%; transition:.2s; box-shadow:0 1px 2px rgba(0,0,0,.15); }
+input:checked+.slider { background:rgba(109,40,217,.3); }
+input:checked+.slider::before { transform:translateX(16px); background:var(--v); }
+.auto-note { margin-top:.5rem; padding:.4rem .6rem; background:var(--vb); border-radius:.5rem; text-align:center; font-size:.62rem; font-weight:600; color:var(--v); }
+.model-list { display:flex; flex-direction:column; gap:.3rem; margin-top:.6rem; }
+.model-item { padding:.55rem .7rem; background:var(--g50); border:1.5px solid var(--g200); border-radius:.6rem; cursor:pointer; transition:all .15s; }
+.model-item:hover { border-color:var(--vl); }
+.model-item.selected { border-color:var(--v); background:var(--vb); }
+.model-name { font-size:.75rem; font-weight:700; color:var(--g800); }
+
+.size-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.3rem; }
+.size-btn { background:var(--g50); border:1.5px solid var(--g200); border-radius:.45rem; padding:.4rem .2rem; cursor:pointer; text-align:center; font-size:.55rem; font-weight:600; color:var(--g400); transition:all .15s; display:flex; flex-direction:column; align-items:center; gap:.15rem; }
+.size-btn:hover { border-color:var(--vl); color:var(--g600); }
+.size-btn.selected { border-color:var(--v); background:var(--vb); color:var(--v); }
+.size-icon { border:1.5px solid currentColor; border-radius:2px; opacity:.6; }
+.size-icon.sq { width:14px; height:14px; }
+.size-icon.ls { width:18px; height:11px; }
+.size-icon.ps { width:11px; height:18px; }
+
+.main-area { display:flex; flex-direction:column; gap:.75rem; }
+.prompt-card { background:var(--w); border:1px solid var(--g200); border-radius:1rem; padding:1rem; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+#promptInput, #promptInputText { width:100%; background:var(--g50); border:1.5px solid var(--g200); border-radius:.6rem; padding:.65rem .8rem; color:var(--g800); font-family:'Raleway',sans-serif; font-size:.8rem; line-height:1.5; resize:none; min-height:80px; transition:border-color .2s; }
+#promptInput:focus, #promptInputText:focus { outline:none; border-color:var(--v); background:var(--w); }
+
+.btn-gen { width:100%; padding:.75rem 1.25rem; border-radius:.75rem; background:linear-gradient(135deg,var(--v),var(--vl)); color:#fff; font-family:'Raleway',sans-serif; font-size:.8rem; font-weight:700; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:.4rem; transition:all .2s; box-shadow:0 4px 16px rgba(109,40,217,.3); }
+.btn-gen:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 6px 24px rgba(109,40,217,.4); }
+.btn-gen:disabled { opacity:.4; cursor:not-allowed; }
+
+.loading-card { background:var(--w); border:1px solid var(--g200); border-radius:1rem; padding:1.5rem 1rem; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+.progress-bar { width:100%; height:6px; background:var(--g100); border-radius:3px; overflow:hidden; margin-bottom:.75rem; }
+.progress-fill { height:100%; background:linear-gradient(90deg,var(--v),var(--vl),var(--c)); border-radius:3px; animation:shimmer 1.5s ease-in-out infinite; background-size:200% 100%; }
+@keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+.loading-msg { font-size:.8rem; font-weight:700; color:var(--g700); text-align:center; }
+.loading-sub { font-size:.65rem; color:var(--g400); text-align:center; margin-top:.2rem; }
+.loading-actions { display:flex; justify-content:center; gap:.5rem; margin-top:.75rem; }
+.btn-abort { padding:.4rem 1.2rem; border-radius:.5rem; border:1px solid var(--g200); background:var(--w); color:var(--g500); font-size:.65rem; font-weight:600; cursor:pointer; font-family:'Raleway',sans-serif; transition:all .15s; }
+.btn-abort:hover { border-color:#DC2626; color:#DC2626; background:rgba(239,68,68,.05); }
+
+.output-card { background:var(--w); border:1px solid var(--g200); border-radius:1rem; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+.output-header { padding:.75rem 1rem; border-bottom:1px solid var(--g100); display:flex; align-items:center; justify-content:space-between; }
+.output-title { font-size:.55rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--g400); }
+.output-body { padding:1.25rem; display:flex; align-items:center; justify-content:center; min-height:200px; }
+.gen-img { max-width:100%; max-height:380px; border-radius:.6rem; box-shadow:0 4px 20px rgba(0,0,0,.1); }
+.gen-text { width:100%; background:var(--g50); border:1px solid var(--g200); border-radius:.6rem; padding:.85rem 1rem; font-size:.8rem; line-height:1.6; color:var(--g700); white-space:pre-wrap; max-height:300px; overflow-y:auto; }
+.output-actions { display:flex; gap:.4rem; padding:.6rem 1rem; border-top:1px solid var(--g100); }
+.action-btn { flex:1; padding:.4rem; border-radius:.5rem; border:1px solid var(--g200); background:var(--g50); color:var(--g600); font-size:.65rem; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:.25rem; transition:all .15s; font-family:'Raleway',sans-serif; }
+.action-btn:hover { border-color:var(--v); color:var(--v); background:var(--vb); }
+
+.error-card { background:var(--w); border:1px solid rgba(239,68,68,.25); border-radius:1rem; padding:.85rem 1rem; display:flex; gap:.6rem; align-items:flex-start; }
+.err-title { font-size:.75rem; font-weight:700; color:#DC2626; margin-bottom:.15rem; }
+.err-msg { font-size:.65rem; color:var(--g600); margin:0; }
+
+.tab-panel { display:none; }
+.tab-panel.active { display:block; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="page-gen">
   <div class="gen-wrap">
-
     <div class="gen-header">
-      <span class="eyebrow">
-        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-        AI Generation Studio
-      </span>
-      <h1>Create with Intelligence</h1>
-      <p>Powered by NVIDIA NIM — images, text, and more</p>
+      <h1>AI Generation Studio</h1>
+      <p>Powered by IDA</p>
     </div>
 
     <div class="tab-bar">
@@ -708,235 +109,135 @@ input:checked + .slider::before { transform: translateX(16px); background: var(-
       </button>
     </div>
 
-    <!-- ── IMAGE TAB ── -->
+    <!-- IMAGE TAB -->
     <div class="tab-panel active" id="panel-image">
-      <div class="gen-layout" style="margin-top:1.25rem">
-        <div class="gen-sidebar">
-          <div class="sidebar-card">
-            <div class="sidebar-label">
+      <div class="gen-layout">
+        <div class="sidebar">
+          <div class="card">
+            <div class="card-label">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
               Model
             </div>
-            <div class="toggle-row" id="autoModeRow">
-              <div class="toggle-label">
-                <span class="toggle-name">Auto Mode</span>
-                <span class="toggle-sub">Pick best available</span>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-name">Auto Mode</div>
+                <div class="toggle-sub">Best model selected</div>
               </div>
               <label class="switch">
-                <input type="checkbox" id="autoModeCheck" checked>
+                <input type="checkbox" id="imgAutoCheck" checked>
                 <span class="slider"></span>
               </label>
             </div>
-
-            <div id="manualModelSection" style="display:none; margin-top:.875rem;">
-              <div class="model-list" id="imageModelList">
+            <div id="imgAutoNote" class="auto-note">Auto — IDA selects best model</div>
+            <div id="imgManualList" style="display:none">
+              <div class="model-list" id="imgModelList">
                 {% for m in image_models %}
-                <div class="model-item{% if forloop.first %} selected{% endif %}"
-                     data-key="{{ m.key }}" data-sizes="{{ m.size_presets|join:"," }}">
-                  <div class="model-item-header">
-                    <span class="model-name">{{ m.label }}</span>
-                    <div class="model-tags">
-                      {% if m.tier == 'premium' %}<span class="tag premium">★</span>
-                      {% elif m.tier == 'fast' %}<span class="tag fast">⚡</span>{% endif %}
-                    </div>
-                  </div>
-                  <div class="model-desc">{{ m.description }}</div>
-                  <div class="model-stats">
-                    <div class="model-stat">Steps <span>{{ m.params.steps }}</span></div>
-                    <div class="model-stat">CFG <span>{{ m.params.cfg_scale }}</span></div>
-                  </div>
+                <div class="model-item{% if forloop.first %} selected{% endif %}" data-key="{{ m.key }}">
+                  <div class="model-name">{{ m.label }}</div>
                 </div>
                 {% endfor %}
               </div>
             </div>
-
-            <div id="autoModelNote" style="margin-top:.75rem; padding:.5rem; background:var(--violet-bg); border-radius:.5rem; text-align:center;">
-              <span style="font-size:.65rem; font-weight:700; color:var(--violet);">★ Auto Mode Active</span>
-              <div style="font-size:.58rem; color:var(--violet-light); margin-top:.2rem;">Best model selected automatically</div>
-            </div>
           </div>
-
-          <div class="sidebar-card">
-            <div class="sidebar-label">
+          <div class="card">
+            <div class="card-label">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
               Size
             </div>
-            <div class="size-grid" id="sizeGrid"></div>
-          </div>
-
-          <div class="sidebar-card">
-            <div class="toggle-row">
-              <div class="toggle-label">
-                <span class="toggle-name">Background mode</span>
-                <span class="toggle-sub">Celery + Redis queue</span>
-              </div>
-              <label class="switch">
-                <input type="checkbox" id="asyncCheck">
-                <span class="slider"></span>
-              </label>
-            </div>
+            <div class="size-grid" id="imgSizeGrid"></div>
           </div>
         </div>
-
-        <div class="gen-main">
+        <div class="main-area">
           <div class="prompt-card">
-            <div class="prompt-label">Prompt</div>
-            <textarea id="promptInput" rows="3"
-              placeholder="Describe the image you want to create — e.g. A majestic mountain at golden hour, cinematic lighting, ultra realistic, 8k..."></textarea>
+            <textarea id="imgPrompt" rows="3" placeholder="Describe the image you want to create..."></textarea>
           </div>
-
-          <button type="button" id="btnGenerate" class="btn-gen">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            Generate Image
-          </button>
-
-          <div id="outputSection" style="display:none">
-            <div class="output-card">
-              <div class="output-header">
-                <span class="output-title">Output</span>
-                <div class="output-badges" id="outputBadges"></div>
-              </div>
-              <div class="output-body" id="outputBody">
-                <div class="empty-state">
-                  <div class="empty-icon">
-                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                  </div>
-                  <p>Your generated image will appear here</p>
-                </div>
-              </div>
-              <div class="output-actions" id="outputActions" style="display:none">
-                <button class="action-btn" id="btnDownload">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                  Download
-                </button>
-                <button class="action-btn" id="btnCopy">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                  Copy
-                </button>
-                <button class="action-btn" id="btnRemix">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                  Remix
-                </button>
-                <button class="action-btn" id="btnEdit">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                  Edit
-                </button>
-              </div>
+          <button type="button" id="btnGenImg" class="btn-gen">Generate Image</button>
+          <div id="imgLoading" class="loading-card" style="display:none">
+            <div class="progress-bar"><div class="progress-fill"></div></div>
+            <div class="loading-msg" id="imgLoadingMsg">Generating...</div>
+            <div class="loading-sub"><span id="imgTimer">0</span>s elapsed</div>
+            <div class="loading-actions">
+              <button class="btn-abort" id="btnAbortImg">Abort</button>
             </div>
           </div>
-
-          <div id="loadingSection" class="loading-card" style="display:none">
-            <div class="loading-rings">
-              <div class="loading-ring"></div>
-              <div class="loading-ring"></div>
-              <div class="loading-ring"></div>
+          <div id="imgOutput" class="output-card" style="display:none">
+            <div class="output-header">
+              <span class="output-title">Result</span>
             </div>
-            <p class="loading-msg" id="loadingMsg">Generating your image...</p>
-            <p class="loading-sub">Powered by NVIDIA · May take up to 30s</p>
+            <div class="output-body" id="imgOutputBody"></div>
+            <div class="output-actions" id="imgOutputActions" style="display:none">
+              <button class="action-btn" id="btnImgDl">Download</button>
+              <button class="action-btn" id="btnImgCopy">Copy</button>
+            </div>
           </div>
-
-          <div id="errorSection" class="error-card" style="display:none">
-            <div class="error-icon">
-              <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            </div>
+          <div id="imgError" class="error-card" style="display:none">
             <div>
               <p class="err-title">Generation Failed</p>
-              <p class="err-msg" id="errorMsg"></p>
+              <p class="err-msg" id="imgErrorMsg"></p>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- ── TEXT TAB ── -->
+    <!-- TEXT TAB -->
     <div class="tab-panel" id="panel-text">
-      <div class="gen-layout" style="margin-top:1.25rem">
-        <div class="gen-sidebar">
-          <div class="sidebar-card">
-            <div class="sidebar-label">
+      <div class="gen-layout">
+        <div class="sidebar">
+          <div class="card">
+            <div class="card-label">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-              Text Model
+              Model
             </div>
-            <div class="model-list text-model-list" id="textModelList">
-              {% for m in text_models %}
-              <div class="model-item{% if forloop.first %} selected{% endif %}"
-                   data-key="{{ m.key }}">
-                <div class="model-item-header">
-                  <span class="model-name">{{ m.label }}</span>
-                  <div class="model-tags">
-                    {% if m.tier == 'premium' %}<span class="tag premium">★ {{ m.tier|title }}</span>
-                    {% elif m.tier == 'fast' %}<span class="tag fast">⚡ {{ m.tier|title }}</span>{% endif %}
-                  </div>
-                </div>
-                <div class="model-desc">{{ m.description }}</div>
-              </div>
-              {% endfor %}
-            </div>
-          </div>
-
-          <div class="sidebar-card">
             <div class="toggle-row">
-              <div class="toggle-label">
-                <span class="toggle-name">Background mode</span>
-                <span class="toggle-sub">Celery + Redis queue</span>
+              <div>
+                <div class="toggle-name">Auto Mode</div>
+                <div class="toggle-sub">Best model selected</div>
               </div>
               <label class="switch">
-                <input type="checkbox" id="asyncCheckText">
+                <input type="checkbox" id="txtAutoCheck" checked>
                 <span class="slider"></span>
               </label>
             </div>
+            <div id="txtAutoNote" class="auto-note">Auto — IDA selects best model</div>
+            <div id="txtManualList" style="display:none">
+              <div class="model-list" id="txtModelList">
+                {% for m in text_models %}
+                <div class="model-item{% if forloop.first %} selected{% endif %}" data-key="{{ m.key }}">
+                  <div class="model-name">{{ m.label }}</div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
           </div>
         </div>
-
-        <div class="gen-main">
+        <div class="main-area">
           <div class="prompt-card">
-            <div class="prompt-label">Prompt</div>
-            <textarea id="promptInputText" rows="5"
-              placeholder="Ask anything — e.g. Explain quantum computing in simple terms, or write a professional email to a client..."></textarea>
+            <textarea id="txtPrompt" rows="5" placeholder="Ask anything..."></textarea>
           </div>
-
-          <button type="button" id="btnGenerateText" class="btn-gen">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-            Generate Text
-          </button>
-
-          <div id="textOutputSection" style="display:none">
-            <div class="output-card">
-              <div class="output-header">
-                <span class="output-title">Output</span>
-                <div class="output-badges" id="textOutputBadges"></div>
-              </div>
-              <div class="output-body" id="textOutputBody"></div>
-              <div class="output-actions" id="textOutputActions" style="display:none">
-                <button class="action-btn" id="btnCopyText">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                  Copy Text
-                </button>
-                <button class="action-btn" id="btnRemixText">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                  Regenerate
-                </button>
-              </div>
+          <button type="button" id="btnGenTxt" class="btn-gen">Generate Text</button>
+          <div id="txtLoading" class="loading-card" style="display:none">
+            <div class="progress-bar"><div class="progress-fill"></div></div>
+            <div class="loading-msg" id="txtLoadingMsg">Generating...</div>
+            <div class="loading-sub"><span id="txtTimer">0</span>s elapsed</div>
+            <div class="loading-actions">
+              <button class="btn-abort" id="btnAbortTxt">Abort</button>
             </div>
           </div>
-
-          <div id="textLoadingSection" class="loading-card" style="display:none">
-            <div class="loading-rings">
-              <div class="loading-ring"></div>
-              <div class="loading-ring"></div>
-              <div class="loading-ring"></div>
+          <div id="txtOutput" class="output-card" style="display:none">
+            <div class="output-header">
+              <span class="output-title">Result</span>
             </div>
-            <p class="loading-msg" id="textLoadingMsg">Generating text...</p>
-            <p class="loading-sub">Powered by NVIDIA · May take a few seconds</p>
+            <div class="output-body" id="txtOutputBody"></div>
+            <div class="output-actions" id="txtOutputActions" style="display:none">
+              <button class="action-btn" id="btnTxtCopy">Copy</button>
+              <button class="action-btn" id="btnTxtRemix">Regenerate</button>
+            </div>
           </div>
-
-          <div id="textErrorSection" class="error-card" style="display:none">
-            <div class="error-icon">
-              <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            </div>
+          <div id="txtError" class="error-card" style="display:none">
             <div>
               <p class="err-title">Generation Failed</p>
-              <p class="err-msg" id="textErrorMsg"></p>
+              <p class="err-msg" id="txtErrorMsg"></p>
             </div>
           </div>
         </div>
@@ -948,369 +249,217 @@ input:checked + .slider::before { transform: translateX(16px); background: var(-
 
 <script>
 (function(){
+  // ── Helpers ──────────────────────────────────────────────────────────
+  var $ = function(id){ return document.getElementById(id); };
+  var csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  var abortController = null;
 
-  /* ── Shared helpers ── */
-  function $(id){ return document.getElementById(id); }
+  // ── Size presets ─────────────────────────────────────────────────────
+  var sizes = [
+    {v:'1024x1024',c:'sq',l:'1:1'},{v:'1344x768',c:'ls',l:'16:9'},{v:'768x1344',c:'ps',l:'9:16'},
+    {v:'1152x896',c:'ls',l:'4:3'},{v:'896x1152',c:'ps',l:'3:4'},{v:'1216x832',c:'ls',l:'3:2'},{v:'832x1216',c:'ps',l:'2:3'},
+  ];
+  var currentSize = '1024x1024';
 
-  function show(el){ el.style.display = ''; }
-  function hide(el){ el.style.display = 'none'; }
-
-  /* ── Auto mode toggle ── */
-  var autoMode = true;
-
-  function updateAutoModeUI() {
-    var manualSection = $('manualModelSection');
-    var autoNote = $('autoModelNote');
-    if (autoMode) {
-      show(autoNote);
-      if (manualSection) hide(manualSection);
-    } else {
-      hide(autoNote);
-      if (manualSection) show(manualSection);
-    }
-  }
-
-  $('autoModeCheck').addEventListener('change', function() {
-    autoMode = this.checked;
-    updateAutoModeUI();
-  });
-  updateAutoModeUI();
-
-  /* ── Image tab setup ── */
-  var selectedImageModel = 'auto';
-  var selectedSize = '1024x1024';
-  var selectedSizePresets = '1024x1024,1344x768,768x1344,1152x896,896x1152,1216x832,832x1216';
-  var currentImageData = null;
-
-  var aspectMap = {
-    '1024x1024': { cls: 'sq', label: '1:1' },
-    '1344x768':  { cls: 'ls', label: '16:9' },
-    '768x1344':  { cls: 'ps', label: '9:16' },
-    '1152x896':  { cls: 'ls', label: '4:3' },
-    '896x1152':  { cls: 'ps', label: '3:4' },
-    '1216x832':  { cls: 'ls', label: '3:2' },
-    '832x1216':  { cls: 'ps', label: '2:3' },
-  };
-
-  function renderSizeGrid(presets) {
-    var grid = $('sizeGrid');
-    grid.innerHTML = '';
-    presets.split(',').forEach(function(p) {
-      var info = aspectMap[p] || { cls: 'sq', label: p };
-      var btn = document.createElement('button');
-      btn.className = 'size-btn' + (p === selectedSize ? ' selected' : '');
-      btn.dataset.value = p;
-      btn.innerHTML = '<div class="size-icon ' + info.cls + '"></div><span>' + info.label + '</span>';
-      btn.addEventListener('click', function() {
-        document.querySelectorAll('.size-btn').forEach(function(b){ b.classList.remove('selected'); });
+  function renderSizes(){
+    var g = $('imgSizeGrid'); if(!g) return;
+    g.innerHTML = sizes.map(function(s){
+      return '<button class="size-btn'+(s.v===currentSize?' selected':'')+'" data-v="'+s.v+'">'+
+        '<div class="size-icon '+s.c+'"></div><span>'+s.l+'</span></button>';
+    }).join('');
+    g.querySelectorAll('.size-btn').forEach(function(b){
+      b.addEventListener('click',function(){
+        g.querySelectorAll('.size-btn').forEach(function(x){x.classList.remove('selected');});
         this.classList.add('selected');
-        selectedSize = p;
+        currentSize = this.dataset.v;
       });
-      grid.appendChild(btn);
     });
   }
+  renderSizes();
 
-  renderSizeGrid(selectedSizePresets);
-
-  document.querySelectorAll('#imageModelList .model-item:not(.unavailable)').forEach(function(item) {
-    item.addEventListener('click', function() {
-      document.querySelectorAll('#imageModelList .model-item').forEach(function(m){ m.classList.remove('selected'); });
-      this.classList.add('selected');
-      selectedImageModel = this.dataset.key;
-      var newPresets = this.dataset.sizes || '1024x1024';
-      if (newPresets !== selectedSizePresets) {
-        selectedSizePresets = newPresets;
-        selectedSize = newPresets.split(',')[0];
-        renderSizeGrid(newPresets);
-      }
+  // ── Tab switching ────────────────────────────────────────────────────
+  document.querySelectorAll('.tab-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+      this.classList.add('active');
+      document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});
+      $(this.dataset.tab==='image'?'panel-image':'panel-text').classList.add('active');
     });
   });
 
-  /* ── Image generation ── */
-  function imgShowLoading(msg) {
-    show($('loadingSection'));
-    hide($('outputSection'));
-    hide($('errorSection'));
-    $('loadingMsg').textContent = msg || 'Generating your image...';
-    $('btnGenerate').disabled = true;
+  // ── Auto mode (shared logic) ────────────────────────────────────────
+  function makeAutoMode(autoId, noteId, listId){
+    var check = $(autoId);
+    var note = $(noteId);
+    var list = $(listId);
+    check.addEventListener('change',function(){
+      if(this.checked){ note.style.display=''; if(list) list.style.display='none'; }
+      else { note.style.display='none'; if(list) list.style.display=''; }
+    });
   }
+  makeAutoMode('imgAutoCheck','imgAutoNote','imgManualList');
+  makeAutoMode('txtAutoCheck','txtAutoNote','txtManualList');
 
-  function imgHideLoading() {
-    hide($('loadingSection'));
-    $('btnGenerate').disabled = false;
-  }
+  // ── Model selection ──────────────────────────────────────────────────
+  var imgModel = 'auto', txtModel = 'auto';
+  document.querySelectorAll('#imgModelList .model-item').forEach(function(el){
+    el.addEventListener('click',function(){
+      document.querySelectorAll('#imgModelList .model-item').forEach(function(m){m.classList.remove('selected');});
+      this.classList.add('selected'); imgModel = this.dataset.key;
+    });
+  });
+  document.querySelectorAll('#txtModelList .model-item').forEach(function(el){
+    el.addEventListener('click',function(){
+      document.querySelectorAll('#txtModelList .model-item').forEach(function(m){m.classList.remove('selected');});
+      this.classList.add('selected'); txtModel = this.dataset.key;
+    });
+  });
 
-  function imgShowOutput() {
-    show($('outputSection'));
-    hide($('loadingSection'));
-    hide($('errorSection'));
-  }
+  // ── Generation driver ───────────────────────────────────────────────
+  var TIMEOUT = 90000; // 90s max
 
-  function imgShowError(msg) {
-    show($('errorSection'));
-    hide($('outputSection'));
-    hide($('loadingSection'));
-    $('errorMsg').textContent = msg;
-    imgHideLoading();
-  }
+  function generate(opts){
+    if(abortController) abortController.abort();
+    abortController = new AbortController();
+    var loading = opts.loadingEl, output = opts.outputEl, error = opts.errorEl;
+    var timer = opts.timerEl, msg = opts.msgEl, body = opts.bodyEl, actions = opts.actionsEl;
+    var btn = opts.btnEl, timerStart, timerInt;
 
-  function imgRenderResult(data) {
-    imgShowOutput();
-    var body = $('outputBody');
-    var badges = $('outputBadges');
-    var actions = $('outputActions');
-    badges.innerHTML = '<span class="badge-val">' + (data.model || '') + '</span>';
-    body.innerHTML = '';
-    currentImageData = null;
-    actions.style.display = 'none';
+    // Show loading
+    loading.style.display = '';
+    output.style.display = 'none';
+    error.style.display = 'none';
+    btn.disabled = true;
+    timer.textContent = '0';
+    timerStart = Date.now();
+    timerInt = setInterval(function(){ timer.textContent = Math.floor((Date.now()-timerStart)/1000); }, 500);
 
-    if (data.images && data.images.length) {
-      var img = document.createElement('img');
-      img.className = 'gen-img';
-      if (data.images[0].type === 'url') {
-        img.src = data.images[0].data;
-      } else {
-        img.src = 'data:image/png;base64,' + data.images[0].data;
-        currentImageData = data.images[0].data;
-      }
-      body.appendChild(img);
-      actions.style.display = 'flex';
+    function done(){
+      clearInterval(timerInt);
+      btn.disabled = false;
+      loading.style.display = 'none';
+      abortController = null;
     }
-  }
 
-  var imgPollTimer = null;
+    function fail(errMsg){
+      done();
+      error.style.display = '';
+      opts.errorMsgEl.textContent = errMsg || 'Generation failed';
+    }
 
-  function imgPoll(taskId) {
-    if (imgPollTimer) clearInterval(imgPollTimer);
-    imgShowLoading('Generating in background...');
-    imgPollTimer = setInterval(function() {
-      fetch('/intelligence/api/generate/status/?task_id=' + encodeURIComponent(taskId))
-        .then(function(r){ return r.json(); })
-        .then(function(d) {
-          if (d.state === 'SUCCESS') {
-            clearInterval(imgPollTimer);
-            imgHideLoading();
-            if (d.result && d.result.success) imgRenderResult(d.result);
-            else imgShowError((d.result && d.result.error) || 'Generation failed');
-          } else if (d.state === 'FAILURE') {
-            clearInterval(imgPollTimer);
-            imgHideLoading();
-            imgShowError(d.error || 'Task failed');
-          }
-        })
-        .catch(function() {
-          clearInterval(imgPollTimer);
-          imgHideLoading();
-          imgShowError('Failed to fetch status');
-        });
-    }, 3000);
-  }
+    function succeed(data){
+      done();
+      output.style.display = '';
+      body.innerHTML = '';
+      actions.style.display = 'none';
 
-  $('btnGenerate').addEventListener('click', function() {
-    var prompt = $('promptInput').value.trim();
-    if (!prompt) return;
+      if(data.images && data.images.length){
+        var img = document.createElement('img');
+        img.className = 'gen-img';
+        img.src = 'data:image/png;base64,' + data.images[0].data;
+        body.appendChild(img);
+        actions.style.display = 'flex';
+        opts.imageData = data.images[0].data;
+      } else if(data.text){
+        body.innerHTML = '<div class="gen-text">' + escapeHtml(data.text) + '</div>';
+        actions.style.display = 'flex';
+        opts.textData = data.text;
+      }
+    }
 
-    var body = {
-      prompt: prompt,
-      model: selectedImageModel,
-      modality: 'image',
-      size: selectedSize,
-      async: $('asyncCheck').checked,
+    var bodyData = {
+      prompt: opts.prompt,
+      model: opts.model,
+      modality: opts.modality,
+      size: currentSize,
     };
 
-    if ($('asyncCheck').checked) {
-      imgShowLoading('Queuing generation...');
-      fetch('{% url "intelligence:api_generate" %}', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
-        body: JSON.stringify(body)
-      }).then(function(r){ return r.json(); })
-        .then(function(d) {
-          if (d.success && d.task_id) imgPoll(d.task_id);
-          else { imgHideLoading(); imgShowError(d.error || 'Failed to queue'); }
-        })
-        .catch(function(){ imgHideLoading(); imgShowError('Request failed'); });
-    } else {
-      imgShowLoading('Generating...');
-      fetch('{% url "intelligence:api_generate" %}', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
-        body: JSON.stringify(body)
-      }).then(function(r){ return r.json(); })
-        .then(function(d) {
-          imgHideLoading();
-          if (d.success) imgRenderResult(d);
-          else imgShowError(d.error || 'Generation failed');
-        })
-        .catch(function(){ imgHideLoading(); imgShowError('Request failed'); });
-    }
+    var timedOut = false;
+    var timeoutId = setTimeout(function(){ timedOut = true; if(abortController) abortController.abort(); }, TIMEOUT);
+
+    fetch(opts.url, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken':csrf},
+      body: JSON.stringify(bodyData),
+      signal: abortController.signal,
+    }).then(function(r){ return r.json(); }).then(function(d){
+      if(timedOut) return;
+      clearTimeout(timeoutId);
+      if(d.success) succeed(d);
+      else fail(d.error);
+    }).catch(function(e){
+      if(timedOut){ fail('Request timed out'); return; }
+      if(e.name==='AbortError'){ fail('Cancelled'); return; }
+      clearTimeout(timeoutId);
+      fail('Request failed');
+    });
+
+    // Abort handler
+    opts.abortEl.addEventListener('click', function(){
+      if(abortController){ abortController.abort(); abortController = null; }
+    }, {once: true});
+  }
+
+  function escapeHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // ── Image generation ─────────────────────────────────────────────────
+  var currImgData = null;
+  $('btnGenImg').addEventListener('click',function(){
+    var prompt = $('imgPrompt').value.trim();
+    if(!prompt) return;
+    var model = $('imgAutoCheck').checked ? 'auto' : imgModel;
+    generate({
+      url: '{% url "intelligence:api_generate" %}',
+      prompt: prompt, model: model, modality: 'image',
+      loadingEl: $('imgLoading'), outputEl: $('imgOutput'), errorEl: $('imgError'),
+      timerEl: $('imgTimer'), msgEl: $('imgLoadingMsg'), bodyEl: $('imgOutputBody'),
+      actionsEl: $('imgOutputActions'), btnEl: $('btnGenImg'),
+      errorMsgEl: $('imgErrorMsg'), abortEl: $('btnAbortImg'),
+      imageData: currImgData, textData: null,
+    });
   });
 
-  $('btnDownload').addEventListener('click', function() {
-    if (!currentImageData) return;
+  $('btnImgDl').addEventListener('click',function(){
+    if(!currImgData) return;
     var a = document.createElement('a');
-    a.href = 'data:image/png;base64,' + currentImageData;
-    a.download = 'ida-gen-' + selectedImageModel + '-' + Date.now() + '.png';
+    a.href = 'data:image/png;base64,' + currImgData;
+    a.download = 'ida-image-' + Date.now() + '.png';
     a.click();
   });
-
-  $('btnCopy').addEventListener('click', function() {
-    if (!currentImageData) return;
+  $('btnImgCopy').addEventListener('click',function(){
+    if(!currImgData) return;
     var img = new Image();
-    img.onload = function() {
+    img.onload = function(){
       var c = document.createElement('canvas');
       c.width = img.width; c.height = img.height;
-      c.getContext('2d').drawImage(img, 0, 0);
-      c.toBlob(function(blob) {
-        navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
+      c.getContext('2d').drawImage(img,0,0);
+      c.toBlob(function(blob){
+        navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
       });
     };
-    img.src = 'data:image/png;base64,' + currentImageData;
+    img.src = 'data:image/png;base64,' + currImgData;
   });
 
-  $('btnRemix').addEventListener('click', function() {
-    var cur = $('promptInput').value.trim();
-    if (cur) $('promptInput').value = cur + ', variation';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
-
-  $('btnEdit').addEventListener('click', function() {
-    if (!currentImageData) return;
-    var editUrl = '{% url "intelligence:generate_edit" %}?image_b64=' + encodeURIComponent(currentImageData);
-    window.location.href = editUrl;
-  });
-
-  /* ── Text tab setup ── */
-  var selectedTextModel = 'ida-chat';
-  var currentTextContent = null;
-
-  document.querySelectorAll('#textModelList .model-item:not(.unavailable)').forEach(function(item) {
-    item.addEventListener('click', function() {
-      document.querySelectorAll('#textModelList .model-item').forEach(function(m){ m.classList.remove('selected'); });
-      this.classList.add('selected');
-      selectedTextModel = this.dataset.key;
+  // ── Text generation ─────────────────────────────────────────────────
+  var currText = null;
+  $('btnGenTxt').addEventListener('click',function(){
+    var prompt = $('txtPrompt').value.trim();
+    if(!prompt) return;
+    var model = $('txtAutoCheck').checked ? 'auto' : txtModel;
+    generate({
+      url: '{% url "intelligence:api_generate" %}',
+      prompt: prompt, model: model, modality: 'text',
+      loadingEl: $('txtLoading'), outputEl: $('txtOutput'), errorEl: $('txtError'),
+      timerEl: $('txtTimer'), msgEl: $('txtLoadingMsg'), bodyEl: $('txtOutputBody'),
+      actionsEl: $('txtOutputActions'), btnEl: $('btnGenTxt'),
+      errorMsgEl: $('txtErrorMsg'), abortEl: $('btnAbortTxt'),
+      imageData: null, textData: currText,
     });
   });
-
-  function txtShowLoading(msg) {
-    show($('textLoadingSection'));
-    hide($('textOutputSection'));
-    hide($('textErrorSection'));
-    $('textLoadingMsg').textContent = msg || 'Generating text...';
-    $('btnGenerateText').disabled = true;
-  }
-
-  function txtHideLoading() {
-    hide($('textLoadingSection'));
-    $('btnGenerateText').disabled = false;
-  }
-
-  function txtShowOutput() {
-    show($('textOutputSection'));
-    hide($('textLoadingSection'));
-    hide($('textErrorSection'));
-  }
-
-  function txtShowError(msg) {
-    show($('textErrorSection'));
-    hide($('textOutputSection'));
-    hide($('textLoadingSection'));
-    $('textErrorMsg').textContent = msg;
-    txtHideLoading();
-  }
-
-  function txtRenderResult(data) {
-    txtShowOutput();
-    $('textOutputBody').innerHTML = '<div class="gen-text">' + (data.text || '') + '</div>';
-    $('textOutputActions').style.display = 'flex';
-    currentTextContent = data.text || '';
-  }
-
-  var txtPollTimer = null;
-
-  function txtPoll(taskId) {
-    if (txtPollTimer) clearInterval(txtPollTimer);
-    txtShowLoading('Generating in background...');
-    txtPollTimer = setInterval(function() {
-      fetch('/intelligence/api/generate/status/?task_id=' + encodeURIComponent(taskId))
-        .then(function(r){ return r.json(); })
-        .then(function(d) {
-          if (d.state === 'SUCCESS') {
-            clearInterval(txtPollTimer);
-            txtHideLoading();
-            if (d.result && d.result.success) txtRenderResult(d.result);
-            else txtShowError((d.result && d.result.error) || 'Generation failed');
-          } else if (d.state === 'FAILURE') {
-            clearInterval(txtPollTimer);
-            txtHideLoading();
-            txtShowError(d.error || 'Task failed');
-          }
-        })
-        .catch(function() {
-          clearInterval(txtPollTimer);
-          txtHideLoading();
-          txtShowError('Failed to fetch status');
-        });
-    }, 3000);
-  }
-
-  $('btnGenerateText').addEventListener('click', function() {
-    var prompt = $('promptInputText').value.trim();
-    if (!prompt) return;
-
-    var body = {
-      prompt: prompt,
-      model: selectedTextModel,
-      modality: 'text',
-      async: $('asyncCheckText').checked,
-    };
-
-    if ($('asyncCheckText').checked) {
-      txtShowLoading('Queuing...');
-      fetch('{% url "intelligence:api_generate" %}', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
-        body: JSON.stringify(body)
-      }).then(function(r){ return r.json(); })
-        .then(function(d) {
-          if (d.success && d.task_id) txtPoll(d.task_id);
-          else { txtHideLoading(); txtShowError(d.error || 'Failed to queue'); }
-        })
-        .catch(function(){ txtHideLoading(); txtShowError('Request failed'); });
-    } else {
-      txtShowLoading('Generating text...');
-      fetch('{% url "intelligence:api_generate" %}', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
-        body: JSON.stringify(body)
-      }).then(function(r){ return r.json(); })
-        .then(function(d) {
-          txtHideLoading();
-          if (d.success) txtRenderResult(d);
-          else txtShowError(d.error || 'Generation failed');
-        })
-        .catch(function(){ txtHideLoading(); txtShowError('Request failed'); });
-    }
+  $('btnTxtCopy').addEventListener('click',function(){
+    if(currText) navigator.clipboard.writeText(currText);
   });
-
-  $('btnCopyText').addEventListener('click', function() {
-    if (currentTextContent) navigator.clipboard.writeText(currentTextContent);
-  });
-
-  $('btnRemixText').addEventListener('click', function() {
-    $('btnGenerateText').click();
-  });
-
-  /* ── Tab switching ── */
-  document.querySelectorAll('.tab-btn:not(.disabled-tab)').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      var tab = this.dataset.tab;
-      document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
-      this.classList.add('active');
-      document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
-      $('panel-' + tab).classList.add('active');
-    });
-  });
+  $('btnTxtRemix').addEventListener('click',function(){ $('btnGenTxt').click(); });
 
 })();
 </script>

@@ -12,8 +12,10 @@ import re
 import threading
 from django.conf import settings
 
-MODEL_PATH = str(getattr(settings, 'ML_MODEL_PATH', os.path.join(settings.BASE_DIR, 'Data', 'spam_model.pkl')))
-VECTORIZER_PATH = str(getattr(settings, 'ML_VECTORIZER_PATH', os.path.join(settings.BASE_DIR, 'Data', 'tfidf_vectorizer.pkl')))
+from pathlib import Path
+
+MODEL_PATH = str(getattr(settings, 'ML_MODEL_PATH', Path(__file__).resolve().parent.parent.parent / 'Data' / 'spam_model.pkl'))
+VECTORIZER_PATH = str(getattr(settings, 'ML_VECTORIZER_PATH', Path(__file__).resolve().parent.parent.parent / 'Data' / 'tfidf_vectorizer.pkl'))
 
 _model = None
 _vectorizer = None
