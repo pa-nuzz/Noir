@@ -238,20 +238,15 @@ class MinIODjangoStorage(Storage):
         """
         Generate a public URL for the file.
         
-        For production, uses MINIO_PUBLIC_BASE_URL if configured.
-        For development, generates a presigned URL.
+        Routes through Django's serve_media_file proxy view so files
+        are served from MinIO via the Django server. This ensures avatars
+        and other media render correctly regardless of MINIO_PUBLIC_BASE_URL
+        being set or the browser's ability to reach MinIO directly.
         """
+        from django.urls import reverse
         key = self._key(name)
-        
-        if self.public_base:
-            return f"{self.public_base}/{key}"
-        
-        # Generate presigned URL for development
-        return self._client.generate_presigned_url(
-            'get_object',
-            Params={'Bucket': self.bucket, 'Key': key},
-            ExpiresIn=3600,
-        )
+        relative_path = self._strip_prefix(key)
+        return reverse('serve_media', kwargs={'path': relative_path})
     
     def get_accessed_time(self, name):
         """Get the last accessed time (not supported by MinIO, returns modified)."""
