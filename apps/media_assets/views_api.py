@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from .models import MediaAsset, MediaFolder, MediaTag
 from .services import MediaService, StorageService
+from apps.workspaces.models import get_or_create_personal_workspace
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,6 @@ def library(request):
 @login_required
 def upload(request):
     if request.method == 'POST':
-        service = MediaService(request.user)
         uploaded_file = request.FILES.get('file')
         folder_id = request.POST.get('folder_id')
         title = request.POST.get('title', '').strip()
@@ -66,6 +66,19 @@ def upload(request):
             return redirect('media_assets:library')
 
         try:
+            ws_id = request.session.get('active_workspace_id')
+            if ws_id:
+                from apps.workspaces.models import Workspace
+                try:
+                    workspace = Workspace.objects.get(id=ws_id)
+                except Workspace.DoesNotExist:
+                    workspace = get_or_create_personal_workspace(request.user)
+            else:
+                workspace = get_or_create_personal_workspace(request.user)
+
+            service = MediaService(request.user)
+            service.storage = StorageService.for_workspace(workspace, user=request.user)
+
             asset = service.upload(uploaded_file, folder_id=folder_id, title=title or None)
         except Exception as e:
             logger.exception("Upload failed")
@@ -186,9 +199,8 @@ def api_assets(request):
 def serve_asset(request, asset_id, file_type='original'):
     asset = get_object_or_404(MediaAsset, id=asset_id, user=request.user)
 
-    from apps.workspaces.models import get_or_create_personal_workspace
     workspace = get_or_create_personal_workspace(request.user)
-    storage = StorageService.for_workspace(workspace)
+    storage = StorageService.for_workspace(workspace, user=request.user)
 
     path = asset.thumbnail_path if file_type == 'thumbnail' else asset.storage_path
     if not path:

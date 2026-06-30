@@ -5,15 +5,19 @@ from datetime import datetime
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from apps.media_assets.models import MediaAsset, MediaFolder
-from apps.media_assets.services import MediaService
+from apps.media_assets.services import MediaService, StorageService
+from apps.workspaces.models import get_or_create_personal_workspace
+from core.tenant import tenant_context
 
 from .services.creative_service import CreativeServiceError, generate_creative_content
+from .services.schemas import get_strategy_schema, get_all_strategy_schemas
 
 from .models import CreativeContext, CreativeStrategy, CreativeStrategyAsset
 
@@ -32,10 +36,12 @@ def _strategies_qs(user, ws_id, status=None):
 
 
 def _attach_asset_urls(assets, request):
-    service = MediaService(request.user)
     for a in assets:
-        a.display_url = service.get_asset_url(a)
-        a.display_thumbnail_url = service.get_thumbnail_url(a) or a.display_url
+        a.display_url = reverse('creative:serve_asset', args=[a.id, 'original'])
+        if a.thumbnail_path:
+            a.display_thumbnail_url = reverse('creative:serve_asset', args=[a.id, 'thumbnail'])
+        else:
+            a.display_thumbnail_url = a.display_url
     return list(assets)
 
 
@@ -52,20 +58,30 @@ def _get_workspace_context(request):
     return context
 
 
-def _build_folder_tree(user, parent=None, _connectors=None):
+def _build_folder_tree(user, ws_id, parent=None, _connectors=None):
     if _connectors is None:
         _connectors = []
-    folders = list(MediaFolder.objects.filter(parent=parent, user=user).order_by('name'))
+    filter_kw = {'parent': parent, 'user': user}
+    if ws_id:
+        filter_kw['workspace_id'] = ws_id
+    else:
+        filter_kw['workspace__isnull'] = True
+    folders = list(MediaFolder.objects.filter(**filter_kw).order_by('name'))
     tree = []
     for idx, f in enumerate(folders):
         is_last = idx == len(folders) - 1
-        children_count = MediaAsset.objects.filter(folder=f, user=user).count()
+        acnt_filter = {'folder': f, 'user': user}
+        if ws_id:
+            acnt_filter['workspace_id'] = ws_id
+        else:
+            acnt_filter['workspace__isnull'] = True
+        children_count = MediaAsset.objects.filter(**acnt_filter).count()
         child_connectors = _connectors + [not is_last]
         tree.append({
             'id': f.id,
             'name': f.name,
             'asset_count': children_count,
-            'children': _build_folder_tree(user, f, child_connectors),
+            'children': _build_folder_tree(user, ws_id, f, child_connectors),
             'has_children': False,
             'is_last': is_last,
             'connectors': _connectors,
@@ -85,6 +101,13 @@ def media_library(request):
     file_type = request.GET.get('type', '')
     folder_id = request.GET.get('folder', '')
     query = request.GET.get('q', '').strip()
+    ws_id = request.session.get('active_workspace_id')
+
+    # Workspace-scoped filter helper
+    if ws_id:
+        ws_filter = {'workspace_id': ws_id}
+    else:
+        ws_filter = {'workspace__isnull': True}
 
     # Handle folder CRUD via POST
     if request.method == 'POST':
@@ -96,10 +119,10 @@ def media_library(request):
             if name:
                 parent = None
                 if parent_id and parent_id.isdigit():
-                    parent = get_object_or_404(MediaFolder, id=int(parent_id), user=user)
+                    parent = get_object_or_404(MediaFolder, id=int(parent_id), user=user, **ws_filter)
                 MediaFolder.objects.get_or_create(
                     name=name, parent=parent, user=user,
-                    defaults={'workspace_id': request.session.get('active_workspace_id')},
+                    defaults={'workspace_id': ws_id},
                 )
                 messages.success(request, f'Folder "{name}" created.')
             return redirect('creative:media_library')
@@ -107,7 +130,7 @@ def media_library(request):
         if action == 'delete_folder':
             fid = request.POST.get('folder_id', '')
             if fid and fid.isdigit():
-                folder = get_object_or_404(MediaFolder, id=int(fid), user=user)
+                folder = get_object_or_404(MediaFolder, id=int(fid), user=user, **ws_filter)
                 folder.delete()
                 messages.success(request, 'Folder deleted.')
             return redirect('creative:media_library')
@@ -116,7 +139,7 @@ def media_library(request):
             fid = request.POST.get('folder_id', '')
             name = request.POST.get('name', '').strip()
             if fid and fid.isdigit() and name:
-                folder = get_object_or_404(MediaFolder, id=int(fid), user=user)
+                folder = get_object_or_404(MediaFolder, id=int(fid), user=user, **ws_filter)
                 folder.name = name
                 folder.save()
                 messages.success(request, 'Folder renamed.')
@@ -126,7 +149,7 @@ def media_library(request):
             asset_id = request.POST.get('asset_id', '')
             notes = request.POST.get('context_notes', '').strip()
             if asset_id and asset_id.isdigit():
-                asset = get_object_or_404(MediaAsset, id=int(asset_id), user=user)
+                asset = get_object_or_404(MediaAsset, id=int(asset_id), user=user, **ws_filter)
                 asset.description = notes
                 asset.save(update_fields=['description'])
                 messages.success(request, 'Notes saved.')
@@ -150,7 +173,7 @@ def media_library(request):
                     parsed = datetime.fromisoformat(scheduled_raw)
                     if timezone.is_naive(parsed):
                         parsed = timezone.make_aware(parsed)
-                    asset = MediaAsset.objects.get(id=int(asset_id), user=user)
+                    asset = MediaAsset.objects.get(id=int(asset_id), user=user, **ws_filter)
                     link = CreativeStrategyAsset.objects.filter(asset=asset).first()
                     if link:
                         link.platform = platform
@@ -168,13 +191,18 @@ def media_library(request):
             return redirect('creative:media_library')
 
     # GET — build folder tree + assets
-    folder_tree = _build_folder_tree(user)
-    all_folders = MediaFolder.objects.filter(user=user)
-    assets = MediaAsset.objects.filter(user=user).select_related('folder').order_by('-created_at')
+    folder_tree = _build_folder_tree(user, ws_id)
+    all_folders = MediaFolder.objects.filter(user=user, **ws_filter)
+    assets = MediaAsset.objects.filter(user=user, **ws_filter).select_related('folder').order_by('-created_at')
 
     if query:
-        service = MediaService(user)
-        assets = service.search_assets(query)
+        from django.db.models import Q
+        assets = assets.filter(
+            Q(title__icontains=query)
+            | Q(original_filename__icontains=query)
+            | Q(description__icontains=query)
+            | Q(tags__name__icontains=query)
+        ).distinct()
     if file_type:
         assets = assets.filter(file_type=file_type)
     if folder_id and folder_id.isdigit():
@@ -199,14 +227,16 @@ def media_library(request):
     if selected_id and selected_id.isdigit():
         from contextlib import suppress
         with suppress(MediaAsset.DoesNotExist):
-            selected_asset = MediaAsset.objects.get(id=int(selected_id), user=user)
+            selected_asset = MediaAsset.objects.get(id=int(selected_id), user=user, **ws_filter)
 
     assets = _attach_asset_urls(assets, request)
 
     if selected_asset:
-        svc = MediaService(user)
-        selected_asset.display_url = svc.get_asset_url(selected_asset)
-        selected_asset.display_thumbnail_url = svc.get_thumbnail_url(selected_asset)
+        selected_asset.display_url = reverse('creative:serve_asset', args=[selected_asset.id, 'original'])
+        if selected_asset.thumbnail_path:
+            selected_asset.display_thumbnail_url = reverse('creative:serve_asset', args=[selected_asset.id, 'thumbnail'])
+        else:
+            selected_asset.display_thumbnail_url = selected_asset.display_url
 
     return render(request, 'creative/media_library.html', {
         'assets': assets,
@@ -218,9 +248,10 @@ def media_library(request):
         'selected_asset': selected_asset,
         'current_type': file_type,
         'current_folder': folder_id,
+        'current_folder_id': int(folder_id) if folder_id and folder_id.isdigit() else None,
         'query': query,
         'strategies': CreativeStrategy.objects.filter(
-            user=user, status__in=['approved', 'active'],
+            user=user, **ws_filter, status__in=['approved', 'active'],
         ).order_by('-created_at')[:20],
     })
 
@@ -549,7 +580,11 @@ def api_strategy_status(request):
 @csrf_exempt
 @login_required
 def api_chat_generate(request):
-    """Accepts collected chat data, generates strategy via LLM, saves as draft."""
+    """Accepts collected chat data, generates strategy via LLM, saves as draft.
+    
+    Handles dynamic input fields based on the strategy type's schema.
+    Maps known fields to model columns; stores extras in metadata JSONField.
+    """
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=400)
     try:
@@ -561,16 +596,53 @@ def api_chat_generate(request):
     ws_id = request.session.get('active_workspace_id')
     strategy_type = data.get('strategy_type', 'full_campaign')
     title = data.get('title', '').strip()
-    description = data.get('description', '').strip()
-    target_audience = data.get('target_audience', '').strip()
-    tone = data.get('tone', 'professional').strip()
-    platforms = data.get('platforms', [])
     scheduled_raw = data.get('scheduled_at', '').strip()
 
     if not title:
         return JsonResponse({'error': 'Title is required'}, status=400)
 
     context_obj = _get_workspace_context(request)
+
+    # ── Load schema for this strategy type ─────────────────────────────────
+    schema = get_strategy_schema(strategy_type)
+
+    # ── Server-side truncation: enforce max_length from schema ─────────────
+    if schema:
+        for step in schema.get('steps', []):
+            max_len = step.get('max_length')
+            key = step['key']
+            if max_len and key in data and isinstance(data[key], str):
+                data[key] = data[key][:max_len]
+
+    # ── Extract common fields from dynamic payload ──────────────────────────
+    # Map known field keys to model/context fields
+    FIELD_MAP = {
+        'title': 'title',
+        'goals': 'campaign_goal',
+        'description': 'campaign_goal',
+        'target_audience': 'target_audience',
+        'audience': 'target_audience',
+        'tone': 'tone_of_voice',
+        'platforms': 'scheduled_platforms',
+    }
+
+    # Extract mapped fields
+    mapped = {}
+    for data_key, model_field in FIELD_MAP.items():
+        if data_key in data:
+            mapped[model_field] = data[data_key]
+
+    campaign_goal = mapped.get('campaign_goal', title)
+    target_audience = mapped.get('target_audience', '')
+    tone = mapped.get('tone_of_voice', 'professional')
+    platforms = mapped.get('scheduled_platforms', [])
+
+    if isinstance(tone, list):
+        tone = tone[0] if tone else 'professional'
+    if isinstance(platforms, str):
+        platforms = [p.strip() for p in platforms.split(',') if p.strip()]
+
+    # ── Build company_context ──────────────────────────────────────────────
     company_context = {
         "name": context_obj.company_name if context_obj else title,
         "industry": context_obj.industry if context_obj else "",
@@ -582,18 +654,51 @@ def api_chat_generate(request):
         "platforms": platforms,
     }
 
+    # Include extra strategy-specific fields in company context
+    if schema:
+        schema_keys = {step['key'] for step in schema.get('steps', [])}
+        STANDARD_CTX_KEYS = {'title', 'goals', 'description', 'target_audience',
+                             'audience', 'tone', 'platforms', 'scheduled_at',
+                             'strategy_type'}
+        extra_keys = schema_keys - STANDARD_CTX_KEYS
+        for key in extra_keys:
+            val = data.get(key)
+            if val:
+                company_context[key] = val
+
+    # ── Build user_input dynamically from schema ──────────────────────────
+    prompt_lines = [
+        f"STRATEGY TYPE: {dict(CreativeStrategy.STRATEGY_TYPES).get(strategy_type, 'Full Campaign')}",
+        f"Title: {title}",
+    ]
+
+    if schema:
+        for step in schema.get('steps', []):
+            key = step['key']
+            if key in ('title', 'scheduled_at', 'strategy_type'):
+                continue
+            val = data.get(key, '')
+            if isinstance(val, list):
+                val = ', '.join(v for v in val if v)
+            if val:
+                prompt_lines.append(f"{step['label']}: {val}")
+    else:
+        # Fallback for unknown types
+        for k, v in data.items():
+            if k not in ('strategy_type', 'title', 'csrfmiddlewaretoken', 'scheduled_at'):
+                if isinstance(v, list):
+                    v = ', '.join(str(x) for x in v if x)
+                if v:
+                    prompt_lines.append(f"{k.replace('_', ' ').title()}: {v}")
+
+    # Add the static prompt template section
     template_key = strategy_type if strategy_type in _PROMPT_TEMPLATES else 'full_campaign'
     strategy_prompt_section = _PROMPT_TEMPLATES[template_key]
+    prompt_lines.append("")
+    prompt_lines.append("BRIEF:")
+    prompt_lines.append(strategy_prompt_section)
 
-    user_input = (
-        f"STRATEGY TYPE: {dict(CreativeStrategy.STRATEGY_TYPES).get(strategy_type, 'Full Campaign')}\n"
-        f"Title: {title}\n"
-        f"Description / Brief: {description}\n"
-        f"Target Audience: {target_audience}\n"
-        f"Tone: {tone}\n"
-        f"Target Platforms: {', '.join(platforms) if platforms else 'All relevant'}\n\n"
-        f"BRIEF:\n{strategy_prompt_section}"
-    )
+    user_input = "\n".join(prompt_lines)
 
     # For platform-specific categories, emphasize which platforms to target
     if strategy_type in ('post_content', 'social_post') and platforms:
@@ -622,6 +727,7 @@ def api_chat_generate(request):
     if not generated:
         return JsonResponse({'error': 'Creative generation returned empty output. Check API keys.'}, status=502)
 
+    # ── Parse scheduled_at ─────────────────────────────────────────────────
     scheduled_at = None
     if scheduled_raw:
         try:
@@ -632,17 +738,28 @@ def api_chat_generate(request):
         except (ValueError, TypeError):
             pass
 
+    # ── Build metadata from fields not mapped to model columns ─────────────
+    mapped_data_keys = set(FIELD_MAP.keys()) | {'strategy_type', 'scheduled_at', 'csrfmiddlewaretoken'}
+    metadata = {}
+    for k, v in data.items():
+        if k not in mapped_data_keys:
+            if isinstance(v, list):
+                v = [x for x in v if x]
+            if v:
+                metadata[k] = v
+
     strategy = CreativeStrategy.objects.create(
         user=user,
         workspace_id=ws_id,
         strategy_type=strategy_type,
         title=full_title,
-        campaign_goal=description or full_title,
-        target_audience=target_audience,
-        tone_of_voice=tone,
+        campaign_goal=campaign_goal if isinstance(campaign_goal, str) else full_title,
+        target_audience=target_audience if isinstance(target_audience, str) else '',
+        tone_of_voice=tone if isinstance(tone, str) else 'professional',
         generated_output=generated,
-        scheduled_platforms=platforms,
+        scheduled_platforms=platforms if isinstance(platforms, list) else [],
         scheduled_at=scheduled_at,
+        metadata=metadata,
         llm_mode=llm_mode,
         status='draft',
     )
@@ -688,3 +805,192 @@ def api_strategy_update(request):
     strategy.save()
 
     return JsonResponse({'success': True, 'title': strategy.title})
+
+
+@login_required
+def api_strategy_inputs(request, strategy_type=None):
+    """Return the input schema for a strategy type, or all schemas if no type given."""
+    if strategy_type:
+        schema = get_strategy_schema(strategy_type)
+        if not schema:
+            return JsonResponse({'error': f'Unknown strategy type: {strategy_type}'}, status=404)
+        return JsonResponse({'schema': schema, 'strategy_type': strategy_type})
+    schemas = get_all_strategy_schemas()
+    return JsonResponse({'schemas': schemas})
+
+
+# ---------------------------------------------------------------------------
+# Custom Media Asset Serve and Upload (workspace-isolated)
+# ---------------------------------------------------------------------------
+
+@login_required
+def serve_creative_asset(request, asset_id, file_type='original'):
+    """
+    Serve media asset via proxy with correct workspace prefix.
+    Uses asset.workspace (FK) to determine MinIO prefix, falling back to personal workspace.
+    Passes user=request.user to StorageService.for_workspace() to ensure prefix matches upload.
+    """
+    asset = get_object_or_404(MediaAsset, id=asset_id, user=request.user)
+    
+    # Determine workspace from asset (FK) or fall back to personal
+    if asset.workspace:
+        workspace = asset.workspace
+    else:
+        workspace = get_or_create_personal_workspace(request.user)
+    
+    # Get storage service with BOTH user and workspace to ensure correct prefix
+    storage = StorageService.for_workspace(workspace, user=request.user)
+    
+    # Select path based on file_type
+    path = asset.thumbnail_path if file_type == 'thumbnail' else asset.storage_path
+    if not path:
+        return HttpResponse(status=404)
+    
+    try:
+        buffer = storage.open(path)
+        content = buffer.read()
+        if file_type == 'thumbnail':
+            content_type = 'image/webp'
+        else:
+            # Guess content type from original filename
+            import mimetypes
+            content_type, _ = mimetypes.guess_type(asset.original_filename)
+            content_type = content_type or 'application/octet-stream'
+        return HttpResponse(content, content_type=content_type)
+    except FileNotFoundError:
+        return HttpResponse(status=404)
+    except Exception:
+        logger.exception('Failed to serve asset %s (%s)', asset_id, file_type)
+        return HttpResponse(status=500)
+
+
+@login_required
+def upload_media(request):
+    """
+    Handle media upload with correct workspace isolation.
+    Supports both regular form POST (redirect) and XHR (JSON response).
+    Uses active workspace from session (or personal) for storage and asset record.
+    """
+    logger.info('Entering upload_media view')
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=400)
+    
+    user = request.user
+    uploaded_file = request.FILES.get('file')
+    folder_id = request.POST.get('folder_id')
+    title = request.POST.get('title', '').strip()
+    is_xhr = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
+    if not uploaded_file:
+        if is_xhr:
+            return JsonResponse({'success': False, 'error': 'No file selected.'}, status=400)
+        messages.error(request, 'Please select a file to upload.')
+        return redirect('creative:media_library')
+    
+    try:
+        # Resolve workspace from session (active workspace) or fall back to personal
+        ws_id = request.session.get('active_workspace_id')
+        if ws_id:
+            from apps.workspaces.models import Workspace
+            try:
+                workspace = Workspace.objects.get(id=ws_id)
+            except Workspace.DoesNotExist:
+                workspace = get_or_create_personal_workspace(user)
+        else:
+            workspace = get_or_create_personal_workspace(user)
+        
+        # Create media service with correct workspace storage
+        from apps.media_assets.services import MediaService
+        service = MediaService(user)
+        # Override the storage service to use the correct workspace
+        service.storage = StorageService.for_workspace(workspace, user=user)
+        logger.info(f'Upload workspace: {workspace.id}, storage prefix: {service.storage.backend.prefix}')
+        
+        # Prepare folder if specified
+        folder = None
+        if folder_id:
+            try:
+                folder = MediaFolder.objects.get(
+                    id=int(folder_id), 
+                    user=user,
+                    **({'workspace_id': ws_id} if ws_id else {'workspace__isnull': True})
+                )
+            except (MediaFolder.DoesNotExist, ValueError):
+                folder = None
+        
+        # Perform upload with correct tenant context to ensure workspace consistency
+        with tenant_context(workspace):
+            asset = service.upload(uploaded_file, folder_id=folder.id if folder else None, title=title or None)
+        logger.info(f'Upload successful: asset_id={asset.id}, storage_path={asset.storage_path}, storage_backend={asset.storage_backend}')
+        
+        if is_xhr:
+            return JsonResponse({
+                'success': True,
+                'asset_id': asset.id,
+                'title': asset.title or asset.original_filename,
+                'file_type': asset.file_type,
+                'url': reverse('creative:serve_asset', args=[asset.id, 'original']),
+                'thumbnail_url': reverse('creative:serve_asset', args=[asset.id, 'thumbnail']) if asset.thumbnail_path else None,
+            })
+        
+        messages.success(request, f'"{asset.original_filename}" uploaded.')
+        # Redirect back to media library with current folder preserved
+        redirect_url = reverse('creative:media_library')
+        if folder_id:
+            redirect_url += f'?folder={folder_id}'
+        return redirect(redirect_url)
+        
+    except Exception as e:
+        logger.exception("Upload failed")
+        if is_xhr:
+            return JsonResponse({'success': False, 'error': f'Upload failed: {str(e)}'}, status=500)
+        messages.error(request, f'Upload failed: {str(e)}')
+        return redirect('creative:media_library')
+
+
+# ---------------------------------------------------------------------------
+# Serve General Media Files (Avatars, etc.) from MinIO
+# Replaces Django static() for production use
+# ---------------------------------------------------------------------------
+
+def serve_media_file(request, path):
+    """
+    Serve media files from MinIO storage.
+    
+    This view replaces Django's static() URL handler for media files,
+    ensuring they work in both DEBUG=True and DEBUG=False.
+    
+    URL pattern: /media/<path_to_file>
+    Examples:
+        /media/avatars/user123.jpg
+        /media/media_assets/2026/06/22/image.png
+    """
+    from apps.media_assets.minio_storage import MinIODjangoStorage
+    import mimetypes
+    
+    try:
+        storage = MinIODjangoStorage(prefix='media')
+        key = path
+        
+        if not storage.exists(key):
+            logger.warning(f'Media file not found in MinIO: {key}')
+            return HttpResponse(status=404)
+        
+        buffer = storage.open(key)
+        content = buffer.read()
+        
+        # Guess content type from the path
+        content_type, _ = mimetypes.guess_type(path)
+        content_type = content_type or 'application/octet-stream'
+        
+        response = HttpResponse(content, content_type=content_type)
+        response['Content-Length'] = len(content)
+        response['Cache-Control'] = 'public, max-age=86400'
+        return response
+        
+    except FileNotFoundError:
+        logger.warning(f'Media file not found: {path}')
+        return HttpResponse(status=404)
+    except Exception as e:
+        logger.exception(f'Failed to serve media file {path}: {e}')
+        return HttpResponse(status=500)
