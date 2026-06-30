@@ -6,6 +6,8 @@ from django.core.files import File
 from django.urls import reverse
 from django.utils import timezone
 
+from core.tenant import get_current_tenant
+
 from .models import MediaAsset, MediaFolder
 from .processing import MediaProcessor
 from .storage import StorageService
@@ -37,6 +39,7 @@ class MediaService:
 
         asset = MediaAsset(
             user=self.user,
+            workspace=get_current_tenant(),
             folder=folder,
             original_filename=uploaded_file.name,
             file_size=uploaded_file.size,
@@ -97,7 +100,8 @@ class MediaService:
         if parent_id:
             parent = MediaFolder.objects.get(id=parent_id, user=self.user)
         folder, _created = MediaFolder.objects.get_or_create(
-            name=name, parent=parent, user=self.user
+            name=name, parent=parent, user=self.user,
+            defaults={'workspace': get_current_tenant()},
         )
         return folder
 

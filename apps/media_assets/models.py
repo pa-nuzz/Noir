@@ -66,7 +66,7 @@ class MediaAsset(AuditMixin):
     file = models.FileField(upload_to='media_assets/%Y/%m/%d/')
     thumbnail = models.FileField(upload_to='media_assets/thumbnails/', blank=True)
     file_type = models.CharField(max_length=20, choices=FILE_TYPE_CHOICES, blank=True)
-    storage_backend = models.CharField(max_length=20, choices=STORAGE_CHOICES, default='local')
+    storage_backend = models.CharField(max_length=20, choices=STORAGE_CHOICES, default='minio')
     storage_path = models.CharField(max_length=500, blank=True)
 
     original_filename = models.CharField(max_length=255)

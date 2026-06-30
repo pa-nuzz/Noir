@@ -3,12 +3,20 @@ import core.admin  # ensure admin site branding is applied
 from django.urls import path, include
 from django.views.generic import TemplateView, RedirectView
 from django.conf import settings
-from django.conf.urls.static import static
 from core.views import landing_view
 from apps.intelligence.views import generate_page
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
-urlpatterns = static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) + [
+# Media files are now served from MinIO via custom view (works in DEBUG and production)
+from apps.creative.views import serve_media_file
+
+# URL pattern for serving media files from MinIO
+# Maps /media/<filename> to serve_media_file view
+media_urlpattern = [
+    path('media/<path:path>', serve_media_file, name='serve_media'),
+]
+
+urlpatterns = media_urlpattern + [
     path('admin/', admin.site.urls),
     path('', landing_view, name='home'),
     path('senders/', include('apps.senders.urls', namespace='senders')),
@@ -23,7 +31,7 @@ urlpatterns = static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) + [
     path('social/', include('apps.social.urls', namespace='social')),
     path('social/', RedirectView.as_view(url='/social-accounts/', permanent=True), name='social_legacy'),
     path('content/', RedirectView.as_view(url='/content-studio/', permanent=True), name='content_legacy'),
-    path('media/', RedirectView.as_view(url='/media-assets/', permanent=True), name='media_legacy'),
+
     path('workspaces/', include('apps.workspaces.urls', namespace='workspaces')),
     path('social-accounts/', include('apps.social_accounts.urls', namespace='social_accounts')),
     path('content-studio/', include('apps.content_studio.urls', namespace='content_studio')),

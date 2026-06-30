@@ -86,16 +86,16 @@
           <div class="group premium-surface rounded-xl overflow-hidden hover:shadow-md transition-all relative
             {% if selected_asset and selected_asset.id == asset.id %}ring-2 ring-primary ring-offset-2{% endif %}"
             data-asset-id="{{ asset.id }}">
-            <button type="button" onclick="openAssetPreview(this)"
-               data-asset-id="{{ asset.id }}"
-               data-asset-title="{{ asset.title|default:asset.original_filename|escapejs }}"
-               data-asset-url="{{ asset.display_url|default:''|escapejs }}"
-               data-asset-thumb="{{ asset.display_thumbnail_url|default:asset.display_url|escapejs }}"
-               data-asset-file-type="{{ asset.file_type }}"
-               data-asset-size="{{ asset.file_size }}"
-               data-asset-folder="{{ asset.folder.name|default:''|escapejs }}"
-               data-asset-created="{{ asset.created_at|date:'c' }}"
-               class="block aspect-square bg-slate-100 relative overflow-hidden w-full text-left">
+             <button type="button" onclick="openAssetPreview(this)"
+                data-asset-id="{{ asset.id }}"
+                data-asset-title="{{ asset.title|default:asset.original_filename|force_escape }}"
+                data-asset-url="{{ asset.display_url|default:'' }}"
+                data-asset-thumb="{{ asset.display_thumbnail_url|default:asset.display_url }}"
+                data-asset-file-type="{{ asset.file_type }}"
+                data-asset-size="{{ asset.file_size }}"
+                data-asset-folder="{{ asset.folder.name|default:''|force_escape }}"
+                data-asset-created="{{ asset.created_at|date:'c' }}"
+                class="block aspect-square bg-slate-100 relative overflow-hidden w-full text-left">
               {% if asset.file_type == 'image' and asset.display_thumbnail_url %}
               <img src="{{ asset.display_thumbnail_url }}" alt="{{ asset.title|default:asset.original_filename }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy">
               {% elif asset.file_type == 'image' and asset.display_url %}
@@ -198,8 +198,9 @@
         <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
-    <form method="post" action="{% url 'media_assets:upload' %}" enctype="multipart/form-data" class="p-5 space-y-4">
+    <form id="creative-upload-form" method="post" action="{% url 'creative:upload_media' %}" enctype="multipart/form-data" class="p-5 space-y-4">
       {% csrf_token %}
+      <div id="upload-error" class="hidden text-sm text-red-600 bg-red-50 rounded-lg px-4 py-3"></div>
       <div class="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:border-primary/40 transition-colors cursor-pointer" onclick="document.getElementById('file-input').click()">
         <svg class="w-10 h-10 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
         <p class="text-sm font-semibold text-slate-600 mb-1">Click to browse or drag & drop</p>
@@ -216,7 +217,7 @@
         <select name="folder_id" class="input-field w-full">
           <option value="">Root (no folder)</option>
           {% for f in folders %}
-          <option value="{{ f.id }}" {% if current_folder == f.id|stringformat:'s' %}selected{% endif %}>{{ f.name }}</option>
+          <option value="{{ f.id }}" {% if current_folder_id == f.id %}selected{% endif %}>{{ f.name }}</option>
           {% endfor %}
         </select>
       </div>
@@ -359,9 +360,49 @@
 function openUploadModal() {
   document.getElementById('upload-file-name').textContent = '';
   document.getElementById('file-input').value = '';
+  document.getElementById('upload-error').classList.add('hidden');
   openModal('uploadModal');
 }
 function closeUploadModal() { closeModal('uploadModal'); }
+
+document.getElementById('creative-upload-form')?.addEventListener('submit', function(e) {
+  e.preventDefault();
+  var btn = this.querySelector('button[type="submit"]');
+  var err = document.getElementById('upload-error');
+  err.classList.add('hidden');
+  btn.disabled = true;
+  btn.textContent = 'Uploading...';
+  var formData = new FormData(this);
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', this.action, true);
+  xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+  xhr.onload = function() {
+    if (xhr.status === 200) {
+      var resp = JSON.parse(xhr.responseText);
+      if (resp.success) {
+        closeUploadModal();
+        window.location.href = '{% url "creative:media_library" %}{% if current_folder_id %}?folder={{ current_folder_id }}{% endif %}';
+      } else {
+        err.textContent = resp.error || 'Upload failed.';
+        err.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Upload';
+      }
+    } else {
+      err.textContent = 'Upload failed (status ' + xhr.status + ').';
+      err.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Upload';
+    }
+  };
+  xhr.onerror = function() {
+    err.textContent = 'Network error during upload.';
+    err.classList.remove('hidden');
+    btn.disabled = false;
+    btn.textContent = 'Upload';
+  };
+  xhr.send(formData);
+});
 
 function openCreateFolderModal() { openFolderModal(); }
 function closeFolderModal() { closeModal('createFolderModal'); }
