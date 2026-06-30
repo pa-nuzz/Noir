@@ -422,82 +422,79 @@ DEEPSEEK_API_KEY = config('DEEPSEEK_API_KEY', default='')
 
 # NVIDIA NIM — image & video generation
 NVIDIA_API_KEY = config('NVIDIA_API_KEY', default='')
-NVIDIA_NIM_BASE_URL = config('NVIDIA_NIM_BASE_URL', default='https://ai.api.nvidia.com/v1')
-
-NVIDIA_NIM_BASE_URL = config('NVIDIA_NIM_BASE_URL', default='https://ai.api.nvidia.com/v1')
 NVIDIA_INTEGRATE_URL = 'https://integrate.api.nvidia.com/v1'
+
+# Pollinations AI — image generation
+POLLINATIONS_API_KEY = config('POLLINATIONS_API_KEY', default='')
+
+# OpenRouter — text generation
+OPENROUTER_API_KEY = config('OPENROUTER_API_KEY', default='')
+
+# Google Gemini — text generation
+GEMINI_API_KEY = config('GEMINI_API_KEY', default=LLM_API_KEY)
 
 NVIDIA_MODELS = {
     # ── Image Generation ──────────────────────────────────────────────
-    'ida-vision-dev': {
-        'label': 'IDA Vision Pro',
-        'modality': 'image',
-        'tier': 'premium',
-        'api_type': 'nim',
-        'endpoint': '/genai/black-forest-labs/flux.1-dev',
-        'available': True,
-        'params': {'steps': 30, 'cfg_scale': 7.0, 'width': 1024, 'height': 1024},
-        'description': 'Photorealistic images with exceptional detail — best quality',
-        'size_presets': ['1024x1024', '1344x768', '768x1344', '1152x896', '896x1152', '1216x832', '832x1216'],
-    },
-    'ida-vision-flash': {
-        'label': 'IDA Vision Flash',
-        'modality': 'image',
-        'tier': 'fast',
-        'api_type': 'nim',
-        'endpoint': '/genai/black-forest-labs/flux.1-schnell',
-        'available': True,
-        'params': {'steps': 4, 'cfg_scale': 0, 'width': 1024, 'height': 1024},
-        'description': 'Lightning fast — 4 steps, perfect for quick iterations',
-        'size_presets': ['1024x1024', '1344x768', '768x1344', '1152x896', '896x1152', '1216x832', '832x1216'],
-    },
     'ida-vision-lite': {
         'label': 'IDA Vision Lite',
         'modality': 'image',
-        'tier': 'fast',
-        'api_type': 'nim',
+        'provider': 'nvidia',
         'endpoint': '/genai/black-forest-labs/flux.2-klein-4b',
         'available': True,
-        'params': {'steps': 4, 'cfg_scale': 1.0, 'width': 1024, 'height': 1024},
-        'description': 'Lightweight 4B model — great quality at incredible speed',
-        'size_presets': ['1024x1024', '1344x768', '768x1344', '1152x896', '896x1152', '1216x832', '832x1216'],
+        'params': {'steps': 4, 'cfg_scale': 1.0},
+        'description': 'Lightning fast — 4B model, great quality',
     },
-    # ── Vision model for Image Editing ──────────────────────────────────
-    'ida-vision-vl': {
-        'label': 'IDA Vision VL',
-        'modality': 'vision_edit',
-        'tier': 'premium',
-        'api_type': 'openai_compat',
-        'endpoint': '/chat/completions',
-        'model_name': 'meta/llama-3.2-11b-vision-instruct',
+    'ida-vision-dev': {
+        'label': 'IDA Vision Pro',
+        'modality': 'image',
+        'provider': 'nvidia',
+        'endpoint': '/genai/black-forest-labs/flux.1-dev',
         'available': True,
-        'params': {'max_tokens': 2048, 'temperature': 0.6},
-        'description': 'Vision model used for image editing — describes and transforms images',
+        'params': {'steps': 30, 'cfg_scale': 7.0},
+        'description': 'Premium quality — photorealistic, best detail',
+    },
+    'ida-pollinations': {
+        'label': 'IDA Image',
+        'modality': 'image',
+        'provider': 'pollinations',
+        'model_name': 'flux',
+        'available': True,
+        'params': {},
+        'description': 'Fast and reliable — free Flux generation',
     },
     # ── Text / LLM Models ─────────────────────────────────────────────
     'ida-chat': {
-        'label': 'IDA Chat 8B',
+        'label': 'IDA Chat',
         'modality': 'text',
-        'tier': 'fast',
-        'api_type': 'openai_compat',
-        'endpoint': '/chat/completions',
+        'provider': 'nvidia',
         'model_name': 'meta/llama-3.1-8b-instruct',
-        'available': True,
-        'params': {'max_tokens': 2048, 'temperature': 0.6},
-        'description': 'Fast and capable — great for code, analysis, and general tasks',
-    },
-    'ida-reason': {
-        'label': 'IDA Reason 70B',
-        'modality': 'text',
-        'tier': 'premium',
-        'api_type': 'openai_compat',
         'endpoint': '/chat/completions',
-        'model_name': 'meta/llama-3.1-70b-instruct',
+        'api_type': 'openai_compat',
         'available': True,
         'params': {'max_tokens': 2048, 'temperature': 0.6},
-        'description': 'High-quality reasoning with 70B parameters — complex tasks',
+        'description': 'Fast and capable — great for general tasks',
+    },
+    'ida-router': {
+        'label': 'IDA Router',
+        'modality': 'text',
+        'provider': 'openrouter',
+        'model_name': 'google/gemini-2.5-flash',
+        'available': True,
+        'params': {'max_tokens': 4096, 'temperature': 0.7},
+        'description': 'Gemini 2.5 Flash via OpenRouter',
+    },
+    'ida-gemini': {
+        'label': 'IDA Gemini',
+        'modality': 'text',
+        'provider': 'gemini',
+        'model_name': 'gemini-2.5-flash',
+        'available': True,
+        'params': {'max_tokens': 8192, 'temperature': 0.7},
+        'description': 'Gemini 2.5 Flash — fast multimodal',
     },
 }
+
+IDA_MODELS = NVIDIA_MODELS
 
 # Silencing django-ratelimit strict cache checks for development
 SILENCED_SYSTEM_CHECKS = ['django_ratelimit.E003']
