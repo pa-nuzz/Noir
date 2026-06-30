@@ -20,24 +20,22 @@ def _get_template_or_404(request, template_id):
     """Fetch a template. Default templates (is_default=True) are accessible to all.
     Custom templates must belong to the current user (workspace=None in personal mode,
     or workspace matches session in workspace mode).
+    Personal-mode templates (workspace=None) are accessible even in workspace mode.
     """
     user = request.user
 
-    # Check unscoped - does a template with this ID exist at all?
     if not EmailTemplate.objects.filter(id=template_id).exists():
         raise Http404("No EmailTemplate matches the given query.")
 
-    # Default templates are accessible to everyone
-    if EmailTemplate.objects.filter(id=template_id, is_default=True).exists():
-        return get_object_or_404(EmailTemplate, id=template_id, is_default=True)
+    if EmailTemplate._base_manager.filter(id=template_id, is_default=True).exists():
+        return get_object_or_404(EmailTemplate._base_manager, id=template_id, is_default=True)
 
-    # For non-default templates, apply workspace/user scoping
+    # For non-default templates, apply workspace/user scoping.
     scoped = filter_by_context(request, EmailTemplate.objects.all())
     if scoped.filter(id=template_id).exists():
         return get_object_or_404(scoped, id=template_id)
 
-    # One more fallback: in personal mode, templates with workspace=None belong to their user
-    # Allow access if this template belongs to the user directly (workspace=None)
+    # Allow personal-mode templates (workspace=None, owned by user) even in workspace mode.
     if EmailTemplate.objects.filter(id=template_id, user=user, workspace__isnull=True).exists():
         return get_object_or_404(EmailTemplate, id=template_id, user=user, workspace__isnull=True)
 
