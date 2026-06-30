@@ -24,20 +24,18 @@ def _get_template_or_404(request, template_id):
     """
     user = request.user
 
-    if not EmailTemplate.objects.filter(id=template_id).exists():
+    if not EmailTemplate._base_manager.filter(id=template_id).exists():
         raise Http404("No EmailTemplate matches the given query.")
 
     if EmailTemplate._base_manager.filter(id=template_id, is_default=True).exists():
         return get_object_or_404(EmailTemplate._base_manager, id=template_id, is_default=True)
 
-    # For non-default templates, apply workspace/user scoping.
     scoped = filter_by_context(request, EmailTemplate.objects.all())
     if scoped.filter(id=template_id).exists():
         return get_object_or_404(scoped, id=template_id)
 
-    # Allow personal-mode templates (workspace=None, owned by user) even in workspace mode.
-    if EmailTemplate.objects.filter(id=template_id, user=user, workspace__isnull=True).exists():
-        return get_object_or_404(EmailTemplate, id=template_id, user=user, workspace__isnull=True)
+    if EmailTemplate._base_manager.filter(id=template_id, user=user, workspace__isnull=True).exists():
+        return get_object_or_404(EmailTemplate._base_manager, id=template_id, user=user, workspace__isnull=True)
 
     raise Http404("No EmailTemplate matches the given query.")
 
