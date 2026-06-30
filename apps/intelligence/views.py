@@ -245,7 +245,7 @@ def api_trigger_auto_reply(request, message_id):
 @login_required
 @require_workspace_permission('workspace', 'read')
 def generate_page(request):
-    all_models = getattr(settings, 'NVIDIA_MODELS', {})
+    all_models = getattr(settings, 'IDA_MODELS', {}) or getattr(settings, 'NVIDIA_MODELS', {})
 
     image_models = []
     text_models = []
@@ -253,16 +253,10 @@ def generate_page(request):
     for key, cfg in all_models.items():
         if not cfg.get('available', False):
             continue
-        label = cfg.get('label', key.replace('-', ' ').replace('.', ' ').title())
         entry = {
             'key': key,
-            'label': label,
+            'label': cfg.get('label', ''),
             'modality': cfg.get('modality', 'image'),
-            'tier': cfg.get('tier', ''),
-            'available': True,
-            'description': cfg.get('description', ''),
-            'params': cfg.get('params', {}),
-            'size_presets': cfg.get('size_presets', []),
         }
         modality = cfg.get('modality', 'image')
         if modality == 'image':
@@ -279,14 +273,7 @@ def generate_page(request):
 @login_required
 @require_workspace_permission('workspace', 'read')
 def generate_edit_page(request):
-    image_b64 = request.GET.get('image_b64', '')
-    image_data_url = ''
-    if image_b64:
-        image_data_url = f'data:image/png;base64,{image_b64}'
-    return render(request, 'intelligence/generate_edit.html', {
-        'image_b64': image_b64,
-        'image_data_url': image_data_url,
-    })
+    return redirect('intelligence:generate_page')
 
 
 @login_required
@@ -302,47 +289,12 @@ def api_generate(request):
     if not prompt:
         return JsonResponse({'success': False, 'error': 'Prompt is required'}, status=400)
 
-    import re
-    prompt = re.sub(r'\s*--[\w:]+(?:\s+[\w:\.]+)*', '', prompt)
-    prompt = re.sub(r'\s*\[.*?\]', '', prompt)
-    prompt = re.sub(r'\s*\{.*?\}', '', prompt)
-    prompt = re.sub(r'\s+', ' ', prompt).strip()
-
     model_key = data.get('model', 'auto')
     modality = data.get('modality', 'image')
     image_b64 = data.get('image_b64', '')
     image_url = data.get('image_url', '')
     async_mode = data.get('async', False)
     size = data.get('size', '1024x1024')
-    seed = data.get('seed')
-
-    if model_key and model_key != 'auto':
-        all_models = getattr(settings, 'NVIDIA_MODELS', {})
-        model_cfg = all_models.get(model_key)
-        if not model_cfg:
-            return JsonResponse({'success': False, 'error': f'Unknown model: {model_key}'}, status=400)
-        if not model_cfg.get('available', False):
-            return JsonResponse({
-                'success': False,
-                'error': f'{model_key} is not available',
-                'model': model_key,
-                'available': False,
-            }, status=422)
-
-    kwargs = {'size': size}
-    if seed is not None:
-        try:
-            kwargs['seed'] = int(seed)
-        except (ValueError, TypeError):
-            pass
-
-    task_type_map = {
-        'image': 'image_generation',
-        'text': 'text_generation',
-        'vision_edit': 'vision_edit',
-        'image_edit': 'image_editing',
-    }
-    task_type = task_type_map.get(modality, 'image_generation')
 
     if async_mode:
         from .tasks import async_generate_content
@@ -350,12 +302,9 @@ def api_generate(request):
             prompt=prompt,
             model=model_key,
             modality=modality,
-            task_type=task_type,
             image_b64=image_b64,
             image_url=image_url,
-            user_id=request.user.id,
-            workspace_id=request.session.get('active_workspace_id'),
-            **kwargs,
+            size=size,
         )
         return JsonResponse({
             'success': True,
@@ -375,16 +324,25 @@ def api_generate(request):
         prompt=prompt,
         model=model_key,
         modality=modality,
-        task_type=task_type,
         image_b64=image_b64,
         image_url=image_url,
-        **kwargs,
+        size=size,
     )
-    if not result.get('success'):
-        status = 502 if 'API error' in result.get('error', '') else 400
-        return JsonResponse(result, status=status)
 
-    return JsonResponse(result)
+    # Strip internal fields from response
+    response = {
+        'success': result.get('success', False),
+        'error': result.get('error', '') if not result.get('success') else '',
+    }
+    if result.get('success'):
+        if result.get('images'):
+            response['images'] = result['images']
+        if result.get('text'):
+            response['text'] = result['text']
+        if result.get('model'):
+            response['model'] = result['model']
+    status_code = 502 if result.get('error') and ('error' in result.get('error', '').lower() or 'time' in result.get('error', '').lower()) else 400
+    return JsonResponse(response, status=status_code if not result.get('success') else 200)
 
 
 @login_required
@@ -402,7 +360,15 @@ def api_generate_status(request):
         'state': result.state,
     }
     if result.state == 'SUCCESS':
-        response['result'] = result.result
+        raw = result.result or {}
+        r = {'success': raw.get('success', False)}
+        if raw.get('images'):
+            r['images'] = raw['images']
+        if raw.get('text'):
+            r['text'] = raw['text']
+        if not raw.get('success'):
+            r['error'] = raw.get('error', 'Generation failed')
+        response['result'] = r
     elif result.state == 'FAILURE':
-        response['error'] = str(result.result)
+        response['error'] = 'Generation failed'
     return JsonResponse(response)
