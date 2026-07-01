@@ -99,7 +99,7 @@ def generate_llm_content(user, topic, platforms, items, rule_id=None):
                 status='draft',
                 is_auto_generated=True,
                 source_prompt=f'Generated from trending: {item.url}',
-                tags=[hashtags] if hashtags else (item.ai_categories or []),
+                tags=hashtags.split() if hashtags else (item.ai_categories or []),
             )
             ci.metadata.update({
                 'source': 'trending_automation',

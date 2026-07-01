@@ -244,11 +244,11 @@
 
 {% block extra_scripts %}
 <script>
+window._automationRuleCount = {{ automation_rule_count }};
 function switchTab(tabId) {
   if (tabId === 'trending') {
     window._refineTriggered = false;
-    var hasCategories = {{ automation_rule_count }} > 0;
-    if (!hasCategories) {
+    if (!window._automationRuleCount) {
       showTrendingToast('Select categories first to see trending topics', 'info');
       tabId = 'automation';
     }

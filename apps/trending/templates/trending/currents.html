@@ -38,6 +38,9 @@
     <p class="text-sm text-slate-500 mt-0.5">Top 5 trending items from your selected categories, ready to publish.</p>
     <p id="currents-last-updated" class="text-xs text-slate-400 mt-0.5 hidden">Last updated: <span id="currents-updated-at"></span></p>
   </div>
+  <button onclick="loadCurrents()" class="tr-btn-ghost" title="Refresh Currents">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:16px;height:16px;"><path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/></svg>
+  </button>
 </div>
 
 <!-- Global Action Bar -->
@@ -92,6 +95,19 @@
   <p>No trending items matching your automation rules.</p>
 </div>
 
+<div id="rd-needs-platform" class="rd-empty hidden">
+  <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.274.145.593.22.916.22l.042-.001a7.73 7.73 0 013.214.803 1.28 1.28 0 001.612-.378l.763-1.053a1.125 1.125 0 011.704-.166 9.04 9.04 0 011.794 2.988 1.125 1.125 0 01-.49 1.466l-1.14.662c-.327.19-.552.513-.618.883-.058.327-.03.662.084.96a7.73 7.73 0 01.442 3.362c-.049.33-.177.646-.4.896l-.878 1.005a1.125 1.125 0 01-1.696-.084 7.73 7.73 0 00-2.478-2.106 1.28 1.28 0 00-1.578.341l-.74 1.042a1.125 1.125 0 01-1.678.2 9.04 9.04 0 01-2.02-2.855 1.125 1.125 0 01.354-1.45l1.106-.672c.324-.197.543-.527.596-.9a7.73 7.73 0 00-.302-3.392 1.28 1.28 0 00-1.254-.73 7.73 7.73 0 00-3.158.616 1.125 1.125 0 01-1.538-.624l-.427-1.22z"/></svg>
+  <p style="color:#6D28D9;font-weight:700;">SELECT PLATFORM In Automation</p>
+  <p class="text-xs text-slate-400 mt-1">Go to the Automation tab and select at least one platform to generate content.</p>
+</div>
+
+<div id="rd-needs-llm" class="rd-empty hidden">
+  <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+  <p style="color:#EA580C;font-weight:700;">Content generation failed</p>
+  <p id="rd-llm-reason" class="text-xs text-slate-500 mt-1"></p>
+  <button onclick="loadCurrents()" class="mt-3 text-xs font-semibold px-4 py-2 rounded-lg border border-orange-300 text-orange-700 hover:bg-orange-50 transition-colors">Retry</button>
+</div>
+
 <script>
 var currentsActionMode = 'none';
 var currentsBatchId = null;
@@ -137,10 +153,14 @@ function loadCurrents() {
   var empty = document.getElementById('rd-empty');
   var needsAuto = document.getElementById('rd-needs-automation');
   var noItems = document.getElementById('rd-no-items');
+  var needsPlatform = document.getElementById('rd-needs-platform');
+  var needsLlm = document.getElementById('rd-needs-llm');
   list.classList.remove('hidden');
   empty.classList.add('hidden');
   needsAuto.classList.add('hidden');
   noItems.classList.add('hidden');
+  needsPlatform.classList.add('hidden');
+  needsLlm.classList.add('hidden');
   list.innerHTML = '<div class="tr-loading">Loading currents…</div>';
 
   fetch('{% url "trending:currents_data" %}')
@@ -155,7 +175,25 @@ function loadCurrents() {
       if (data.needs_feed_load) {
         list.classList.add('hidden');
         document.getElementById('rd-needs-feed-load').classList.remove('hidden');
+        return;
+      }
+      if (data.needs_platform) {
+        list.classList.add('hidden');
+        needsPlatform.classList.remove('hidden');
         stopCurrentsPolling();
+        return;
+      }
+      if (data.llm_error) {
+        list.classList.add('hidden');
+        document.getElementById('rd-llm-reason').textContent = data.llm_error;
+        needsLlm.classList.remove('hidden');
+        stopCurrentsPolling();
+        return;
+      }
+      if (data.llm_retry) {
+        list.innerHTML = '<div class="tr-empty"><svg class="tr-spin" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="width:40px;height:40px;margin:0 auto 12px;opacity:0.4"><path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/></svg>' +
+          '<p style="font-weight:600;color:#6D28D9;">Content generation retrying</p>' +
+          '<p class="text-xs" style="margin-top:4px;color:#94A3B8;">Attempt ' + (data.retry_attempt || 1) + '. This should complete soon.</p></div>';
         return;
       }
       if (!data.items || data.items.length === 0) {
@@ -172,19 +210,19 @@ function loadCurrents() {
         }
         var platformHtml = '';
         var content = item.generated_content || {};
-        var activePlatforms = item.active_platforms || ALL_PLATFORMS;
+        var activePlatforms = item.active_platforms;
         activePlatforms.forEach(function(p) {
           var pdata = content[p];
           if (!pdata || !pdata.body) return;
-          var hashtagsHtml = '';
-          if (pdata.hashtags) {
-            hashtagsHtml = '<div class="rd-platform-hashtags">' +
-              pdata.hashtags.split(' ').map(function(t) {
-                if (!t) return '';
-                return '<span>' + escapeHtml(t) + '</span>';
-              }).join('') +
-            '</div>';
-          }
+                var hashtagsHtml = '';
+                if (pdata.hashtags && typeof pdata.hashtags === 'string') {
+                    hashtagsHtml = '<div class="rd-platform-hashtags">' +
+                    pdata.hashtags.split(' ').map(function(t) {
+                        if (!t) return '';
+                        return '<span>' + escapeHtml(t) + '</span>';
+                    }).join('') +
+                    '</div>';
+                }
           platformHtml +=
             '<hr class="rd-platform-divider">' +
             '<div class="rd-platform-header">' + escapeHtml(PLATFORM_LABELS[p] || p) + '</div>' +
@@ -211,6 +249,9 @@ function loadCurrents() {
       });
       list.innerHTML = html;
       currentsBatchId = data.batch_id;
+      if (currentsActionMode !== 'none' && currentsBatchId) {
+        autoExecute();
+      }
       if (data.generated_at) {
         var el = document.getElementById('currents-last-updated');
         var span = document.getElementById('currents-updated-at');
