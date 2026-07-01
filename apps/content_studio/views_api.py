@@ -13,6 +13,7 @@ from .adapters import PlatformAdapter
 from .models import ALL_PLATFORMS, ContentApproval, ContentItem, ContentVersion, DeletedDriveSheet, ExcelSheetImport, ExcelSheetRowLog, UserGoogleSheet
 from .services import ContentService
 from apps.social_accounts.models import SocialPost
+from apps.social_accounts.services import SocialService
 from apps.workspaces.query_helpers import filter_by_context
 from apps.workspaces.decorators import require_workspace_permission
 from core.tenant import get_current_tenant
@@ -107,6 +108,7 @@ def detail(request, item_id):
     s = SocialService(request.user)
     platform_filter = item.platform if item.platform and item.platform != 'all' else None
     social_accounts = s.get_accounts(platform=platform_filter)
+    from django.middleware.csrf import get_token
     return render(request, 'content_studio/detail.html', {
         'item': item,
         'versions': versions,
@@ -114,6 +116,7 @@ def detail(request, item_id):
         'platform_issues': platform_issues,
         'social_accounts': social_accounts,
         'all_platforms': ALL_PLATFORMS,
+        'csrf_token': get_token(request),
     })
 
 
@@ -209,7 +212,7 @@ def edit(request, item_id):
                 messages.success(request, 'Content scheduled.')
             except (ValueError, TypeError):
                 messages.error(request, 'Invalid date format.')
-            return redirect('content_studio:detail', item_id=item.id)
+                return redirect('content_studio:detail', item_id=item.id)
         body = request.POST.get('body', '').strip()
         title = request.POST.get('title', '').strip()
         if body and title:
@@ -217,7 +220,7 @@ def edit(request, item_id):
             item.title = title
             item.save(update_fields=['body', 'title', 'updated_at'])
             messages.success(request, 'Content updated.')
-        return redirect('content_studio:detail', item_id=item.id)
+            return redirect('content_studio:detail', item_id=item.id)
     return render(request, 'content_studio/edit.html', {
         'item': item,
     })
@@ -236,7 +239,7 @@ def refine(request, item_id):
                 messages.error(request, result.body)
                 return redirect('content_studio:detail', item_id=item_id)
             messages.success(request, 'Content refined.')
-        return redirect('content_studio:detail', item_id=item_id)
+            return redirect('content_studio:detail', item_id=item_id)
     return render(request, 'content_studio/refine.html', {
         'item': item,
     })
@@ -265,7 +268,7 @@ def delete(request, item_id):
     if request.method == 'POST':
         item.delete()
         messages.success(request, 'Content deleted.')
-    return redirect('content_studio:content_hub')
+        return redirect('content_studio:content_hub')
 
 
 @login_required
@@ -412,12 +415,12 @@ def excel_sheets(request):
         failed_count=Count('row_logs', filter=Q(row_logs__status='failed')),
         total_processed=Count('row_logs'),
     )
-    
+
     workspace = get_or_create_personal_workspace(request.user)
     config = WorkspaceStorageConfig.objects.filter(workspace=workspace).first()
-    
+
     sheets_credentials_saved = bool(config and config.is_google_sheets_credentials_configured())
-    
+
     # Check if user has connected Google Sheets (workspace-level or legacy per-user)
     is_connected = bool(config and config.is_google_sheets_connected())
     if not is_connected:
@@ -426,7 +429,7 @@ def excel_sheets(request):
             is_connected = bool(token and token.refresh_token)
         except AttributeError:
             pass
-    
+
     # Get list of user's Google Sheets (if connected), excluding hidden ones
     google_sheets = []
     if is_connected:
@@ -441,7 +444,7 @@ def excel_sheets(request):
             google_sheets = [s for s in raw_sheets if s['id'] not in hidden_ids]
         except Exception:
             pass
-    
+
     # Get active sheet for the user
     active_sheet = UserGoogleSheet.objects.filter(user=request.user, is_active=True).first()
     active_import_id = None
@@ -451,7 +454,7 @@ def excel_sheets(request):
         ).first()
         if sheet_import:
             active_import_id = sheet_import.id
-    
+
     # KPI stats
     from django.utils import timezone as tz
     sheets_count = sheets.count()
@@ -630,7 +633,7 @@ def google_sheets_create(request):
     if request.method != 'POST':
         messages.error(request, 'Invalid request method.')
         return redirect('content_studio:excel_sheets')
-    
+
     from .services.google_sheets import GoogleSheetsService
     from apps.workspaces.models import get_or_create_personal_workspace
     try:
@@ -639,7 +642,7 @@ def google_sheets_create(request):
         result = service.create_sheet(title)
         spreadsheet_id = result['spreadsheetId']
         sheet_name = 'Sheet1'
-        
+
         UserGoogleSheet.objects.update_or_create(
             user=request.user,
             defaults={
@@ -649,7 +652,7 @@ def google_sheets_create(request):
                 'is_active': True,
             },
         )
-        
+
         ExcelSheetImport.objects.get_or_create(
             user=request.user,
             spreadsheet_id=spreadsheet_id,
@@ -658,7 +661,7 @@ def google_sheets_create(request):
                 'title': title,
             },
         )
-        
+
         messages.success(request, f'Google Sheet "{title}" created and selected.')
         return redirect('content_studio:excel_sheets')
     except Exception as exc:
@@ -671,15 +674,15 @@ def google_sheets_select(request):
     """Select an existing Google Sheet as the active sheet for the user."""
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=400)
-    
+
     spreadsheet_id = request.POST.get('spreadsheet_id')
     title = request.POST.get('title', 'Untitled')
     sheet_name = request.POST.get('sheet_name', 'Sheet1')
-    
+
     if not spreadsheet_id:
         messages.error(request, 'Spreadsheet ID is required.')
         return redirect('content_studio:excel_sheets')
-    
+
     UserGoogleSheet.objects.update_or_create(
         user=request.user,
         defaults={
@@ -689,7 +692,7 @@ def google_sheets_select(request):
             'is_active': True,
         },
     )
-    
+
     ExcelSheetImport.objects.get_or_create(
         user=request.user,
         spreadsheet_id=spreadsheet_id,
@@ -698,6 +701,82 @@ def google_sheets_select(request):
             'title': title,
         },
     )
-    
+
     messages.success(request, f'Google Sheet "{title}" selected.')
     return redirect('content_studio:excel_sheets')
+
+
+# ---------------------------------------------------------------------------
+# Content Publish Endpoint
+# ---------------------------------------------------------------------------
+
+@login_required
+@require_workspace_permission('content_studio', 'edit')
+def publish_content_item(request, item_id):
+    """Publish a content item to connected social accounts"""
+    item = get_object_or_404(filter_by_context(request, ContentItem.objects.all()), id=item_id)
+    
+    if item.status == 'published':
+        return JsonResponse({'published': True, 'message': 'Already published'})
+    
+    # Check if user has connected account for this platform
+    if item.platform == 'all':
+        # For 'all' platform, use the first connected account across all platforms
+        account = SocialService(request.user).get_accounts().first()
+        if not account:
+            return JsonResponse({
+                'error': 'not_connected',
+                'message': 'Connect at least one social account to publish.'
+            }, status=400)
+    else:
+        account = SocialService(request.user).get_accounts(platform=item.platform).first()
+        if not account:
+            return JsonResponse({
+                'error': 'not_connected',
+                'message': f'Connect your {item.platform.title()} account to publish.'
+            }, status=400)
+    
+    try:
+        # Get full content from platform_data if available, fallback to item.body
+        full_content = item.body
+        if item.platform_data and item.platform and item.platform in item.platform_data:
+            platform_content = item.platform_data[item.platform]
+            if isinstance(platform_content, dict) and 'content' in platform_content:
+                full_content = platform_content['content']
+        
+        # Create social post
+        post = SocialPost.objects.create(
+            user=request.user,
+            account=account,
+            content_item=item,
+            platform=item.platform,
+            content=full_content,
+            hashtags=item.tags or [],
+            status='scheduled',
+            workspace=get_current_tenant(),
+        )
+        
+        # Publish via service
+        svc = SocialService(request.user)
+        result = svc.publish_post(post.id)
+        
+        if result:
+            item.status = 'published'
+            item.save(update_fields=['status'])
+            return JsonResponse({
+                'published': True,
+                'post_id': post.id,
+                'platform_post_url': post.platform_post_url,
+            })
+        else:
+            post.refresh_from_db()
+            return JsonResponse({
+                'error': 'publish_failed',
+                'message': post.error_message or 'Platform returned empty result',
+            }, status=500)
+        
+    except Exception as e:
+        return JsonResponse({
+            'error': 'publish_failed',
+            'message': str(e)
+        }, status=500)

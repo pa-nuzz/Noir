@@ -66,7 +66,7 @@ class CSPMiddleware:
         response = self.get_response(request)
         response['Content-Security-Policy'] = (
             "default-src 'self'; "
-            "script-src 'self' https://cdn.tailwindcss.com https://fonts.googleapis.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net 'unsafe-inline' 'unsafe-eval'; "
+            "script-src 'self' https://cdn.tailwindcss.com https://fonts.googleapis.com https://cdnjs.cloudflare.com https://unpkg.com 'unsafe-inline'; "
             "style-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net 'unsafe-inline'; "
             "font-src 'self' https://fonts.gstatic.com; "
             "img-src 'self' data: blob: https: https://image.pollinations.ai https://api.deepai.org; "

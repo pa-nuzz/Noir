@@ -32,4 +32,7 @@ urlpatterns = [
     path('sheets/list/', views_api.google_sheets_list, name='sheets_list'),
     path('sheets/create/', views_api.google_sheets_create, name='sheets_create'),
     path('sheets/select/', views_api.google_sheets_select, name='sheets_select'),
+    
+    # Content Publish Endpoint
+    path('<int:item_id>/publish/', views_api.publish_content_item, name='publish_content_item'),
 ]

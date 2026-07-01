@@ -265,6 +265,9 @@ function saveAutomationRules() {
   .then(function(r) { return r.json(); })
   .then(function(data) {
     markSaved();
+    if (typeof window._automationRuleCount !== 'undefined') {
+      window._automationRuleCount = data.count;
+    }
     showToast('success', data.count + ' rule(s) saved!');
   })
   .catch(function() {

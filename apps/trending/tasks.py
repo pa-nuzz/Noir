@@ -3,13 +3,14 @@ from datetime import timedelta
 from datetime import datetime, timezone
 
 from celery import shared_task
+from django.db.utils import OperationalError
 from django.utils import timezone as tz
 
 logger = logging.getLogger(__name__)
 
 
-@shared_task(queue='low')
-def collect_all_sources(force=False):
+@shared_task(queue='low', bind=True, autoretry_for=(OperationalError,), max_retries=3, default_retry_delay=60)
+def collect_all_sources(self, force=False):
     from django.db import close_old_connections
     close_old_connections()
 
@@ -58,8 +59,12 @@ def collect_all_sources(force=False):
         source.save(update_fields=['last_fetched'])
 
     if total_created > 0:
-        recalculate_trending_scores.delay()
-        deduplicate_content.delay()
+        if force:
+            recalculate_trending_scores()
+            deduplicate_content()
+        else:
+            recalculate_trending_scores.delay()
+            deduplicate_content.delay()
 
     if not force:
         from django.core.cache import cache
@@ -70,8 +75,8 @@ def collect_all_sources(force=False):
     return total_created
 
 
-@shared_task(queue='low')
-def recalculate_trending_scores():
+@shared_task(queue='low', bind=True, autoretry_for=(OperationalError,), max_retries=3, default_retry_delay=60)
+def recalculate_trending_scores(self):
     from django.db import close_old_connections
     close_old_connections()
 
@@ -118,8 +123,8 @@ def recalculate_trending_scores():
     return updated
 
 
-@shared_task(queue='low')
-def deduplicate_content():
+@shared_task(queue='low', bind=True, autoretry_for=(OperationalError,), max_retries=3, default_retry_delay=60)
+def deduplicate_content(self):
     from django.db import close_old_connections
     close_old_connections()
 
@@ -145,8 +150,8 @@ def deduplicate_content():
     return marked
 
 
-@shared_task(queue='low')
-def analyze_user_profiles():
+@shared_task(queue='low', bind=True, autoretry_for=(OperationalError,), max_retries=3, default_retry_delay=60)
+def analyze_user_profiles(self):
     from django.db import close_old_connections
     close_old_connections()
 
@@ -169,8 +174,8 @@ def analyze_user_profiles():
     return processed
 
 
-@shared_task(queue='low')
-def run_automation():
+@shared_task(queue='low', bind=True, autoretry_for=(OperationalError,), max_retries=3, default_retry_delay=60)
+def run_automation(self):
     from datetime import timedelta
     from django.db import close_old_connections
     from django.utils import timezone
@@ -251,5 +256,95 @@ def run_automation():
 
     logger.info("run_automation: processed %d items from %d rules", processed, rules.count())
     return processed
+
+
+@shared_task(queue='low', max_retries=1)  # manual scheduling, not Celery retry
+def retry_refine_feed(user_id, item_ids, attempt=1):
+    """Background retry for refine_feed_top5 when LLM API was rate limited."""
+    from django.core.cache import cache
+    from django.contrib.auth import get_user_model
+    from django.db import close_old_connections
+    from django.db.utils import OperationalError
+    from .models import FeedItem
+    from .views import _run_refine_pipeline
+
+    close_old_connections()
+
+    User = get_user_model()
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        logger.error("retry_refine_feed: user %s not found", user_id)
+        return
+    except OperationalError:
+        close_old_connections()
+        raise
+
+    try:
+        items = list(
+            FeedItem.objects.filter(id__in=item_ids, is_duplicate=False)
+            .select_related('topic', 'source')
+        )
+    except OperationalError:
+        close_old_connections()
+        raise
+    if not items:
+        logger.warning("retry_refine_feed: items not found for user %s", user_id)
+        return
+
+    try:
+        ok, result = _run_refine_pipeline(user, items)
+    except Exception as e:
+        logger.exception("retry_refine_feed: unexpected error for user %s: %s", user_id, e)
+        from django.core.cache import cache
+        if attempt < 3:
+            next_attempt = attempt + 1
+            delay = min(next_attempt * 300, 3600)
+            cache.set(f'llm_retry_{user_id}', {
+                'attempt': next_attempt, 'error': str(e),
+            }, timeout=next_attempt * 3600)
+            retry_refine_feed.apply_async(
+                args=[user_id, item_ids, next_attempt],
+                countdown=delay,
+            )
+        else:
+            cache.set(f'llm_error_{user_id}', str(e), timeout=3600)
+            cache.delete(f'llm_retry_{user_id}')
+        return
+
+    if ok:
+        cache.delete(f'llm_retry_{user_id}')
+        cache.delete(f'llm_error_{user_id}')
+        logger.info("retry_refine_feed: success for user %s (attempt %d)", user_id, attempt)
+        return
+
+    error = result.get('error', '')
+    logger.warning("retry_refine_feed: %s for user %s (attempt %d)", error, user_id, attempt)
+
+    if error == 'no_platforms':
+        cache.set(f'needs_platform_{user_id}', True, timeout=86400)
+        cache.delete(f'llm_retry_{user_id}')
+        return
+
+    if error == 'llm_failed':
+        if attempt < 3:
+            next_attempt = attempt + 1
+            delay = min(next_attempt * 300, 3600)
+            cache.set(f'llm_retry_{user_id}', {
+                'attempt': next_attempt,
+                'error': result.get('reason', ''),
+            }, timeout=next_attempt * 3600)
+            retry_refine_feed.apply_async(
+                args=[user_id, item_ids, next_attempt],
+                countdown=delay,
+            )
+            logger.info("retry_refine_feed: scheduled attempt %d in %ds for user %s",
+                        next_attempt, delay, user_id)
+        else:
+            reason = result.get('reason', 'Max retries exceeded')
+            cache.set(f'llm_error_{user_id}', reason, timeout=3600)
+            cache.delete(f'llm_retry_{user_id}')
+            logger.error("retry_refine_feed: all attempts exhausted for user %s: %s",
+                         user_id, reason)
 
 
