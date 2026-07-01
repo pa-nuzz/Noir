@@ -254,6 +254,15 @@ function loadTrendingFeed(topicId, page) {
         '</div>';
         return;
       }
+      if (data.collecting) {
+        list.innerHTML = '<div class="tr-empty">' +
+          '<svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="width:40px;height:40px;margin:0 auto 12px;opacity:0.4"><path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/></svg>' +
+          '<p>Collecting trending content from your sources...</p>' +
+          '<p class="text-xs" style="margin-top:4px;color:#94A3B8;">Sources are polled every 30 minutes. Check back soon or refresh now.</p>' +
+          '<button onclick="refreshTrendingFeed()" class="tr-feed-btn" style="margin-top:12px;">↻ Refresh Now</button>' +
+        '</div>';
+        return;
+      }
       _trTotalPages = data.total_pages || 1;
       _trTotal = data.total || 0;
       renderItems(data.items);
@@ -271,8 +280,31 @@ function loadTrendingFeed(topicId, page) {
         .then(function(d) {
           if (d.ok) {
             window._currentsBatchReady = d.batch_id;
-            if (typeof loadCurrents === 'function' && document.getElementById('panel-currents').classList.contains('active')) {
+            if (typeof loadCurrents === 'function') {
               loadCurrents();
+            }
+          } else if (d.error === 'no_platforms') {
+            showTrendingToast('Select platforms in Automation to generate Currents content', 'info');
+          } else if (d.error === 'llm_failed') {
+            showTrendingToast('Content generation failed: ' + (d.reason || 'Unknown error'), 'error');
+          } else if (d.error === 'llm_retry') {
+            var mins = Math.ceil((d.retry_in || 300) / 60);
+            showTrendingToast('Content generation will retry in ' + mins + ' min (attempt ' + (d.attempt || 1) + ')', 'info');
+          } else if (d.error === 'db_error') {
+            showTrendingToast('Database temporarily unavailable — will retry shortly', 'info');
+            if (d.retryable) {
+              setTimeout(function() {
+                fetch('{% url "trending:refine_feed_top5" %}', {
+                  method: 'POST',
+                  headers: {'X-CSRFToken': getCSRFToken(), 'Content-Type': 'application/json'},
+                  body: JSON.stringify({item_ids: top5ids}),
+                }).then(function(r2) { return r2.json(); }).then(function(d2) {
+                  if (d2.ok) {
+                    window._currentsBatchReady = d2.batch_id;
+                    showTrendingToast('Content generation completed!', 'success');
+                  }
+                }).catch(function() {});
+              }, 30000);
             }
           }
         }).catch(function() {});
@@ -350,6 +382,19 @@ function refreshTrendingProfile() {
 var _trLastRefresh = 0;
 var _trRefreshPoll = null;
 
+function _trStopRefresh() {
+  var btn = document.getElementById('tr-refresh-btn');
+  var label = document.getElementById('tr-refresh-label');
+  var icon = document.getElementById('tr-refresh-icon');
+  clearInterval(_trRefreshPoll);
+  _trRefreshPoll = null;
+  window._refineTriggered = false;
+  loadTrendingFeed(_trCurrentTopic, _trPage);
+  btn.disabled = false;
+  label.textContent = 'Refresh';
+  icon.classList.remove('tr-spin');
+}
+
 function refreshTrendingFeed() {
   var btn = document.getElementById('tr-refresh-btn');
   var label = document.getElementById('tr-refresh-label');
@@ -384,30 +429,26 @@ function refreshTrendingFeed() {
     showTrendingToast('Fetching fresh content\u2026', 'success');
 
     var pollElapsed = 0;
+    var _trPollSnapshot = null;
     if (_trRefreshPoll) clearInterval(_trRefreshPoll);
     _trRefreshPoll = setInterval(function() {
       pollElapsed += 3;
-      if (pollElapsed >= 60) {
-        clearInterval(_trRefreshPoll);
-        _trRefreshPoll = null;
-        window._refineTriggered = false;
-        loadTrendingFeed(_trCurrentTopic, _trPage);
-        btn.disabled = false;
-        label.textContent = 'Refresh';
-        icon.classList.remove('tr-spin');
+      if (pollElapsed >= 120) {
+        _trStopRefresh();
         return;
       }
+      if (pollElapsed < 15) return;
+
       fetch('{% url "trending:feed_data" %}?page=1')
         .then(function(r) { return r.json(); })
         .then(function(d) {
-          if (d.items && d.items.length > 0) {
-            clearInterval(_trRefreshPoll);
-            _trRefreshPoll = null;
-            window._refineTriggered = false;
-            loadTrendingFeed(_trCurrentTopic, _trPage);
-            btn.disabled = false;
-            label.textContent = 'Refresh';
-            icon.classList.remove('tr-spin');
+          var ids = (d.items || []).map(function(i) { return i.id; }).sort().join(',');
+          if (_trPollSnapshot === null) {
+            _trPollSnapshot = ids;
+            return;
+          }
+          if (ids !== _trPollSnapshot) {
+            _trStopRefresh();
           }
         })
         .catch(function() {});

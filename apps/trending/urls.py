@@ -24,4 +24,5 @@ urlpatterns = [
     path('api/automation/schedule/<int:content_item_id>/', views.schedule_automation_item, name='schedule_automation_item'),
     path('api/feed/refresh/', views.refresh_feed, name='refresh_feed'),
     path('api/profile/refresh/', views.refresh_profile, name='refresh_profile'),
+    path('api/debug/status/', views.pipeline_status, name='pipeline_status'),
 ]
