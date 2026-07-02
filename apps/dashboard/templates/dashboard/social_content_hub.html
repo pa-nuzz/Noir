@@ -112,19 +112,20 @@
   </div>
 
   <!-- KPI Cards -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-    <a href="{% url 'media_assets:library' %}" class="sch-kpi-card premium-surface rounded-2xl p-5">
-      <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Media Assets</p>
-      <p class="text-2xl font-bold text-slate-900 mt-1">{{ media_assets_total }}</p>
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 stagger-children">
+    {% for kpi in kpis %}
+    <a href="{{ kpi.href }}" {% if forloop.counter == 3 %}onclick="switchTab('trending'); return false;"{% endif %} class="group premium-surface card-elevate surface-hover-clean rounded-2xl p-6 reveal-up delay-{{ forloop.counter }} border-b-2 border-transparent hover:border-primary transition-all duration-300 block">
+      <div class="flex items-start justify-between mb-4">
+        <div class="w-10 h-10 {{ kpi.icon_bg }} rounded-lg flex items-center justify-center">
+          {{ kpi.icon_svg|safe }}
+        </div>
+        <svg class="w-4 h-4 text-slate-300 group-hover:text-primary group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </div>
+      <p class="text-2xl font-bold tabular-nums text-slate-900 mb-0.5">{{ kpi.value }}</p>
+      <p class="text-xs font-semibold text-slate-700">{{ kpi.label }}</p>
+      <p class="text-[11px] text-slate-400 mt-1">{{ kpi.sub }}</p>
     </a>
-    <a href="{% url 'content_studio:content_hub' %}" class="sch-kpi-card premium-surface rounded-2xl p-5">
-      <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Content Items</p>
-      <p class="text-2xl font-bold text-slate-900 mt-1">{{ content_items_total }}</p>
-    </a>
-    <a href="#" onclick="switchTab('trending'); return false;" class="sch-kpi-card premium-surface rounded-2xl p-5">
-      <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Trending Topics</p>
-      <p class="text-2xl font-bold text-slate-900 mt-1">{{ trending_topics|length }}</p>
-    </a>
+    {% endfor %}
   </div>
 
   <!-- Quick Actions -->

@@ -159,7 +159,6 @@ INSTALLED_APPS = [
     'apps.contacts',
     'apps.automations',
     'apps.social',
-    'apps.content',
     'apps.inbox',
     'apps.media',
     'apps.workspaces',

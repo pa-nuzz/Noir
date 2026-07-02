@@ -26,7 +26,7 @@
 
   /* Content list items */
   .cs-item {
-    display: flex; align-items: center; gap: 14px;
+    display: grid; grid-template-columns: 36px 1fr 110px 90px; align-items: center; gap: 10px;
     padding: 14px 20px; transition: background-color 0.15s;
   }
   .cs-item:hover { background-color: #F8FAFC; }
@@ -61,6 +61,7 @@
   .cs-gen-card:hover .cs-gen-icon { background: #ECFEFF; }
   .cs-gen-icon svg { width: 18px; height: 18px; color: #64748B; transition: color 0.15s; }
   .cs-gen-card:hover .cs-gen-icon svg { color: #06B6D4; }
+
 
 </style>
 
@@ -137,14 +138,14 @@
                 {% else %}bg-slate-100 text-slate-600{% endif %}">
                 {{ item.get_content_type_display|slice:':2'|upper }}
               </div>
-              <div class="flex-1 min-w-0">
+              <div class="min-w-0">
                 <p class="text-sm font-semibold text-slate-900 truncate">{{ item.title|default:item.body|truncatechars:60 }}</p>
                 <p class="text-xs text-gray-400 mt-0.5">
                   {{ item.get_content_type_display }} &middot; {{ item.created_at|date:'M d, Y' }}
-                  {% if item.platform %} &middot; {{ item.platform|title }}{% endif %}
                 </p>
               </div>
-              <span class="cs-status cs-status-{{ item.status }}">{{ item.get_status_display }}</span>
+              {% if item.platform %}<span class="cs-platform cs-platform-{{ item.platform }}" style="justify-self:start">{{ item.platform }}</span>{% else %}<span></span>{% endif %}
+              <span class="cs-status cs-status-{{ item.status }}" style="justify-self:end">{{ item.get_status_display }}</span>
             </a>
             {% endfor %}
           </div>
@@ -252,7 +253,7 @@
                       {{ item.get_content_type_display }}
                     </span>
                   </td>
-                  <td class="px-6 py-4 text-slate-600">{{ item.platform|title|default:'—' }}</td>
+                  <td class="px-6 py-4">{% if item.platform %}<span class="cs-platform cs-platform-{{ item.platform }}">{{ item.platform }}</span>{% else %}<span class="text-slate-400">—</span>{% endif %}</td>
                   <td class="px-6 py-4">
                     <span class="cs-status cs-status-{{ item.status }}">{{ item.get_status_display }}</span>
                   </td>

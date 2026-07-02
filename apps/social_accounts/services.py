@@ -123,6 +123,12 @@ class SocialService:
 
         try:
             content = post.content
+            # Defensive fallback: use cached adapted version from ContentItem if available
+            if post.content_item_id:
+                platform_data = (post.content_item.platform_data or {}).get(post.platform, {})
+                adapted_body = platform_data.get('adapted_body')
+                if adapted_body:
+                    content = adapted_body
             if post.hashtags:
                 hashtag_text = ' '.join(f'#{h.lstrip("#")}' for h in post.hashtags)
                 content = f"{content}\n\n{hashtag_text}" if content else hashtag_text

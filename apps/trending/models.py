@@ -131,6 +131,7 @@ class UserFeedInteraction(AuditMixin):
 
 
 class TrendingAutomationRule(models.Model):
+    objects = TenantManager()
     SCHEDULE_INTERVALS = [
         ('hourly', 'Every Hour'),
         ('every_6h', 'Every 6 Hours'),
@@ -139,6 +140,7 @@ class TrendingAutomationRule(models.Model):
     ]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='trending_automation_rules')
+    workspace = models.ForeignKey('workspaces.Workspace', on_delete=models.CASCADE, null=True, blank=True, related_name='trending_automation_rules')
     topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='automation_rules')
     platforms = models.JSONField(default=list, blank=True, help_text='List of platform strings to publish to')
     schedule_interval = models.CharField(max_length=20, choices=SCHEDULE_INTERVALS, default='daily')
@@ -149,7 +151,7 @@ class TrendingAutomationRule(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('user', 'topic')
+        unique_together = ('user', 'workspace', 'topic')
         ordering = ['-created_at']
         verbose_name = 'Trending Automation Rule'
 
@@ -158,6 +160,7 @@ class TrendingAutomationRule(models.Model):
 
 
 class CurrentItem(models.Model):
+    objects = TenantManager()
     STATUS_CHOICES = [
         ('draft', 'Draft'),
         ('scheduled', 'Scheduled'),
@@ -165,6 +168,7 @@ class CurrentItem(models.Model):
     ]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='currents')
+    workspace = models.ForeignKey('workspaces.Workspace', on_delete=models.CASCADE, null=True, blank=True, related_name='currents')
     feed_item = models.ForeignKey(FeedItem, on_delete=models.CASCADE, related_name='currents')
     scheduled_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
@@ -174,14 +178,16 @@ class CurrentItem(models.Model):
 
     class Meta:
         ordering = ['-created_at']
-        unique_together = ('user', 'feed_item')
+        unique_together = ('user', 'workspace', 'feed_item')
 
     def __str__(self):
         return f"{self.user.email} → {self.feed_item.title[:60]}"
 
 
 class CurrentsSnapshot(models.Model):
+    objects = TenantManager()
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='currents_snapshots')
+    workspace = models.ForeignKey('workspaces.Workspace', on_delete=models.CASCADE, null=True, blank=True, related_name='currents_snapshots')
     feed_item = models.ForeignKey(FeedItem, on_delete=models.CASCADE, related_name='currents_snapshots')
     topic = models.ForeignKey(Topic, on_delete=models.SET_NULL, null=True, blank=True)
     platforms_data = models.JSONField(default=dict, blank=True)

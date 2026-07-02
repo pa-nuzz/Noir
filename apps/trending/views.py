@@ -21,12 +21,21 @@ from .services.content_generator import generate_llm_content
 
 
 ALL_PLATFORMS = ['linkedin', 'twitter', 'instagram', 'facebook', 'tiktok']
+PLATFORM_LIMITS = {
+    'twitter': 280,
+    'linkedin': 2000,
+    'instagram': 220,
+    'facebook': 500,
+    'tiktok': 100,
+    'youtube': 500,
+}
 PLATFORM_REQS = {
-    'linkedin': 'Professional, 1300-2000 chars, 3-5 hashtags',
-    'twitter': 'Concise, under 280 chars, 1-2 hashtags',
-    'instagram': 'Visual-first, 150-220 chars, 5-8 hashtags',
-    'facebook': 'Conversational, 150-500 chars, 2-4 hashtags',
-    'tiktok': 'Casual and punchy, under 100 chars, 1-3 hashtags',
+    'linkedin': 'Professional, 1300-2000 chars including hashtags, 3-5 hashtags',
+    'twitter': 'Concise, under 280 chars including hashtags, 1-2 hashtags',
+    'instagram': 'Visual-first, 150-220 chars including hashtags, 5-8 hashtags',
+    'facebook': 'Conversational, 150-500 chars including hashtags, 2-4 hashtags',
+    'tiktok': 'Casual and punchy, under 100 chars including hashtags, 1-3 hashtags',
+    'youtube': 'Engaging, 200-500 chars including hashtags, 2-4 hashtags',
 }
 
 
@@ -43,27 +52,48 @@ def _first_n_sentences(text, n=5):
 def _scrape_article_text(url, fallback=''):
     try:
         import httpx
+        from html.parser import HTMLParser
+
         resp = httpx.get(url, timeout=10.0, follow_redirects=True, headers={
             'User-Agent': 'Mozilla/5.0 (compatible; IDA Trending Bot/1.0)',
         })
         resp.raise_for_status()
         html = resp.text
-        m = re.search(r'<article[^>]*>(.*?)</article>', html, re.IGNORECASE | re.DOTALL)
-        if m:
-            text = m.group(1)
-        else:
-            m = re.search(r'<body[^>]*>(.*?)</body>', html, re.IGNORECASE | re.DOTALL)
-            text = m.group(1) if m else html
-        text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.DOTALL)
-        text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.DOTALL)
-        text = re.sub(r'<[^>]+>', ' ', text)
-        text = re.sub(r'\s+', ' ', text).strip()
-        return text[:5000]
-    except Exception:
+
+        class _TextExtractor(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self._text = []
+                self._skip = False
+            def handle_starttag(self, tag, attrs):
+                if tag in ('script', 'style'):
+                    self._skip = True
+            def handle_endtag(self, tag):
+                if tag in ('script', 'style'):
+                    self._skip = False
+            def handle_data(self, data):
+                if not self._skip:
+                    stripped = data.strip()
+                    if stripped:
+                        self._text.append(stripped)
+            def get_text(self):
+                return ' '.join(self._text)
+
+        m = re.search(r'<article[^>]*>.*?</article>', html, re.IGNORECASE | re.DOTALL)
+        extract_html = m.group(0) if m else (
+            re.search(r'<body[^>]*>.*?</body>', html, re.IGNORECASE | re.DOTALL).group(0)
+            if re.search(r'<body[^>]*>.*?</body>', html, re.IGNORECASE | re.DOTALL) else html
+        )
+        extractor = _TextExtractor()
+        extractor.feed(extract_html)
+        text = extractor.get_text()[:5000]
+        return text
+    except Exception as e:
+        logger.warning("_scrape_article_text failed for URL %s: %s", url, e)
         return fallback
 
 
-def _run_refine_pipeline(user, items):
+def _run_refine_pipeline(user, items, workspace=None):
     """Run the full refine pipeline per-item: scrape, LLM, create snapshots.
     Returns (True, {'batch_id': ...}) on success or (False, error_dict) on failure.
     """
@@ -71,10 +101,13 @@ def _run_refine_pipeline(user, items):
     from .models import TrendingAutomationRule, CurrentsSnapshot
 
     try:
+        rule_filter = {'user': user, 'is_active': True}
+        if workspace:
+            rule_filter['workspace'] = workspace
         topic_platforms = {
             r.topic_id: r.platforms
             for r in TrendingAutomationRule.objects.filter(
-                user=user, is_active=True,
+                **rule_filter,
             ).exclude(platforms=[])
         }
         all_platforms = sorted(set(p for plats in topic_platforms.values() for p in plats))
@@ -100,53 +133,80 @@ def _run_refine_pipeline(user, items):
     req_block = '\n'.join(req_lines)
     plat_block = platform_entries
 
+    # Build batched user prompt from ai_summary (no per-item re-scrape)
+    item_summaries = []
+    for item in items:
+        summary = item.ai_summary or item.content_cleaned or item.content_raw or ''
+        item_summaries.append(f"ITEM {item.id}:\nTitle: {item.title or ''}\nSummary: {summary[:500]}")
+    user_prompt = "\n---\n".join(item_summaries)
+
+    system_prompt = (
+        "You are a social media content strategist. Generate platform-optimized posts for each item.\n\n"
+        "Platforms:\n" + req_block + "\n\n"
+        "For each item, return a JSON array (one entry per item):\n"
+        "[\n  {\n"
+        '    "id": <item_id>,\n'
+        '    "platforms": {\n' + plat_block + "    }\n  }\n]\n"
+        "Body length MUST include hashtags. Do not exceed the platform's character limit.\n"
+        "No markdown, no backticks, no text outside the JSON."
+    )
+
     batch_id = uuid.uuid4().hex
     new_snapshots = []
-    item_errors = []
+    length_rules = "\n".join(f"- {p}: {PLATFORM_LIMITS.get(p, 280)} chars max (body + hashtags)" for p in all_platforms)
+
+    try:
+        initial = _call_llm_fatal('ideator', system_prompt, user_prompt, max_tokens=3000)
+
+        critic_user = f"Platform length rules:\n{length_rules}\n\nJSON DRAFT:\n{initial}"
+        critique = _call_llm_fatal('critic', build_batch_critic_prompt(), critic_user, max_tokens=500)
+
+        refiner_user = (
+            f"Platform length rules:\n{length_rules}\n\n"
+            f"JSON DRAFT:\n{initial}\n\n"
+            f"EDITOR CRITIQUE:\n{critique}\n\n"
+            f"Please completely rewrite the entire JSON array, fixing all issues raised in the critique."
+        )
+        refined = _call_llm_fatal('refiner', build_batch_refiner_prompt(), refiner_user, max_tokens=3000)
+
+        text = refined.strip()
+        m = re.search(r'\[.*\]', text, re.DOTALL)
+        parsed = json.loads(m.group()) if m else []
+        gen_map = {entry['id']: entry for entry in parsed if isinstance(entry, dict) and 'id' in entry}
+    except (LLMPipelineError, json.JSONDecodeError, Exception) as e:
+        logger.error("_run_refine_pipeline batch LLM failed: %s", e)
+        return (False, {'error': 'llm_failed', 'reason': str(e)})
 
     for item in items:
-        content = _scrape_article_text(
-            item.url,
-            fallback=(item.content_cleaned or item.content_raw or '')[:500],
-        )
-
-        system_prompt = (
-            "You are a social media content strategist. Generate platform-optimized posts.\n\n"
-            "Platforms:\n" + req_block + "\n\n"
-            "Return ONLY a valid JSON object:\n{\n"
-            '  "platforms": {\n' + plat_block + "\n  }\n}\n"
-            "No markdown, no backticks, no text outside the JSON."
-        )
-        user_prompt = f"ITEM:\nTitle: {item.title}\nContent:\n{content}"
-
         platforms_data = {}
-        try:
-            initial = _call_llm_fatal('ideator', system_prompt, user_prompt)
-            critique = _call_llm_fatal(
-                'critic', build_batch_critic_prompt(),
-                f"USER BRIEF:\n{system_prompt}\n\nJSON DRAFT:\n{initial}",
-            )
-            refined = _call_llm_fatal(
-                'refiner', build_batch_refiner_prompt(),
-                f"USER BRIEF:\n{system_prompt}\n\nJSON DRAFT:\n{initial}\n\nCRITIQUE:\n{critique}\n\nFully rewrite the JSON.",
-            )
-            text = refined.strip()
-            m = re.search(r'\{.*\}', text, re.DOTALL)
-            if m:
-                parsed = json.loads(m.group())
-                if isinstance(parsed.get('platforms'), dict):
-                    active = topic_platforms.get(item.topic_id, all_platforms)
-                    for p, info in parsed['platforms'].items():
-                        if p in active and isinstance(info, dict):
-                            body = info.get('body', '')
-                            hashtags = info.get('hashtags', '')
-                            platforms_data[p] = {'body': body, 'hashtags': hashtags}
-        except (LLMPipelineError, Exception) as e:
-            logger.error("_run_refine_pipeline LLM failed for item %d: %s", item.id, e)
-            item_errors.append({'item_id': item.id, 'error': str(e)})
+        entry = gen_map.get(item.id, {})
+        entry_platforms = entry.get('platforms', {}) if isinstance(entry, dict) else {}
+        active = topic_platforms.get(item.topic_id, all_platforms)
+
+        for p, info in entry_platforms.items():
+            if p not in active or not isinstance(info, dict):
+                continue
+            body = (info.get('body', '') or '').strip()
+            hashtags = info.get('hashtags', '')
+
+            if not body:
+                continue
+
+            # Enforce platform length limits including hashtag budget
+            ht_formatted = ' '.join(f'#{h.strip().lstrip("#")}' for h in hashtags.split() if h.strip()) if hashtags else ''
+            ht_len = len(ht_formatted) + (1 if ht_formatted else 0)
+            limit = PLATFORM_LIMITS.get(p, 280)
+            max_body = limit - ht_len
+            if max_body < 20:
+                ht_formatted = ''
+                max_body = limit
+            if len(body) > max_body:
+                body = body[:max_body]
+
+            platforms_data[p] = {'body': body, 'hashtags': ht_formatted}
 
         new_snapshots.append(CurrentsSnapshot(
-            user=user, feed_item=item,
+            user=user, feed_item=item, workspace=workspace,
             topic=item.topic, platforms_data=platforms_data, batch_id=batch_id,
         ))
 
@@ -154,19 +214,19 @@ def _run_refine_pipeline(user, items):
         from django.db import close_old_connections, transaction
         close_old_connections()
         with transaction.atomic():
-            CurrentsSnapshot.objects.filter(user=user).delete()
+            CurrentsSnapshot.objects.filter(
+                user=user, feed_item__in=items,
+            ).delete()
             CurrentsSnapshot.objects.bulk_create(new_snapshots)
 
-    if item_errors and len(item_errors) == len(items):
-        return (False, {'error': 'llm_failed', 'reason': item_errors[0]['error']})
-
-    return (True, {'batch_id': batch_id, 'item_errors': item_errors})
+    return (True, {'batch_id': batch_id, 'item_errors': []})
 
 
 @login_required
 @require_GET
 def feed_data(request):
     from .models import TrendingAutomationRule
+    from core.tenant import get_current_tenant
 
     PAGE_SIZE = 40
     page = max(1, int(request.GET.get('page', 1) or 1))
@@ -179,10 +239,12 @@ def feed_data(request):
         except (ValueError, TypeError):
             topic_id = None
 
+    workspace = get_current_tenant()
+    rule_filter = {'user': request.user, 'is_active': True}
+    if workspace:
+        rule_filter['workspace'] = workspace
     automation_topic_ids = list(
-        TrendingAutomationRule.objects.filter(
-            user=request.user, is_active=True,
-        ).values_list('topic_id', flat=True)
+        TrendingAutomationRule.objects.filter(**rule_filter).values_list('topic_id', flat=True)
     )
 
     if topic_id and topic_id in automation_topic_ids:
@@ -266,12 +328,15 @@ def feed_data(request):
 @require_GET
 def topic_list(request):
     from .models import TrendingAutomationRule
+    from core.tenant import get_current_tenant
     topics = Topic.objects.filter(is_active=True).order_by('-subscriber_count')
 
+    workspace = get_current_tenant()
+    rule_filter = {'user': request.user, 'is_active': True}
+    if workspace:
+        rule_filter['workspace'] = workspace
     auto_ids = set(
-        TrendingAutomationRule.objects.filter(
-            user=request.user, is_active=True,
-        ).values_list('topic_id', flat=True)
+        TrendingAutomationRule.objects.filter(**rule_filter).values_list('topic_id', flat=True)
     )
 
     data = []
@@ -339,6 +404,15 @@ def save_as_draft(request, item_id):
         })
         item.save(update_fields=['metadata'])
 
+        # Adapt content for platform (translate + smart truncate)
+        try:
+            from apps.content_studio.services.content_service import ContentService
+            hashtag_list = [h.strip().lstrip('#') for h in hashtags.split() if h.strip()] if hashtags else []
+            cs = ContentService(request.user)
+            cs.adapt_for_platform(item, platform, hashtags=hashtag_list)
+        except Exception as e:
+            logger.warning("save_as_draft: adaptation failed for platform %s: %s", platform, e)
+
         # Attach image from feed item
         if feed_item.image_url:
             try:
@@ -358,8 +432,8 @@ def save_as_draft(request, item_id):
                     title=f"Illustration: {feed_item.title[:50]}",
                 )
                 item.attachments.add(asset)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("save_as_draft: failed to attach image for feed item %d: %s", feed_item.id, e)
 
         created_items.append(item.id)
 
@@ -421,10 +495,14 @@ def currents_data(request):
     from .models import TrendingAutomationRule, CurrentsSnapshot
     from collections import OrderedDict
     from django.core.cache import cache
+    from core.tenant import get_current_tenant
 
-    rules = TrendingAutomationRule.objects.filter(
-        user=request.user, is_active=True,
-    )
+    workspace = get_current_tenant()
+    rule_filter = {'user': request.user, 'is_active': True}
+    if workspace:
+        rule_filter['workspace'] = workspace
+
+    rules = TrendingAutomationRule.objects.filter(**rule_filter)
     if not rules.exists():
         return JsonResponse({'items': [], 'total': 0, 'needs_automation': True})
 
@@ -446,8 +524,11 @@ def currents_data(request):
             'retry_attempt': retry_info.get('attempt', 1),
         })
 
+    snap_filter = {'user': request.user}
+    if workspace:
+        snap_filter['workspace'] = workspace
     latest = CurrentsSnapshot.objects.filter(
-        user=request.user,
+        **snap_filter,
     ).order_by('-created_at').values('batch_id', 'created_at').first()
 
     if not latest:
@@ -461,8 +542,11 @@ def currents_data(request):
     ).select_related('feed_item__topic', 'feed_item__source')
 
     # Build response from snapshots
+    ci_filter = {'user': request.user}
+    if workspace:
+        ci_filter['workspace'] = workspace
     ready_ids = set(
-        CurrentItem.objects.filter(user=request.user).values_list('feed_item_id', flat=True)
+        CurrentItem.objects.filter(**ci_filter).values_list('feed_item_id', flat=True)
     )
     item_map = OrderedDict()
 
@@ -529,8 +613,11 @@ def currents_batch_action(request):
     if not batch_id:
         return JsonResponse({'success': False, 'error': 'batch_id required'}, status=400)
 
+    snap_filter = {'user': request.user, 'batch_id': batch_id}
+    if workspace:
+        snap_filter['workspace'] = workspace
     snapshots = CurrentsSnapshot.objects.filter(
-        user=request.user, batch_id=batch_id,
+        **snap_filter,
     ).select_related('feed_item', 'topic')
 
     if not snapshots.exists():
@@ -539,25 +626,29 @@ def currents_batch_action(request):
     processed = 0
     errors = []
 
+    rule_filter = {'user': request.user, 'is_active': True}
+    if workspace:
+        rule_filter['workspace'] = workspace
+    fallback_rules = list(TrendingAutomationRule.objects.filter(
+        **rule_filter,
+    ).exclude(platforms=[]).values('topic_id', 'platforms'))
+    fallback_rule_map = {}
+    for r in fallback_rules:
+        fallback_rule_map.setdefault(r['topic_id'], []).extend(r['platforms'])
+
     for snap in snapshots:
         feed = snap.feed_item
         platforms_data = snap.platforms_data or {}
 
         # Fallback when LLM content is missing — use feed data
         if not platforms_data:
-            rules = TrendingAutomationRule.objects.filter(
-                user=request.user, is_active=True,
-            ).exclude(platforms=[])
-            for r in rules:
-                if r.topic_id == snap.topic_id:
-                    for p in r.platforms:
-                        if p not in platforms_data:
-                            platforms_data[p] = {}
+            platforms_data = {}
+            for p in fallback_rule_map.get(snap.topic_id, []):
+                platforms_data.setdefault(p, {})
             if not platforms_data:
-                for r in rules:
-                    for p in r.platforms:
-                        if p not in platforms_data:
-                            platforms_data[p] = {}
+                for plats in fallback_rule_map.values():
+                    for p in plats:
+                        platforms_data.setdefault(p, {})
             if not platforms_data:
                 from apps.social_accounts.models import SocialAccount
                 connected = SocialAccount.objects.filter(
@@ -582,7 +673,6 @@ def currents_batch_action(request):
                     platform=platform,
                     metadata__source='currents',
                     metadata__feed_item_id=feed.id,
-                    metadata__batch_id=batch_id,
                 ).first()
                 if existing:
                     continue
@@ -613,6 +703,15 @@ def currents_batch_action(request):
                 item.metadata.update(meta)
                 item.save(update_fields=['metadata'])
 
+                # Adapt content for platform (translate + smart truncate)
+                try:
+                    from apps.content_studio.services.content_service import ContentService
+                    hashtag_list = [h.strip().lstrip('#') for h in hashtags.split() if h.strip()] if hashtags else []
+                    cs = ContentService(request.user)
+                    cs.adapt_for_platform(item, platform, hashtags=hashtag_list)
+                except Exception as e:
+                    logger.warning("currents_batch_action: adaptation failed for platform %s: %s", platform, e)
+
                 from apps.social_accounts.models import SocialAccount, SocialPost
 
                 social_account = SocialAccount.objects.filter(
@@ -629,7 +728,7 @@ def currents_batch_action(request):
                         account=social_account,
                         content_item=item,
                         platform=platform,
-                        content=body_text,
+                        content=item.body,
                         hashtags=hashtag_list,
                         status=item.status,
                         workspace=workspace,
@@ -670,6 +769,8 @@ def currents_batch_action(request):
 @login_required
 @require_POST
 def queue_for_publish(request, item_id):
+    from core.tenant import get_current_tenant
+
     feed_item = get_object_or_404(FeedItem, id=item_id, is_duplicate=False)
 
     try:
@@ -688,13 +789,18 @@ def queue_for_publish(request, item_id):
     platforms = body.get('platforms', [])
     platform_content = body.get('platform_content', {})
 
+    workspace = get_current_tenant()
+    ci_defaults = {
+        'scheduled_at': scheduled_dt,
+        'status': 'scheduled' if scheduled_dt else 'draft',
+        'workspace': workspace,
+    }
+    ci_filter = {'user': request.user, 'feed_item': feed_item}
+    if workspace:
+        ci_filter['workspace'] = workspace
     ready, created = CurrentItem.objects.get_or_create(
-        user=request.user,
-        feed_item=feed_item,
-        defaults={
-            'scheduled_at': scheduled_dt,
-            'status': 'scheduled' if scheduled_dt else 'draft',
-        },
+        defaults=ci_defaults,
+        **ci_filter,
     )
 
     if not created and scheduled_dt:
@@ -720,17 +826,26 @@ def queue_for_publish(request, item_id):
 @login_required
 @require_POST
 def dequeue_currents(request, item_id):
-    deleted, _ = CurrentItem.objects.filter(
-        user=request.user, feed_item_id=item_id,
-    ).delete()
+    from core.tenant import get_current_tenant
+    workspace = get_current_tenant()
+    ci_filter = {'user': request.user, 'feed_item_id': item_id}
+    if workspace:
+        ci_filter['workspace'] = workspace
+    deleted, _ = CurrentItem.objects.filter(**ci_filter).delete()
     return JsonResponse({'deleted': bool(deleted)})
 
 
 @login_required
 @require_POST
 def publish_currents(request, item_id):
+    from core.tenant import get_current_tenant
+
     feed_item = get_object_or_404(FeedItem, id=item_id, is_duplicate=False)
-    ready = CurrentItem.objects.filter(user=request.user, feed_item=feed_item).first()
+    workspace = get_current_tenant()
+    ci_filter = {'user': request.user, 'feed_item': feed_item}
+    if workspace:
+        ci_filter['workspace'] = workspace
+    ready = CurrentItem.objects.filter(**ci_filter).first()
 
     if not ready:
         return JsonResponse({'error': 'Item not in currents queue'}, status=400)
@@ -796,6 +911,15 @@ def publish_currents(request, item_id):
             'platform': platform,
         })
         item.save(update_fields=['metadata'])
+
+        # Adapt content for platform (translate + smart truncate)
+        hashtag_list = [h.strip().lstrip('#') for h in hashtags.split() if h.strip()] if hashtags else []
+        try:
+            from apps.content_studio.services.content_service import ContentService
+            cs = ContentService(request.user)
+            cs.adapt_for_platform(item, platform, hashtags=hashtag_list)
+        except Exception as e:
+            logger.warning("publish_currents: adaptation failed for platform %s: %s", platform, e)
         
         # Attach image from feed item
         if feed_item.image_url:
@@ -816,8 +940,35 @@ def publish_currents(request, item_id):
                     title=f"Illustration: {feed_item.title[:50]}",
                 )
                 item.attachments.add(asset)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("publish_currents: failed to attach image for feed item %d: %s", feed_item.id, e)
+
+        # Publish to social platform
+        if platform:
+            try:
+                from apps.social_accounts.models import SocialAccount, SocialPost
+                social_account = SocialAccount.objects.filter(
+                    user=request.user, platform=platform, is_active=True,
+                ).first()
+                if social_account:
+                    hashtag_list = [h.strip().lstrip('#') for h in hashtags.split() if h.strip()] if hashtags else []
+                    post = SocialPost.objects.create(
+                        user=request.user,
+                        account=social_account,
+                        content_item=item,
+                        platform=platform,
+                        content=item.body,
+                        hashtags=hashtag_list,
+                        status='published',
+                        workspace=workspace,
+                    )
+                    from apps.social_accounts.services import SocialService
+                    svc = SocialService(request.user)
+                    svc.publish_post(post.id)
+                    item.status = 'published'
+                    item.save(update_fields=['status'])
+            except Exception as e:
+                logger.warning("publish_currents: failed to publish platform %s for feed item %d: %s", platform, feed_item.id, e)
 
         created_items.append(item.id)
 
@@ -838,6 +989,8 @@ def publish_currents(request, item_id):
 @login_required
 @require_POST
 def save_automation_rules(request):
+    from core.tenant import get_current_tenant
+
     try:
         body = json.loads(request.body)
     except json.JSONDecodeError:
@@ -849,6 +1002,7 @@ def save_automation_rules(request):
 
     from .models import TrendingAutomationRule, Topic, UserTopicPreference
 
+    workspace = get_current_tenant()
     saved = []
     for rule in rules:
         topic_id = rule.get('topic_id')
@@ -858,15 +1012,19 @@ def save_automation_rules(request):
         if not topic:
             continue
 
+        rule_defaults = {
+            'platforms': rule.get('platforms', []),
+            'schedule_interval': rule.get('schedule_interval', 'daily'),
+            'auto_publish': rule.get('auto_publish', False),
+            'is_active': rule.get('is_active', True),
+            'workspace': workspace,
+        }
+        rule_filter = {'user': request.user, 'topic': topic}
+        if workspace:
+            rule_filter['workspace'] = workspace
         obj, created = TrendingAutomationRule.objects.update_or_create(
-            user=request.user,
-            topic=topic,
-            defaults={
-                'platforms': rule.get('platforms', []),
-                'schedule_interval': rule.get('schedule_interval', 'daily'),
-                'auto_publish': rule.get('auto_publish', False),
-                'is_active': rule.get('is_active', True),
-            },
+            defaults=rule_defaults,
+            **rule_filter,
         )
         saved.append({
             'id': obj.id,
@@ -880,8 +1038,11 @@ def save_automation_rules(request):
 
     # Remove rules for topics no longer in the request
     submitted_topic_ids = [r['topic_id'] for r in rules if r.get('topic_id')]
+    delete_rule_filter = {'user': request.user}
+    if workspace:
+        delete_rule_filter['workspace'] = workspace
     TrendingAutomationRule.objects.filter(
-        user=request.user,
+        **delete_rule_filter,
     ).exclude(topic_id__in=submitted_topic_ids).delete()
 
     # Feed subscriptions (UserTopicPreference) are managed independently via
@@ -890,7 +1051,10 @@ def save_automation_rules(request):
 
     # Invalidate Currents snapshots so the next load immediately reflects the new rules.
     from .models import CurrentsSnapshot
-    CurrentsSnapshot.objects.filter(user=request.user).delete()
+    delete_snap_filter = {'user': request.user}
+    if workspace:
+        delete_snap_filter['workspace'] = workspace
+    CurrentsSnapshot.objects.filter(**delete_snap_filter).delete()
 
     return JsonResponse({'rules': saved, 'count': len(saved)})
 
@@ -899,8 +1063,13 @@ def save_automation_rules(request):
 @require_GET
 def automation_rules_data(request):
     from .models import TrendingAutomationRule
+    from core.tenant import get_current_tenant
 
-    rules = TrendingAutomationRule.objects.filter(user=request.user).select_related('topic')
+    workspace = get_current_tenant()
+    rule_filter = {'user': request.user}
+    if workspace:
+        rule_filter['workspace'] = workspace
+    rules = TrendingAutomationRule.objects.filter(**rule_filter).select_related('topic')
     data = []
     for rule in rules:
         data.append({
@@ -1105,7 +1274,11 @@ def schedule_automation_item(request, content_item_id):
 def refine_feed_top5(request):
     """Called by the frontend after rendering page 1 of the feed.
     Takes the top 5 item IDs, runs LLM refinement, stores as CurrentsSnapshot."""
+    from django.db.models import Count
+    from django.utils import timezone
+    from datetime import timedelta
     from django.core.cache import cache
+    from .models import CurrentsSnapshot
 
     try:
         body = json.loads(request.body)
@@ -1126,7 +1299,27 @@ def refine_feed_top5(request):
     if not items:
         return JsonResponse({'ok': False, 'error': 'items not found'}, status=404)
 
-    ok, result = _run_refine_pipeline(request.user, items)
+    workspace = get_current_tenant()
+
+    # If these exact feed items were already refined in the last 6 hours, reuse the batch
+    recent = timezone.now() - timedelta(hours=6)
+    matching = CurrentsSnapshot.objects.filter(
+        user=request.user,
+        feed_item_id__in=item_ids,
+        created_at__gte=recent,
+    ).values('batch_id').annotate(
+        matched=Count('feed_item_id', distinct=True)
+    ).filter(matched=len(item_ids))
+
+    if matching.exists():
+        return JsonResponse({
+            'ok': True,
+            'batch_id': matching.order_by('batch_id').first()['batch_id'],
+            'llm': True,
+            'cached': True,
+        })
+
+    ok, result = _run_refine_pipeline(request.user, items, workspace=workspace)
 
     if ok:
         cache.delete(f'llm_retry_{request.user.id}')
@@ -1250,12 +1443,19 @@ def refresh_profile(request):
 @require_GET
 def pipeline_status(request):
     from .models import ContentSource, FeedItem, TrendingAutomationRule, CurrentsSnapshot
+    from core.tenant import get_current_tenant
 
     sources = ContentSource.objects.filter(is_active=True).count()
     total_items = FeedItem.objects.count()
     scored_items = FeedItem.objects.exclude(trending_score__isnull=True).count()
-    rules = TrendingAutomationRule.objects.filter(user=request.user, is_active=True).count()
-    snapshots = CurrentsSnapshot.objects.filter(user=request.user).count()
+    workspace = get_current_tenant()
+    rule_filter = {'user': request.user, 'is_active': True}
+    snap_filter = {'user': request.user}
+    if workspace:
+        rule_filter['workspace'] = workspace
+        snap_filter['workspace'] = workspace
+    rules = TrendingAutomationRule.objects.filter(**rule_filter).count()
+    snapshots = CurrentsSnapshot.objects.filter(**snap_filter).count()
     return JsonResponse({
         'sources': sources,
         'feed_items': total_items,

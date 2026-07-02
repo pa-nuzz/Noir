@@ -85,10 +85,12 @@ def recalculate_trending_scores(self):
     from .services.categorizer import Categorizer
     from .services.content_cleaner import ContentCleaner
     from .services.scorer import Scorer
+    from .services.summarizer import Summarizer
 
     cleaner = ContentCleaner()
     categorizer = Categorizer()
     scorer = Scorer()
+    summarizer = Summarizer()
 
     all_topics = list(Topic.objects.filter(is_active=True))
 
@@ -104,6 +106,7 @@ def recalculate_trending_scores(self):
         close_old_connections()
         try:
             item = cleaner.clean(item)
+            item = summarizer.summarize(item)
             item_before_topic = item.topic
             item = categorizer.categorize(item, topics=all_topics)
             if item.topic is None:
