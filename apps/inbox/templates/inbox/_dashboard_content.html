@@ -25,13 +25,7 @@
         <p class="page-lead mt-1">Manage your connected inboxes, reply with AI, and stay on top of conversations.</p>
       </div>
     </div>
-    <div class="flex items-center gap-2 w-full sm:w-auto">
-      {% url 'inbox:connect' as inbox_connect_url %}
-      {% include "components/button.html" with label="Connect Inbox" variant="primary" href=inbox_connect_url icon="M12 4v16m8-8H4" class="w-full sm:w-auto whitespace-nowrap justify-center" %}
-    </div>
-  </div>
-
-  {% if inboxes %}
+    {% if inboxes %}
   <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <div class="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0 w-full sm:w-auto">
@@ -77,6 +71,8 @@
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           <span id="select-all-label">Select All</span>
         </button>
+        {% url 'inbox:connect' as inbox_connect_url %}
+        {% include "components/button.html" with label="Connect Inbox" variant="outline" size="sm" href=inbox_connect_url icon="M12 4v16m8-8H4" class="text-xs" %}
         <form method="post" action="{% url 'inbox:disconnect' selected_inbox.id %}" class="inline" data-confirm="Disconnect this inbox?">
           {% csrf_token %}
           <button type="submit"
@@ -84,6 +80,9 @@
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
           </button>
         </form>
+        {% else %}
+        {% url 'inbox:connect' as inbox_connect_url %}
+        {% include "components/button.html" with label="Connect Inbox" variant="primary" href=inbox_connect_url icon="M12 4v16m8-8H4" class="w-full sm:w-auto whitespace-nowrap justify-center" %}
         {% endif %}
       </div>
     </div>
