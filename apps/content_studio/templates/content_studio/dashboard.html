@@ -46,8 +46,8 @@
       {% if items %}
       <div class="divide-y divide-slate-50">
         {% for item in items %}
-        <a href="{% url 'content_studio:detail' item.id %}" class="flex items-center gap-4 px-6 py-3.5 hover:bg-slate-50/50 transition-colors">
-          <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold
+        <a href="{% url 'content_studio:detail' item.id %}" class="grid items-center gap-3 px-6 py-3.5 hover:bg-slate-50/50 transition-colors" style="grid-template-columns:36px 1fr 110px 90px">
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold
             {% if item.content_type == 'caption' %}bg-blue-50 text-blue-600
             {% elif item.content_type == 'hashtag_set' %}bg-indigo-50 text-indigo-600
             {% elif item.content_type == 'carousel' %}bg-amber-50 text-amber-600
@@ -57,19 +57,21 @@
             {% else %}bg-slate-100 text-slate-600{% endif %}">
             {{ item.get_content_type_display|slice:':2'|upper }}
           </div>
-          <div class="flex-1 min-w-0">
+          <div class="min-w-0">
             <p class="text-sm font-semibold text-slate-900 truncate">{{ item.title|default:item.body|truncatechars:60 }}</p>
             <p class="text-xs text-gray-400 mt-0.5">
               {{ item.get_content_type_display }} · {{ item.created_at|date:'M d, Y' }}
-              {% if item.platform %} · {{ item.platform|title }}{% endif %}
             </p>
           </div>
+          {% if item.platform %}<span class="cs-platform cs-platform-{{ item.platform }}" style="justify-self:start">{{ item.platform }}</span>{% else %}<span></span>{% endif %}
+          <span style="justify-self:end">
           {% if item.status == 'draft' %}{% include "components/badge.html" with label=item.get_status_display variant="gray" %}
           {% elif item.status == 'pending_review' %}{% include "components/badge.html" with label=item.get_status_display variant="yellow" %}
           {% elif item.status == 'approved' %}{% include "components/badge.html" with label=item.get_status_display variant="green" %}
           {% elif item.status == 'published' %}{% include "components/badge.html" with label=item.get_status_display variant="blue" %}
           {% elif item.status == 'archived' %}{% include "components/badge.html" with label=item.get_status_display variant="gray" %}
           {% endif %}
+          </span>
         </a>
         {% endfor %}
       </div>

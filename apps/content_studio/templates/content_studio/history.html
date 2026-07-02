@@ -71,7 +71,7 @@
                 {{ item.get_content_type_display }}
               </span>
             </td>
-            <td class="px-6 py-4 text-slate-600">{{ item.platform|title|default:'—' }}</td>
+            <td class="px-6 py-4">{% if item.platform %}<span class="cs-platform cs-platform-{{ item.platform }}">{{ item.platform }}</span>{% else %}<span class="text-slate-400">—</span>{% endif %}</td>
             <td class="px-6 py-4">
                       {% if item.status == 'draft' %}{% include "components/badge.html" with label=item.get_status_display variant="gray" %}
               {% elif item.status == 'pending_review' %}{% include "components/badge.html" with label=item.get_status_display variant="yellow" %}

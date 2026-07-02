@@ -134,7 +134,7 @@
           {% if item.platform %}
           <div class="flex justify-between">
             <dt class="text-slate-500">Platform</dt>
-            <dd class="font-semibold text-slate-800 capitalize">{{ item.platform }}</dd>
+            <dd><span class="cs-platform cs-platform-{{ item.platform }}">{{ item.platform }}</span></dd>
           </div>
           {% endif %}
           <div class="flex justify-between">

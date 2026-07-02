@@ -158,6 +158,33 @@ SYSTEM_PROMPTS = {
         "VARIANT 2 [<trigger_label>]: <CTA text>\n"
         "..."
     ),
+    'translator': (
+        "You are a professional translator specializing in social media content. "
+        "Translate the following text to English.\n\n"
+        "Rules:\n"
+        "- Preserve all hashtags exactly as-is (#example stays #example)\n"
+        "- Preserve all @mentions exactly as-is (@user stays @user)\n"
+        "- Preserve all URLs exactly as-is (https://... stays as-is)\n"
+        "- Preserve all emoji exactly as-is\n"
+        "- Preserve the original tone and register (casual stays casual, "
+        "professional stays professional, humorous stays humorous)\n"
+        "- Do NOT add any commentary, explanations, or quotation marks\n"
+        "- Return only the translated text, nothing else"
+    ),
+    'caption_compressor': (
+        "You are a social media copyeditor. Compress the following text to fit "
+        "within a strict character limit while preserving the core message, key points, "
+        "and tone.\n\n"
+        "Rules:\n"
+        "- Do NOT exceed the specified character limit\n"
+        "- Keep the most important information — prioritize the hook/opening and main value\n"
+        "- Preserve all hashtags, @mentions, URLs, and emoji exactly as-is\n"
+        "- Maintain the original tone and voice\n"
+        "- Do NOT add new content, hashtags, or commentary\n"
+        "- Do NOT use ellipsis or '...' to indicate truncation\n"
+        "- Write complete sentences — no mid-sentence cuts\n"
+        "- Return only the compressed text, nothing else"
+    ),
 }
 
 TONE_DESCRIPTIONS = {
@@ -220,7 +247,7 @@ def _build_system_prompt(content_type, platform=None, tone='professional', **kwa
     return "\n\n".join(p for p in parts if p)
 
 
-def _call_llm(system_prompt, user_prompt, api_key=None):
+def _call_llm(system_prompt, user_prompt, api_key=None, max_tokens=None):
     if not api_key:
         api_key = (
             getattr(settings, 'LLM_API_KEY', None)
@@ -254,6 +281,8 @@ def _call_llm(system_prompt, user_prompt, api_key=None):
         "model": model,
         "messages": messages,
     }
+    if max_tokens:
+        payload["max_tokens"] = max_tokens
 
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -381,8 +410,8 @@ def _call_llm(system_prompt, user_prompt, api_key=None):
             return {"success": False, "error": "unknown", "message": f"An error occurred while contacting the AI API: {str(e)}", "content": None}
 
 
-def _call_llm_fatal(agent, system_prompt, user_prompt, api_key=None):
-    result = _call_llm(system_prompt, user_prompt, api_key)
+def _call_llm_fatal(agent, system_prompt, user_prompt, api_key=None, max_tokens=None):
+    result = _call_llm(system_prompt, user_prompt, api_key, max_tokens=max_tokens)
     if not result['success']:
         raise LLMPipelineError(agent, result['error'], result['message'])
     if not result['content'] or not result['content'].strip():

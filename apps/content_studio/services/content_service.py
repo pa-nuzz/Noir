@@ -56,6 +56,20 @@ class ContentService:
         )
         return item
 
+    def adapt_for_platform(self, content_item, platform, hashtags=None):
+        from ..adapters import PlatformAdapter
+        adapter = PlatformAdapter(platform)
+        adapted_body, meta = adapter.adapt_content(content_item.body, hashtags=hashtags)
+        content_item.body = adapted_body
+        platform_data = dict(content_item.platform_data or {})
+        platform_entry = dict(platform_data.get(platform, {}))
+        platform_entry.update(meta)
+        platform_entry['adapted_body'] = adapted_body
+        platform_data[platform] = platform_entry
+        content_item.platform_data = platform_data
+        content_item.save(update_fields=['body', 'platform_data', 'updated_at'])
+        return adapted_body
+
     def refine_content(self, item_id, feedback, **kwargs):
         item = ContentItem.objects.get(id=item_id, user=self.user)
         generator = get_generator(item.content_type, platform=item.platform)

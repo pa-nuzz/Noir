@@ -112,6 +112,7 @@
 var currentsActionMode = 'none';
 var currentsBatchId = null;
 var currentsPollTimer = null;
+var lastAutoExecutedBatchId = sessionStorage.getItem('currentsLastExecutedBatchId') || null;
 var ALL_PLATFORMS = ['linkedin', 'twitter', 'instagram', 'facebook', 'tiktok'];
 var PLATFORM_LABELS = {linkedin: 'LinkedIn', twitter: 'Twitter', instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok'};
 
@@ -249,7 +250,7 @@ function loadCurrents() {
       });
       list.innerHTML = html;
       currentsBatchId = data.batch_id;
-      if (currentsActionMode !== 'none' && currentsBatchId) {
+      if (currentsActionMode !== 'none' && currentsBatchId && currentsBatchId !== lastAutoExecutedBatchId) {
         autoExecute();
       }
       if (data.generated_at) {
@@ -276,7 +277,7 @@ function updateActionMode() {
   wrapper.classList.toggle('hidden', currentsActionMode !== 'schedule');
   var statusEl = document.getElementById('currents-auto-status');
   if (statusEl) statusEl.classList.add('hidden');
-  if (currentsActionMode !== 'none' && currentsBatchId) {
+  if (currentsActionMode !== 'none' && currentsBatchId && currentsBatchId !== lastAutoExecutedBatchId) {
     autoExecute();
   }
 }
@@ -317,9 +318,16 @@ function autoExecute() {
       if (data.success && data.processed > 0) {
         statusEl.textContent = '✓ ' + data.processed + ' item(s) processed';
         showTrendingToast(data.processed + ' item(s) saved to Content Items', 'success');
-        setTimeout(function() { location.reload(); }, 1500);
+        lastAutoExecutedBatchId = currentsBatchId;
+        sessionStorage.setItem('currentsLastExecutedBatchId', currentsBatchId);
+        document.querySelectorAll('.rd-card').forEach(function(card) {
+          card.style.opacity = '0.5';
+          card.style.pointerEvents = 'none';
+        });
       } else if (data.success && data.processed === 0) {
         statusEl.textContent = '✓ Already processed (0 new items)';
+        lastAutoExecutedBatchId = currentsBatchId;
+        sessionStorage.setItem('currentsLastExecutedBatchId', currentsBatchId);
       } else {
         statusEl.textContent = '✗ Action failed';
         showTrendingToast(data.error || 'Action failed', 'error');

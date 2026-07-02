@@ -4,6 +4,23 @@ import re
 
 logger = logging.getLogger(__name__)
 
+PLATFORM_LIMITS = {
+    'twitter': 280,
+    'linkedin': 2000,
+    'instagram': 220,
+    'facebook': 500,
+    'tiktok': 100,
+    'youtube': 500,
+}
+PLATFORM_REQS = {
+    'linkedin': 'linkedin: Professional, thought-leadership, 1300-2000 chars including hashtags, 3-5 hashtags',
+    'twitter': 'twitter: Concise, under 280 chars including hashtags, 1-2 hashtags',
+    'instagram': 'instagram: Visual-first, 150-220 chars including hashtags, 5-8 hashtags',
+    'facebook': 'facebook: Conversational, 150-500 chars including hashtags, 2-4 hashtags',
+    'tiktok': 'tiktok: Casual and punchy, under 100 chars including hashtags, 1-3 hashtags',
+    'youtube': 'youtube: Engaging, 200-500 chars including hashtags, 2-4 hashtags',
+}
+
 
 def generate_llm_content(user, topic, platforms, items, rule_id=None):
     from core.tenant import get_current_tenant
@@ -11,16 +28,7 @@ def generate_llm_content(user, topic, platforms, items, rule_id=None):
     from apps.content_studio.llm.critique_prompts import build_batch_critic_prompt, build_batch_refiner_prompt
     from apps.content_studio.models import ContentItem
 
-    platform_reqs = {
-        'linkedin': 'linkedin: Professional, thought-leadership, 1300-2000 chars, 3-5 hashtags',
-        'twitter': 'twitter: Concise, under 280 chars, 1-2 hashtags',
-        'instagram': 'instagram: Visual-first, 150-220 chars, 5-8 hashtags',
-        'facebook': 'facebook: Conversational, 150-500 chars, 2-4 hashtags',
-        'tiktok': 'tiktok: Casual and punchy, under 100 chars, 1-3 hashtags',
-        'youtube': 'youtube: Engaging, 200-500 chars, 2-4 hashtags',
-    }
-
-    req_strs = [platform_reqs.get(p, f'{p}: Standard social media post') for p in platforms if p in platform_reqs]
+    req_strs = [PLATFORM_REQS.get(p, f'{p}: Standard social media post') for p in platforms if p in PLATFORM_REQS]
     if not req_strs:
         req_strs = [f'{p}: Standard social media post' for p in platforms]
 
@@ -42,24 +50,26 @@ def generate_llm_content(user, topic, platforms, items, rule_id=None):
         system_prompt += f'      "{p}": {{"body": "...", "hashtags": "#tag1 #tag2"}},\n'
     system_prompt += (
         "    }\n  }\n]\n"
+        "Body length MUST include hashtags. Do not exceed the platform's character limit.\n"
         "Do NOT include markdown code fences, backticks, or text outside the JSON."
     )
 
     user_prompt = "\n---\n".join(prompt_parts)
 
     try:
-        initial = _call_llm_fatal('ideator', system_prompt, user_prompt)
+        initial = _call_llm_fatal('ideator', system_prompt, user_prompt, max_tokens=3000)
         critic_sys = build_batch_critic_prompt()
-        critic_user = f"USER BRIEF:\n{system_prompt}\n\nJSON DRAFT:\n{initial}"
-        critique = _call_llm_fatal('critic', critic_sys, critic_user)
+        length_rules = "\n".join(f"- {p}: {PLATFORM_LIMITS.get(p, 280)} chars max (body + hashtags)" for p in platforms)
+        critic_user = f"Platform length rules:\n{length_rules}\n\nJSON DRAFT:\n{initial}"
+        critique = _call_llm_fatal('critic', critic_sys, critic_user, max_tokens=500)
         refiner_sys = build_batch_refiner_prompt()
         refiner_user = (
-            f"USER BRIEF:\n{system_prompt}\n\n"
+            f"Platform length rules:\n{length_rules}\n\n"
             f"JSON DRAFT:\n{initial}\n\n"
             f"EDITOR CRITIQUE:\n{critique}\n\n"
             f"Please completely rewrite the entire JSON array, fixing all issues raised in the critique."
         )
-        refined = _call_llm_fatal('refiner', refiner_sys, refiner_user)
+        refined = _call_llm_fatal('refiner', refiner_sys, refiner_user, max_tokens=3000)
         result = {"success": True, "error": None, "message": None, "content": refined}
     except LLMPipelineError as e:
         logger.error("3-agent pipeline failed for generate_llm_content: %s", e)
@@ -89,6 +99,9 @@ def generate_llm_content(user, topic, platforms, items, rule_id=None):
             if not post_body:
                 continue
 
+            from apps.content_studio.services.content_service import ContentService
+            hashtag_list = [h.strip().lstrip('#') for h in hashtags.split() if h.strip()] if hashtags else []
+
             ci = ContentItem.objects.create(
                 user=user,
                 workspace=get_current_tenant(),
@@ -99,7 +112,7 @@ def generate_llm_content(user, topic, platforms, items, rule_id=None):
                 status='draft',
                 is_auto_generated=True,
                 source_prompt=f'Generated from trending: {item.url}',
-                tags=hashtags.split() if hashtags else (item.ai_categories or []),
+                tags=hashtag_list or (item.ai_categories or []),
             )
             ci.metadata.update({
                 'source': 'trending_automation',
@@ -112,6 +125,12 @@ def generate_llm_content(user, topic, platforms, items, rule_id=None):
             if rule_id:
                 ci.metadata['automation_rule_id'] = rule_id
             ci.save(update_fields=['metadata'])
+
+            try:
+                cs = ContentService(user)
+                cs.adapt_for_platform(ci, platform, hashtags=hashtag_list)
+            except Exception as e:
+                logger.warning("adapt_for_platform failed for item %d platform %s: %s", item.id, platform, e)
 
             created.append(ci)
     return created
