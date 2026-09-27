@@ -4,9 +4,13 @@ Provides views for rendering the main dashboard with KPIs, email engagement metr
 campaign statistics, and user profile/settings management.
 """
 
+import logging
 from datetime import datetime, timedelta
+
+logger = logging.getLogger(__name__)
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.db.models import Avg, Count, Q, Sum
 from django.db.models.functions import TruncDate
 from django.http import JsonResponse
@@ -806,10 +810,9 @@ def platform_analytics(request):
     month_start = today - timedelta(days=30)
     month_start_dt, _ = _day_bounds_static(month_start, now)
 
-    # Reuse already-scoped querysets from earlier in the function
-    # user_campaigns and user_engagements already defined above with filter_by_context
-    # Just re-assign for clarity in this analytics section
-    scoped_campaigns = user_campaigns
+    # --- Workspace-scoped querysets (same logic as dashboard_view) ---
+    scoped_campaigns = filter_by_context(request, Campaign.objects.all())
+    user_engagements = EmailEngagement.objects.filter(campaign__in=scoped_campaigns)
     scoped_engagements = user_engagements
 
     SocialAccount = _safe_model('social_accounts', 'SocialAccount')
@@ -1326,9 +1329,40 @@ def profile_view(request):
         if action == 'update_profile':
             profile_form = ProfileForm(request.POST, request.FILES, instance=request.user)
             if profile_form.is_valid():
-                profile_form.save()
-                messages.success(request, 'Profile updated.')
-                return redirect('dashboard:dashboard')
+                try:
+                    profile_form.save()
+                except Exception as exc:
+                    # Form.save() now raises ValidationError with a per-field
+                    # message when storage is unreachable. Treat anything else
+                    # as a true bug and re-raise so logs capture it.
+                    from django.core.exceptions import ValidationError as _DVE
+                    if isinstance(exc, _DVE):
+                        for field, msgs in (exc.message_dict if hasattr(exc, 'message_dict') else {}).items():
+                            for msg in (msgs if isinstance(msgs, list) else [msgs]):
+                                profile_form.add_error(field, msg)
+                        messages.error(
+                            request,
+                            'Profile picture upload failed. Other changes were not saved. '
+                            'Please try again, or submit without a new photo.',
+                        )
+                        logger.warning('Profile avatar upload failed: %s', exc)
+                    else:
+                        try:
+                            from botocore.exceptions import BotoCoreError, ClientError
+                            if isinstance(exc, (BotoCoreError, ClientError)):
+                                messages.error(
+                                    request,
+                                    'Profile picture upload failed: storage service is unreachable. '
+                                    'Please try again in a few minutes.',
+                                )
+                                logger.exception('Profile avatar upload failed (storage error)')
+                            else:
+                                raise
+                        except ImportError:
+                            raise
+                else:
+                    messages.success(request, 'Profile updated.')
+                    return redirect('dashboard:dashboard')
 
         elif action == 'change_password':
             password_form = ChangePasswordForm(request.user, request.POST)
@@ -1369,24 +1403,49 @@ def clear_notifications_view(request):
 
 @login_required
 def check_notifications_view(request):
+    """
+    Return unread notification count + latest 5 unread items.
+    Optimized: single DB query with Count() + Redis cache (10s TTL).
+    Cache key per-user to avoid cross-user pollution.
+    """
+    user_cache_key = f'notif_count_v2:{request.user.id}'
+    try:
+        cached = cache.get(user_cache_key)
+        if cached is not None:
+            return JsonResponse(cached)
+    except Exception:
+        pass  # Cache unavailable — fall through to DB
+
     since_id = request.GET.get('since_id')
-    qs = NotificationModel.objects.filter(user=request.user, is_read=False)
+    base_qs = NotificationModel.objects.filter(user=request.user, is_read=False)
     if since_id:
         try:
-            qs = qs.filter(id__gt=int(since_id))
+            since_id_int = int(since_id)
+            base_qs = base_qs.filter(id__gt=since_id_int)
         except (ValueError, TypeError):
             pass
-    count = NotificationModel.objects.filter(user=request.user, is_read=False).count()
+
+    unread_count = NotificationModel.objects.filter(user=request.user, is_read=False).aggregate(c=Count('id'))['c'] or 0
+
     items = []
-    for n in qs.order_by('-created_at')[:5]:
+    for n in base_qs.order_by('-created_at')[:5]:
         items.append({
-            'id': f'db-{n.id}',
+            'id': n.id,
             'title': n.title,
             'message': n.message,
-            'tone': n.tone,
-            'url': n.url,
+            'tone': getattr(n, 'tone', 'info'),
+            'url': getattr(n, 'url', '') or '',
         })
-    return JsonResponse({'count': count, 'notifications': items})
+
+    data = {'count': unread_count, 'notifications': items}
+
+    # Cache for 10 seconds to absorb burst polls across tabs
+    try:
+        cache.set(user_cache_key, data, 10)
+    except Exception:
+        pass  # Redis/connection issues must not break the poll
+
+    return JsonResponse(data)
 
 
 @login_required

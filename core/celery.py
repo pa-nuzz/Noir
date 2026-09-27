@@ -7,6 +7,9 @@ app = Celery('core')
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
+# Recycle workers after N tasks to prevent memory leaks / SIGSEGV
+app.conf.worker_max_tasks_per_child = 50
+
 app.conf.beat_schedule = {
     'run-scheduled-campaigns-every-minute': {
         'task': 'apps.campaigns.tasks.run_scheduled_campaigns_task',

@@ -86,7 +86,7 @@ def _campaign_form_view(request, campaign=None, read_only=False):
                 'templates': user_templates,
                 'templates_json': templates_json,
                 'wizard_steps': wizard_steps,
-                'current_step': 4,
+                'current_step': 0,  # Reset to step 0 so user sees form-level errors + starts fresh
             })
 
         campaign_obj = form.save(commit=False)
@@ -154,7 +154,7 @@ def _campaign_form_view(request, campaign=None, read_only=False):
                     'templates': user_templates,
                     'templates_json': templates_json,
                     'wizard_steps': wizard_steps,
-                    'current_step': 4,
+                    'current_step': 0,
                 })
             try:
                 validate_email(test_email)
@@ -169,7 +169,7 @@ def _campaign_form_view(request, campaign=None, read_only=False):
                     'templates': user_templates,
                     'templates_json': templates_json,
                     'wizard_steps': wizard_steps,
-                    'current_step': 4,
+                    'current_step': 0,
                 })
             campaign_obj.total_recipients = len(campaign_obj.get_recipient_list())
             if not campaign_obj.pk:

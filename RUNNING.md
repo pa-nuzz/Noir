@@ -1,110 +1,48 @@
-# Running MailFlow AI
+# Running MailFlow locally
 
-## Required Services
+## First-time setup
 
-### 1. PostgreSQL Database
-Ensure PostgreSQL is running and the database is created. Check `DB_NAME`, `DB_USER`, `DB_PASSWORD` in your `.env` file.
-
-### 2. Redis Server
-MailFlow AI uses Redis as the Celery message broker. Redis must be running before starting Celery.
-
-### 3. Django Development Server
+Create and activate a virtual environment, then install dependencies:
 
 ```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+Copy `.env.example` to `.env` only when you need local secrets or a configured
+PostgreSQL database. Without `DB_NAME`, Django uses `db.sqlite3` automatically.
+When `DB_NAME` is set, all PostgreSQL settings must point to a reachable
+database.
+
+## Start Django
+
+```bash
+python manage.py migrate
 python manage.py runserver
 ```
 
-### 4. Celery Worker (REQUIRED for all background tasks)
+Open http://127.0.0.1:8000.
 
-Without the Celery worker running, these features will BREAK:
-- Campaign sending (emails queued but never sent)
-- Inbox syncing (new emails never fetched)
-- AI auto-reply (drafts never generated)
-- Scheduled posts (never published)
-- Lock expiration cleanup
+## Optional background workers
 
-**Start the worker:**
+Redis is required for Celery tasks. Start it with your operating system's
+service manager, then run each process in its own terminal:
 
 ```bash
 celery -A core worker -l info
-```
-
-### 5. Celery Beat Scheduler (REQUIRED for periodic tasks)
-
-Starts the scheduler that triggers periodic tasks like inbox syncing and lock cleanup.
-
-```bash
 celery -A core beat -l info
 ```
 
-## Full Startup Sequence
-
-1. **Ensure PostgreSQL is running**
-   ```bash
-   brew services start postgresql@14  # macOS with Homebrew
-   # OR
-   sudo service postgresql start    # Linux
-   ```
-
-2. **Ensure Redis is running**
-   ```bash
-   redis-server
-   # OR (if using Homebrew)
-   brew services start redis
-   ```
-
-3. **Apply any new migrations** (if you haven't already)
-   ```bash
-   python manage.py migrate
-   ```
-
-4. **Start all services** (in separate terminal windows):
-
-   Terminal 1 - Django:
-   ```bash
-   python manage.py runserver
-   ```
-
-   Terminal 2 - Celery Worker:
-   ```bash
-   celery -A core worker -l info
-   ```
-
-   Terminal 3 - Celery Beat:
-   ```bash
-   celery -A core beat -l info
-   ```
+The web application does not require Celery for ordinary page loads. Campaign
+sending, inbox synchronization, scheduled work, and AI background jobs require
+the worker to be running.
 
 ## Troubleshooting
 
-### "Inbox stuck at loading" or "Syncing..." stays forever
-**Cause:** Celery worker is not running. The sync task is queued but never executed.
-**Fix:** Start the Celery worker (`celery -A core worker -l info`).
-
-### Campaign says "sending" but never updates to "sent"
-**Cause:** Celery worker not running. Campaign task is queued but never executed.
-**Fix:** Start the Celery worker.
-
-### SMTP connected but no emails sent
-**Cause:** Campaign send is a Celery task. If worker is down, emails are never sent.
-**Fix:** Start the Celery worker.
-
-### AI draft generation stuck at "loading..."
-**Cause:** Django messages framework is used for feedback. If the async task (Celery) isn't running, the draft is never generated.
-**Fix:** Start the Celery worker.
-
-## Environment Variables (in .env)
-
-Make sure your `.env` file has:
-```
-DATABASE_URL=postgres://user:password@localhost:5432/mailflow_ai
-REDIS_URL=redis://localhost:6379/0
-FERNET_KEY=your-fernet-key-here
-SECRET_KEY=your-secret-key-here
-DEBUG=True
-# Set to production domain for tracking
-TRACKING_BASE_URL=http://127.0.0.1:8000 - production is https://idadev.techaxis.com.np 
-# Optional: use environment-specific SMTP
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-```
+- If Django reports a PostgreSQL timeout, check `DB_HOST`, `DB_PORT`, and the
+  database firewall. Remove `DB_NAME` from `.env` to use a local SQLite
+  database instead.
+- If a task remains queued, verify Redis and the Celery worker.
+- If the first migration on a fresh checkout fails, remove the local
+  `db.sqlite3` and run `python manage.py migrate` again.

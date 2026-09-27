@@ -1310,8 +1310,16 @@
         }
       });
 
-      // Poll for new notifications every 15 seconds — syncs toast + bell dropdown + badge
-      // Uses Page Visibility API to pause polling when tab is hidden
+// ── Notification Polling ──────────────────────────────────────────
+      // Single leader tab polls every 30s; all tabs receive results via
+      // BroadcastChannel so multiple tabs don't multiply DB queries.
+      // Exponential backoff kicks in when the endpoint returns errors.
+      // Uses Page Visibility API to pause polling when tab is hidden.
+
+      var NOTIF_CHANNEL_NAME = 'ida-notif-v1';
+      var NOTIF_POLL_MS = 30000;       // 30s (was 15s)
+      var NOTIF_BACKOFF_MS = [30000, 60000, 120000, 300000]; // [30s, 1m, 2m, 5m]
+
       var lastNotifCount = {{ dashboard_notification_count }};
       var toneMap = {
         success: { bg: 'bg-emerald-50 text-emerald-600', icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>', toastClass: 'text-emerald-700' },
@@ -1319,62 +1327,124 @@
         danger:  { bg: 'bg-red-50 text-red-600', icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M4.93 19h14.14c1.54 0 2.502-1.667 1.732-3L13.73 4c-.77-1.333-2.694-1.333-3.464 0L3.2 16c-.77 1.333.192 3 1.73 3z"/></svg>', toastClass: 'text-red-700' },
       };
       var defaultTone = { bg: 'bg-primary-light text-primary', icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>', toastClass: 'text-slate-700' };
+
       function escapeHtml(value) {
         var div = document.createElement('div');
         div.textContent = value || '';
         return div.innerHTML;
       }
+
       var maxNotifId = 0;
-      function pollNotifications() {
-        if (document.hidden) { setTimeout(pollNotifications, 15000); return; }
+      var backoffIdx = 0;
+      var pollTimer = null;
+      var isLeader = false;
+
+      // ── BroadcastChannel: coordinate one poller across tabs ───────────
+      var channel = null;
+      try { channel = new BroadcastChannel(NOTIF_CHANNEL_NAME); } catch(e) { channel = null; }
+
+      function broadcastResult(data) {
+        if (!channel) return;
+        try { channel.postMessage({ type: 'notif-result', data: data, tabId: Date.now() }); } catch(e) {}
+      }
+
+      function onBroadcastMessage(event) {
+        if (!event.data || event.data.type !== 'notif-result') return;
+        renderNotifications(event.data.data);
+      }
+
+      if (channel) {
+        channel.addEventListener('message', onBroadcastMessage);
+      }
+
+      // ── Render notifications from poll (or broadcast) ─────────────────
+      function renderNotifications(data) {
+        var badge = document.getElementById('notif-badge');
+        if (badge) {
+          if (data.count > 0) badge.classList.remove('hidden');
+          else badge.classList.add('hidden');
+        }
+        (data.notifications || []).forEach(function(n) {
+          if (n.id > maxNotifId) maxNotifId = n.id;
+          var list = document.getElementById('notif-list');
+          if (!list) return;
+          if (list.querySelector('[data-nid="' + n.id + '"]')) return;
+          var t = toneMap[n.tone] || defaultTone;
+          var item = document.createElement('a');
+          item.setAttribute('href', n.url || '#');
+          item.setAttribute('data-nid', n.id);
+          item.className = 'px-5 py-4 hover:bg-slate-100 transition-colors flex gap-3 group';
+          item.innerHTML = '<div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center ' + t.bg + '">' + t.icon + '</div><div><p class="text-sm font-semibold text-slate-800 group-hover:text-primary transition-colors">' + escapeHtml(n.title) + '</p><p class="text-xs text-gray-400 mt-0.5">' + escapeHtml(n.message) + '</p></div>';
+          list.insertBefore(item, list.firstChild);
+          list.classList.remove('hidden');
+          var empty = document.getElementById('notif-empty');
+          if (empty) empty.classList.add('hidden');
+          // Toast
+          var toast = document.createElement('div');
+          toast.className = 'toast-msg animate-toast-in px-5 py-4 rounded-2xl shadow-2xl glass border border-white/50 flex items-center gap-3 ' + t.toastClass;
+          toast.innerHTML = '<div class="w-8 h-8 rounded-full flex items-center justify-center bg-white/80">' + t.icon + '</div><div><p class="text-sm font-bold">' + escapeHtml(n.title) + '</p><p class="text-xs opacity-80 mt-0.5">' + escapeHtml(n.message) + '</p></div>';
+          var container = document.getElementById('toast-container');
+          if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            container.className = 'fixed top-24 right-10 z-[60] flex flex-col gap-3';
+            document.body.appendChild(container);
+          }
+          container.appendChild(toast);
+          setTimeout(function() {
+            toast.classList.add('animate-toast-out');
+            setTimeout(function() { toast.remove(); }, 400);
+          }, 5000);
+        });
+        lastNotifCount = data.count;
+      }
+
+      // ── Core poll: only fires if no other tab is known to be polling ──
+      function doPoll() {
         var wrapper = document.getElementById('notif-wrapper');
-        if (!wrapper) { setTimeout(pollNotifications, 15000); return; }
+        if (!wrapper) return;
         var url = new URL(wrapper.dataset.checkUrl, window.location.origin);
         if (maxNotifId > 0) {
           url.searchParams.set('since_id', maxNotifId);
         }
         fetch(url.toString(), {
           headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        }).then(function(r) { return r.json(); }).then(function(data) {
-          var badge = document.getElementById('notif-badge');
-          if (badge) {
-            if (data.count > 0) badge.classList.remove('hidden');
-            else badge.classList.add('hidden');
-          }
-          data.notifications.forEach(function(n) {
-            if (n.id > maxNotifId) maxNotifId = n.id;
-            var list = document.getElementById('notif-list');
-            if (!list) return;
-            if (list.querySelector('[data-nid="' + n.id + '"]')) return;
-            var t = toneMap[n.tone] || defaultTone;
-            var item = document.createElement('a');
-            item.setAttribute('href', n.url);
-            item.setAttribute('data-nid', n.id);
-            item.className = 'px-5 py-4 hover:bg-slate-100 transition-colors flex gap-3 group';
-            item.innerHTML = '<div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center ' + t.bg + '">' + t.icon + '</div><div><p class="text-sm font-semibold text-slate-800 group-hover:text-primary transition-colors">' + escapeHtml(n.title) + '</p><p class="text-xs text-gray-400 mt-0.5">' + escapeHtml(n.message) + '</p></div>';
-            list.appendChild(item);
-            list.classList.remove('hidden');
-            var empty = document.getElementById('notif-empty');
-            if (empty) empty.classList.add('hidden');
-            var toast = document.createElement('div');
-            toast.className = 'toast-msg animate-toast-in px-5 py-4 rounded-2xl shadow-2xl glass border border-white/50 flex items-center gap-3 ' + t.toastClass;
-            toast.innerHTML = '<div class="w-8 h-8 rounded-full flex items-center justify-center bg-white/80">' + t.icon + '</div><div><p class="text-sm font-bold">' + escapeHtml(n.title) + '</p><p class="text-xs opacity-80 mt-0.5">' + escapeHtml(n.message) + '</p></div>';
-            var container = document.getElementById('toast-container');
-            if (!container) {
-              container = document.createElement('div');
-              container.id = 'toast-container';
-              container.className = 'fixed top-24 right-10 z-[60] flex flex-col gap-3';
-              document.body.appendChild(container);
-            }
-            container.appendChild(toast);
-            setTimeout(function() {
-              toast.classList.add('animate-toast-out');
-              setTimeout(function() { toast.remove(); }, 400);
-            }, 5000);
-          });
-          lastNotifCount = data.count;
-        }).catch(function() {}).finally(function() {
-          setTimeout(pollNotifications, 15000);
+        }).then(function(r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        }).then(function(data) {
+          renderNotifications(data);
+          broadcastResult(data);
+          // Reset backoff on success
+          backoffIdx = 0;
+        }).catch(function() {
+          // Exponential backoff: double wait time on errors
+          backoffIdx = Math.min(backoffIdx + 1, NOTIF_BACKOFF_MS.length - 1);
+        }).finally(function() {
+          var delay = NOTIF_BACKOFF_MS[backoffIdx];
+          pollTimer = setTimeout(doPoll, delay);
+        });
+      }
+
+      function pollNotifications() {
+        if (document.hidden) {
+          pollTimer = setTimeout(pollNotifications, NOTIF_POLL_MS);
+          return;
+        }
+        var wrapper = document.getElementById('notif-wrapper');
+        if (!wrapper) {
+          pollTimer = setTimeout(pollNotifications, NOTIF_POLL_MS);
+          return;
+        }
+        // Claim leadership: if another tab polls within 5s it will broadcast;
+        // we skip our poll to halve total traffic.
+        isLeader = true;
+        clearTimeout(pollTimer);
+        doPoll();
+      }
+
+      // ── Start polling (30s interval as baseline) ────────────────────
+      pollTimer = setTimeout(pollNotifications, NOTIF_POLL_MS);
         });
       }
       setTimeout(pollNotifications, 15000);

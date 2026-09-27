@@ -784,6 +784,31 @@
   </div>
 </div>
 
+<!-- ── Template Apply Confirmation Modal ── -->
+<div id="template-confirm-overlay" class="hidden fixed inset-0 z-[90] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeTemplateConfirm()">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onclick="event.stopPropagation()">
+    <div class="p-6">
+      <div class="flex items-center gap-4 mb-4">
+        <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+          <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Apply Template?</h3>
+          <p class="text-sm text-slate-500 mt-0.5">This will replace your current subject and message body.</p>
+        </div>
+      </div>
+      <div id="template-confirm-details" class="mb-5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-sm">
+        <p class="font-semibold text-slate-700" id="template-confirm-name"></p>
+        <p class="text-xs text-slate-500 mt-1" id="template-confirm-subject"></p>
+      </div>
+      <div class="flex gap-3">
+        <button type="button" onclick="closeTemplateConfirm()" class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition-colors">Cancel</button>
+        <button type="button" id="template-confirm-apply-btn" class="flex-1 px-4 py-2.5 rounded-xl bg-primary text-white font-semibold hover:bg-primary-hover transition-colors shadow-lg shadow-indigo-500/30">Apply Template</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ── Campaign Preview Modal ── -->
 <div id="campaignPreviewOverlay" class="hidden fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeCampaignPreview()">
   <div id="campaignPreviewPanel" class="bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden w-full max-w-3xl max-h-[85vh] flex flex-col">
@@ -801,8 +826,6 @@
     </div>
   </div>
 </div>
-
-</form>
 
 <style>
 .copilot-drawer {
@@ -847,10 +870,27 @@ function filterTemplates(query) {
 function validateStep(step) {
   var existing = document.getElementById('wizard-error-' + step);
   if (existing) existing.remove();
-  
+
   var errors = [];
-  
-  if (step === 1) {
+
+  if (step === 0) {
+    // Manual tab: recipients are entered on Step 1 (Identity), so no check needed
+    var activeHint = document.getElementById('contact-source-hint');
+    var isManualTab = activeHint && activeHint.textContent.indexOf('Manual') !== -1;
+    if (isManualTab) {
+      // No recipients required for manual tab — they'll be entered on the Identity step
+    } else {
+      // List or CSV tab: at least one source must have recipients
+      var checkedLists = document.querySelectorAll('input[name="contact_lists"]:checked');
+      var csvInput = document.getElementById('csv_emails_input');
+      var csvHasEmails = csvInput && csvInput.value && csvInput.value.split(',').filter(Boolean).length > 0;
+      var recipientField = document.getElementById('id_recipient_emails');
+      var hasManualEmails = recipientField && recipientField.value.trim().split(/[,;\n]/).filter(function(e){return e.trim();}).length > 0;
+      if (checkedLists.length === 0 && !csvHasEmails && !hasManualEmails) {
+        errors.push('Please select a contact list, upload a CSV, or add recipients.');
+      }
+    }
+  } else if (step === 1) {
     var nameField = document.getElementById('id_name');
     if (nameField && !nameField.value.trim()) { errors.push('Campaign Name is required'); nameField.focus(); }
   } else if (step === 2) {
@@ -873,6 +913,18 @@ function validateStep(step) {
   } else if (step === 3) {
     var senderField = document.getElementById('id_sender');
     if (senderField && !senderField.value) { errors.push('Please select a sender profile'); senderField.focus(); }
+  } else if (step === 4) {
+    var recipientField2 = document.getElementById('id_recipient_emails');
+    var senderField2 = document.getElementById('id_sender');
+    var nameField2 = document.getElementById('id_name');
+    var subjectField2 = document.getElementById('id_subject');
+    var bodyField2 = document.getElementById('id_body_text');
+    var recipOk = (recipientField2 && recipientField2.value.trim()) || document.querySelectorAll('input[name="contact_lists"]:checked').length > 0 || (document.getElementById('csv_emails_input') && document.getElementById('csv_emails_input').value);
+    if (!recipOk) errors.push('At least one recipient is required before reviewing.');
+    else if (senderField2 && !senderField2.value) errors.push('Please select a sender profile.');
+    else if (nameField2 && !nameField2.value.trim()) errors.push('Campaign name is required.');
+    else if (subjectField2 && !subjectField2.value.trim()) errors.push('Subject line is required.');
+    else if (bodyField2 && !bodyField2.value.trim()) errors.push('Message body is required.');
   }
 
   if (errors.length) {
@@ -889,8 +941,24 @@ function validateStep(step) {
 
 function goToStep(step) {
   if (step < 0 || step >= TOTAL_STEPS) return;
-  if (step > maxCompletedStep && !validateStep(currentStep)) return;
-  if (step > maxCompletedStep) maxCompletedStep = step;
+  if (step === currentStep) return;
+  var forward = step > currentStep;
+  if (forward) {
+    for (var s = currentStep; s < step; s++) {
+      if (s > maxCompletedStep) { maxCompletedStep = s; }
+      if (!validateStep(s)) {
+        document.querySelectorAll('.step-panel').forEach(function(el){ el.classList.add('hidden'); });
+        document.getElementById('step-' + s).classList.remove('hidden');
+        document.querySelectorAll('.step-btn').forEach(function(btn, idx){
+          btn.disabled = idx > maxCompletedStep;
+        });
+        currentStep = s;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+    }
+    maxCompletedStep = step;
+  }
   document.querySelectorAll('.step-panel').forEach(function(el) { el.classList.add('hidden'); });
   document.getElementById('step-' + step).classList.remove('hidden');
   document.querySelectorAll('.step-btn').forEach(function(btn, idx) {
@@ -916,8 +984,8 @@ function goToStep(step) {
   });
   currentStep = step;
   if (step === 1) updateRecipientLiveStats();
+  if (step === 4) updateReviewStep();
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  updateReviewStep();
 }
 
 // ── Review Step Sync ────────────────────────────────────────────
@@ -1016,7 +1084,27 @@ function switchTab(tab) {
     var bodyHtmlField = document.getElementById('id_body_html');
     var currentSubject = (subjectField && subjectField.value) || '';
     var currentBody = (bodyField && bodyField.value) || '';
-    if ((currentSubject || currentBody) && !confirm('This will overwrite your current subject and body. Continue?')) return;
+    if (currentSubject || currentBody) {
+      document.getElementById('template-confirm-name').textContent = tpl.name || 'Template';
+      document.getElementById('template-confirm-subject').textContent = 'Subject: ' + (tpl.subject || '(no subject)');
+      document.getElementById('template-confirm-overlay').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+      document.getElementById('template-confirm-apply-btn').onclick = function() {
+        doApplyTemplate(tpl);
+        closeTemplateConfirm();
+      };
+    } else {
+      doApplyTemplate(tpl);
+    }
+  }
+  function closeTemplateConfirm() {
+    document.getElementById('template-confirm-overlay').classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+  function doApplyTemplate(tpl) {
+    var subjectField = document.getElementById('id_subject');
+    var bodyField = document.getElementById('id_body_text');
+    var bodyHtmlField = document.getElementById('id_body_html');
     if (subjectField) subjectField.value = tpl.subject || '';
     if (tpl.body_html) {
       if (bodyHtmlField) bodyHtmlField.value = tpl.body_html;
@@ -1032,13 +1120,19 @@ function switchTab(tab) {
       tidInput.type = 'hidden'; tidInput.name = 'template_id'; tidInput.value = tpl.id;
       document.getElementById('campaign-form').appendChild(tidInput);
     }
-    applyBtn.className = 'btn-action btn-action-primary whitespace-nowrap';
+    var applyBtn = document.getElementById('apply-template-btn');
+    if (applyBtn) applyBtn.className = 'btn-action btn-action-primary whitespace-nowrap';
   }
   selector.addEventListener('change', function() {
     applyBtn.className = (selector.value && templateData[selector.value]) ? 'btn-action btn-action-primary whitespace-nowrap' : 'btn-action btn-action-secondary whitespace-nowrap';
   });
   applyBtn.addEventListener('click', applyTemplate);
   applyBtn.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); applyTemplate(); } });
+  var selectedTplId = '{{ selected_template.id|default:"" }}';
+  if (selectedTplId && templateData[selectedTplId]) {
+    selector.value = selectedTplId;
+    applyBtn.className = 'btn-action btn-action-primary whitespace-nowrap';
+  }
 })();
 
 // ── Schedule Confirmation ─────────────────────────────────────
@@ -1231,6 +1325,26 @@ document.getElementById('analyze-spam-btn').addEventListener('click', function()
 function clearCSV() { var csvInput=document.getElementById('csv-file-input'); var preview=document.getElementById('csv-preview'); if(csvInput)csvInput.value=''; if(preview)preview.classList.add('hidden'); document.getElementById('csv_emails_input').value=''; document.getElementById('csv_context_input').value=''; switchTab('manual'); }
 function addAttachmentRow() { var template=document.getElementById('attachment-row-template'); var container=document.getElementById('new-attachment-rows'); container.appendChild(template.content.cloneNode(true)); }
 
+// ── Body text → body_html auto-sync ──────────────────────────
+// Hidden body_html is only set by template JS; for manual entry it stays empty.
+// Sync body_text into body_html so backend clean() sees content in both fields.
+(function() {
+  var bodyText = document.getElementById('id_body_text');
+  var bodyHtml = document.getElementById('id_body_html');
+  if (bodyText && bodyHtml) {
+    bodyText.addEventListener('input', function() {
+      var val = bodyText.value || '';
+      // Only populate if body_html is still empty (template hasn't set it)
+      if (!bodyHtml.value || bodyHtml.value.trim() === '') {
+        // Convert plain text to minimal HTML for backend validation
+        bodyHtml.value = val.split('\n').map(function(line) {
+          return line.trim() ? '<p>' + line.replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>') + '</p>' : '';
+        }).join('');
+      }
+    });
+  }
+})();
+
 // ── Subject char counter ─────────────────────────────────────
 (function() {
   var subjectField = document.getElementById('id_subject');
@@ -1289,7 +1403,34 @@ function updateRecipientLiveStats() {
 (function() {
   var form = document.getElementById('campaign-form');
   if (!form) return;
-  form.addEventListener('submit', function(e) {
+  function syncBodyHtml() {
+    var bodyText = document.getElementById('id_body_text');
+    var bodyHtml = document.getElementById('id_body_html');
+    if (!bodyText || !bodyHtml) return;
+    var textVal = bodyText.value || '';
+    if (textVal.trim() && (!bodyHtml.value || bodyHtml.value.trim() === '')) {
+      bodyHtml.value = textVal.split('\n').map(function(line) {
+        return line.trim() ? '<p>' + line.replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>') + '</p>' : '';
+      }).join('');
+    }
+  }
+  form.addEventListener('submit', syncBodyHtml);
+  form.addEventListener('click', function(e) {
+    if (e.target && (e.target.name === 'action' || e.target.closest('button[name="action"]'))) {
+      syncBodyHtml();
+    }
+  });
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+      document.querySelectorAll('#campaign-form button[type="submit"]').forEach(function(btn) {
+        if (btn.disabled && btn.dataset.originalHtml) {
+          btn.disabled = false;
+          btn.innerHTML = btn.dataset.originalHtml;
+        }
+      });
+    }
+  });
+})();
     var submitter = e.submitter;
     if (!submitter || submitter.type !== 'submit') return;
     var submitButtons = form.querySelectorAll('button[type="submit"]');
@@ -1337,7 +1478,9 @@ function updateRecipientLiveStats() {
 })();
 
 // ── Initialize ─────────────────────────────────────────────────
-goToStep({% if read_only %}4{% else %}0{% endif %});
+// Use the server-provided current_step so form-validation errors (which set
+// current_step=4) are displayed correctly instead of being reset to 0.
+goToStep({{ current_step|default:0 }});
 
 // ── Campaign Send Confirmation ─────────────────────────────────
 function confirmCampaignSend() {
@@ -1369,6 +1512,14 @@ function confirmCampaignSend() {
   }
   if (!hasSubject) {
     showInlineAlert('Please add a subject line before sending. Go to the Message step to add a subject.', 'error');
+    return;
+  }
+
+  // Check body content — use textarea (body_text) as source of truth for manual entry
+  var bodyEl = document.getElementById('id_body_text');
+  var hasBody = (bodyEl && bodyEl.value.trim());
+  if (!hasBody) {
+    showInlineAlert('Please add message content before sending. Go to the Message step to add body text.', 'error');
     return;
   }
 

@@ -22,7 +22,38 @@
 .tab-btn:hover { color: var(--g700); }
 .tab-btn.active { background: var(--w); color: var(--g900); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
 .gen-layout { display: grid; grid-template-columns: 240px 1fr; gap: 1.25rem; align-items: start; margin-top: 1.25rem; }
-@media (max-width: 768px) { .gen-layout { grid-template-columns: 1fr; } }
+@media (max-width: 768px) {
+  .gen-layout { grid-template-columns: 1fr; }
+  .gen-wrap { padding: 1.5rem 1rem 3rem; }
+  .tab-bar { gap: .15rem; }
+  .tab-btn { font-size: .65rem; padding: .45rem .3rem; }
+  .gen-header h1 { font-size: 1.4rem; }
+  .sidebar { flex-direction: row; overflow-x: auto; gap: .5rem; }
+  .sidebar .card { min-width: 160px; flex-shrink: 0; }
+  .size-grid { grid-template-columns: repeat(3, 1fr); }
+  .btn-gen { padding: .65rem 1rem; font-size: .75rem; }
+}
+@media (max-width: 480px) {
+  .gen-wrap { padding: 1rem .75rem 2rem; }
+  .gen-header h1 { font-size: 1.2rem; }
+  .gen-header p { font-size: .75rem; }
+  .card-label { font-size: .5rem; }
+  .toggle-name { font-size: .7rem; }
+  .toggle-sub { font-size: .52rem; }
+  .size-btn { font-size: .5rem; padding: .35rem .1rem; }
+  .model-name { font-size: .68rem; }
+  .prompt-card { padding: .8rem; }
+  #imgPrompt, #txtPrompt { font-size: .75rem; min-height: 120px; }
+  .output-card { border-radius: .75rem; }
+  .output-body { padding: 1rem; }
+  .gen-img { max-height: 260px; }
+  .gen-text { font-size: .75rem; padding: .75rem .85rem; }
+}
+@media (max-width: 360px) {
+  .gen-header h1 { font-size: 1.05rem; }
+  .tab-btn { font-size: .6rem; padding: .4rem .2rem; }
+  .tab-btn svg { width: 2.5px; height: 2.5px; }
+}
 .sidebar { display: flex; flex-direction: column; gap: .75rem; }
 .card { background: var(--w); border: 1px solid var(--g200); border-radius: 1rem; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
 .card-label { font-size:.55rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--g400); margin-bottom:.6rem; display:flex; align-items:center; gap:.35rem; }

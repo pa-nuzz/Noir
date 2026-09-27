@@ -147,13 +147,18 @@ def inbox_connect(request):
         form = EmailInboxConnectForm(request.POST)
         if form.is_valid():
             email = form.cleaned_data['email_address']
-            existing = filter_by_context(
+            # Check globally first — DB unique_together is on (user, email_address)
+            global_existing = EmailInbox.objects.filter(
+                user=request.user, email_address=email
+            ).first()
+            existing_in_current_context = filter_by_context(
                 request, EmailInbox.objects.filter(email_address=email))
 
             if reconnect_inbox and reconnect_inbox.email_address == email:
                 inbox = reconnect_inbox
                 inbox.provider = form.cleaned_data['provider']
-            elif existing.exists():
+            elif existing_in_current_context.exists():
+                # Same email already connected in CURRENT context (Personal or Workspace)
                 if is_ajax:
                     return JsonResponse({'success': False, 'error': f'Inbox "{email}" is already connected.'})
                 messages.error(
@@ -162,6 +167,19 @@ def inbox_connect(request):
                     'form': form,
                     'existing_inboxes': filter_by_context(request, EmailInbox.objects.all()),
                 })
+            elif global_existing:
+                # Same email exists in a DIFFERENT context (e.g. Personal vs Workspace)
+                # Reuse the credentials/tokens from the existing entry but create
+                # a scoped copy for the current context to avoid IntegrityError.
+                inbox = form.save(commit=False)
+                inbox.user = request.user
+                inbox.access_token = global_existing.access_token
+                inbox.refresh_token = global_existing.refresh_token
+                inbox.provider_account_id = global_existing.provider_account_id
+                inbox.provider = form.cleaned_data['provider']
+                ws_id = request.session.get('active_workspace_id')
+                if ws_id:
+                    inbox.workspace_id = ws_id
             else:
                 inbox = form.save(commit=False)
                 inbox.user = request.user
@@ -350,9 +368,8 @@ def inbox_auto_reply(request, inbox_id):
         request, EmailInbox.objects.all()), id=inbox_id)
     from apps.intelligence.services.auto_reply import (classify_importance,
                                                        is_human_email,
-                                                       process_auto_reply)
-
-    from .models import EmailDraft, EmailMessage
+                                                       process_auto_reply,
+                                                       generate_auto_reply)
 
     messages_list = EmailMessage.objects.filter(
         thread__inbox=inbox,
@@ -428,7 +445,6 @@ def bulk_auto_reply(request):
     if not message_ids:
         return JsonResponse({'success': False, 'error': 'No messages selected.'})
 
-    from .models import EmailDraft, EmailMessage
     messages_to_process = EmailMessage.objects.filter(
         id__in=message_ids,
         thread__inbox__in=filter_by_context(request, EmailInbox.objects.all()),

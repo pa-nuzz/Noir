@@ -16,12 +16,14 @@
     </p>
     <form method="post">
       {% csrf_token %}
-      <button type="submit" class="px-6 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors">
-        Yes, unsubscribe me
-      </button>
-      <a href="{{ request.META.HTTP_REFERER|default:'' }}" class="ml-3 px-6 py-3 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-semibold transition-colors inline-block">
-        Cancel
-      </a>
+      <div class="flex flex-col sm:flex-row sm:justify-center gap-3">
+        <button type="submit" class="px-6 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors">
+          Yes, unsubscribe me
+        </button>
+        <a href="{{ request.META.HTTP_REFERER|default:'' }}" class="px-6 py-3 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-semibold transition-colors inline-block text-center">
+          Cancel
+        </a>
+      </div>
     </form>
     {% else %}
     <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-100 flex items-center justify-center">
@@ -36,6 +38,7 @@
     <a href="{% url 'home' %}" class="px-6 py-3 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-colors inline-block">
       Go home
     </a>
+    <p class="mt-6 text-xs text-slate-400">If you believe this is a mistake, please contact the original sender.</p>
     {% endif %}
   </div>
 </div>

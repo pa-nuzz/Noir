@@ -69,7 +69,7 @@
 
         <p class="text-xs text-slate-400 uppercase tracking-wider mb-1">Preview</p>
         <div class="text-sm text-slate-600 leading-relaxed bg-white p-3 rounded-lg border border-slate-100 line-clamp-3 cursor-pointer hover:bg-indigo-50/50 transition-colors" onclick="openPreviewModal('{{ template.id }}')">
-          <span class="text-indigo-500 font-semibold text-xs">👁 Click to preview</span>
+          {% if template.body_text %}{{ template.body_text|truncatechars:120|escape }}{% elif template.body_html %}{{ template.body_html|striptags|truncatechars:120|escape }}{% else %}<span class="text-indigo-500 font-semibold text-xs">Click to preview full content</span>{% endif %}
         </div>
       </div>
 

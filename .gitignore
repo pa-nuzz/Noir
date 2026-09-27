@@ -10,8 +10,16 @@ __pycache__/
 # C extensions
 *.so
 .vscode
+.env
+venv/
 media/**/*
-/celerybeat-schedule.db 
+db.sqlite3
+*.sqlite3
+celerybeat-schedule
+celerybeat-schedule.db
+dump.rdb
+nohup.out
+logs/*.log
 # Distribution / packaging
 .Python
 build/

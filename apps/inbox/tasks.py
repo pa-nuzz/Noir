@@ -68,6 +68,31 @@ def sync_all_inboxes_task():
 
     close_old_connections()
     total = 0
+
+    # --- Sync Personal inboxes (workspace=NULL) ---
+    try:
+        close_old_connections()
+        personal_inboxes = EmailInbox.objects.filter(
+            workspace__isnull=True, is_active=True)
+        personal_total = 0
+        for inbox in personal_inboxes:
+            try:
+                password = inbox.get_token()
+                count = sync_inbox(inbox, password or '')
+                personal_total += count
+                total += count
+                if count > 0:
+                    process_auto_replies_for_inbox.delay(inbox.id, None)
+            except Exception as e:
+                logger.error(f"Error syncing personal inbox {inbox.id}: {e}")
+
+        logger.info(
+            f"Synced {personal_total} new message(s) for personal inboxes")
+    except Exception as e:
+        logger.error(f"Error syncing personal inboxes: {e}")
+        close_old_connections()
+
+    # --- Sync Workspace inboxes ---
     for workspace in Workspace.objects.all().only('id', 'name'):
         try:
             with tenant_context(workspace):

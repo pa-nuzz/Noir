@@ -150,12 +150,17 @@ class CampaignForm(forms.ModelForm):
                 self.add_error('subject', 'Subject line is required before sending.')
             body_text = (cleaned_data.get('body_text') or '').strip()
             body_html = (cleaned_data.get('body_html') or '').strip()
+            # Auto-sync: if only body_text is provided, convert to HTML
             if body_text and not body_html:
-                cleaned_data['body_html'] = '<p>' + body_text.replace('\n', '<br>') + '</p>'
+                cleaned_data['body_html'] = text_to_html(body_text)
+                body_html = cleaned_data['body_html']
+            # Auto-sync: if only body_html is provided, extract plain text
             elif body_html and not body_text:
                 import re
-                cleaned_data['body_text'] = re.sub(r'<[^>]+>', '', body_html)
-            if not cleaned_data.get('body_text') and not cleaned_data.get('body_html'):
+                cleaned_data['body_text'] = re.sub(r'<[^>]+>', '', body_html).strip()
+                body_text = cleaned_data['body_text']
+            # Final check — both must be non-empty after potential sync
+            if not body_text and not body_html:
                 raise forms.ValidationError('Message content is required.')
 
         scheduled_at = cleaned_data.get('scheduled_at')

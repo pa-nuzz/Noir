@@ -14,14 +14,4 @@ class Migration(migrations.Migration):
             model_name="emaildraft",
             name="inbox_email_user_id_3ac61f_idx",
         ),
-        migrations.RenameIndex(
-            model_name="emaildraft",
-            new_name="inbox_email_user_id_5f9bba_idx",
-            old_name="emaildraft_u_w_s_idx",
-        ),
-        migrations.RenameIndex(
-            model_name="emaildraft",
-            new_name="inbox_email_workspa_67c63d_idx",
-            old_name="emaildraft_ws_status_idx",
-        ),
     ]
