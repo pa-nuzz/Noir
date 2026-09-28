@@ -105,7 +105,7 @@
 .flow-node-card {
   width: 100%;
   background: #fff;
-  border: 1.5px solid #E2E8F0;
+  border: 1.5px solid #d8e0d5;
   border-radius: 14px;
   padding: 16px;
   transition: all .2s ease;
@@ -116,13 +116,13 @@
   box-shadow: 0 8px 24px rgba(0,0,0,.06);
 }
 .flow-node-card.drag-over {
-  border-color: #6D28D9;
-  box-shadow: 0 0 0 3px rgba(109,40,217,.12);
+  border-color: #17211d;
+  box-shadow: 0 0 0 3px rgba(23,33,29,.12);
 }
 .flow-node-card.dragging {
   opacity: .35;
 }
-.flow-node-card.trigger { border-left: 4px solid #7C3AED; }
+.flow-node-card.trigger { border-left: 4px solid #6f845d; }
 .flow-node-card.delay { border-left: 4px solid #F59E0B; }
 .flow-node-card.action { border-left: 4px solid #10B981; }
 
@@ -130,14 +130,14 @@
   width: 34px; height: 34px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.trigger .node-icon-wrap { background: #F3E8FF; color: #7C3AED; }
+.trigger .node-icon-wrap { background: #edf1eb; color: #6f845d; }
 .delay .node-icon-wrap { background: #FFFBEB; color: #D97706; }
 .action .node-icon-wrap { background: #ECFDF5; color: #059669; }
 
 .flow-connector {
   width: 2px;
   height: 40px;
-  background: linear-gradient(180deg, #CBD5E1, #94A3B8);
+  background: linear-gradient(180deg, #CBD5E1, #88958a);
   position: relative;
   flex-shrink: 0;
 }
@@ -149,7 +149,7 @@
   width: 0; height: 0;
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
-  border-top: 6px solid #94A3B8;
+  border-top: 6px solid #88958a;
 }
 .flow-connector-add {
   position: absolute;
@@ -159,7 +159,7 @@
   border-radius: 50%;
   background: #fff;
   border: 1.5px solid #CBD5E1;
-  color: #94A3B8;
+  color: #88958a;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -168,17 +168,17 @@
   z-index: 2;
 }
 .flow-connector-add:hover {
-  background: #6D28D9;
-  border-color: #6D28D9;
+  background: #17211d;
+  border-color: #17211d;
   color: #fff;
   transform: translate(-50%, -50%) scale(1.1);
-  box-shadow: 0 4px 12px rgba(109,40,217,.3);
+  box-shadow: 0 4px 12px rgba(23,33,29,.3);
 }
 .flow-select {
   width: 100%;
   padding: 6px 10px;
   border-radius: 8px;
-  border: 1.5px solid #E2E8F0;
+  border: 1.5px solid #d8e0d5;
   font-size: 12px;
   font-family: inherit;
   color: #334155;
@@ -186,19 +186,19 @@
   outline: none;
   transition: border-color .15s;
 }
-.flow-select:focus { border-color: #6D28D9; box-shadow: 0 0 0 3px rgba(109,40,217,.08); }
+.flow-select:focus { border-color: #17211d; box-shadow: 0 0 0 3px rgba(23,33,29,.08); }
 .flow-input {
   width: 100%;
   padding: 6px 10px;
   border-radius: 8px;
-  border: 1.5px solid #E2E8F0;
+  border: 1.5px solid #d8e0d5;
   font-size: 12px;
   font-family: inherit;
   color: #334155;
   outline: none;
   transition: border-color .15s;
 }
-.flow-input:focus { border-color: #6D28D9; box-shadow: 0 0 0 3px rgba(109,40,217,.08); }
+.flow-input:focus { border-color: #17211d; box-shadow: 0 0 0 3px rgba(23,33,29,.08); }
 .flow-input-narrow { max-width: 80px; }
 
 @keyframes node-enter {

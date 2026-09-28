@@ -10,13 +10,13 @@
   }
   .mfa-shield-icon {
     width: 80px; height: 80px;
-    background: linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 100%);
+    background: linear-gradient(135deg, #edf1eb 0%, #DDD6FE 100%);
     border-radius: 1.25rem;
     display: flex; align-items: center; justify-content: center;
     margin: 0 auto 1.5rem;
     box-shadow: 0 8px 24px -6px rgba(109, 40, 217, 0.25);
   }
-  .mfa-shield-icon svg { width: 40px; height: 40px; color: #6D28D9; }
+  .mfa-shield-icon svg { width: 40px; height: 40px; color: #17211d; }
   .mfa-steps { list-style: none; padding: 0; margin: 1.5rem 0; text-align: left; }
   .mfa-steps li {
     display: flex; align-items: flex-start; gap: 0.875rem;
@@ -26,7 +26,7 @@
   .mfa-steps li:last-child { border-bottom: none; }
   .mfa-step-num {
     width: 28px; height: 28px; border-radius: 50%;
-    background: #F3E8FF; color: #6D28D9;
+    background: #edf1eb; color: #17211d;
     display: flex; align-items: center; justify-content: center;
     font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
   }
@@ -34,7 +34,7 @@
   .mfa-step-text strong { color: #0F172A; }
   .mfa-benefit {
     display: flex; align-items: center; gap: 0.625rem;
-    padding: 0.5rem 0; font-size: 0.8125rem; color: #475569;
+    padding: 0.5rem 0; font-size: 0.8125rem; color: #526057;
   }
   .mfa-benefit svg { width: 18px; height: 18px; color: #10B981; flex-shrink: 0; }
 </style>
@@ -56,10 +56,10 @@
       </p>
     </div>
 
-    <div class="bg-white rounded-2xl border border-[#E2E8F0] shadow-[0_18px_42px_-26px_rgba(15,23,42,0.12)] overflow-hidden">
+    <div class="bg-white rounded-2xl border border-[#d8e0d5] shadow-[0_18px_42px_-26px_rgba(15,23,42,0.12)] overflow-hidden">
       <div class="px-6 pt-6 pb-4">
         <h2 class="text-sm font-semibold text-[#334155] mb-1">How it works</h2>
-        <p class="text-xs text-[#94A3B8] mb-3">Takes about 30 seconds — you only need a phone.</p>
+        <p class="text-xs text-[#88958a] mb-3">Takes about 30 seconds — you only need a phone.</p>
 
         <ol class="mfa-steps">
           <li>
@@ -77,7 +77,7 @@
         </ol>
       </div>
 
-      <div class="bg-[#F8FAFC] px-6 py-4 border-t border-[#F1F5F9]">
+      <div class="bg-[#fbfcf9] px-6 py-4 border-t border-[#F1F5F9]">
         <div class="mfa-benefit">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
@@ -100,13 +100,13 @@
 
       <div class="px-6 pb-6 pt-4 text-center">
         <a href="{% url 'mfa:settings' %}"
-           class="inline-flex items-center gap-2 bg-[#6D28D9] text-white text-sm font-semibold px-6 py-3 rounded-xl hover:bg-[#5424c8] transition-all shadow-[0_4px_14px_-3px_rgba(109,40,217,0.4)] hover:shadow-[0_6px_20px_-3px_rgba(109,40,217,0.5)]">
+           class="inline-flex items-center gap-2 bg-[#17211d] text-white text-sm font-semibold px-6 py-3 rounded-xl hover:bg-[#5424c8] transition-all shadow-[0_4px_14px_-3px_rgba(23,33,29,0.4)] hover:shadow-[0_6px_20px_-3px_rgba(23,33,29,0.5)]">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
           </svg>
           Set Up MFA Now
         </a>
-        <p class="text-[11px] text-[#94A3B8] mt-3">You'll be redirected here until MFA is enabled.</p>
+        <p class="text-[11px] text-[#88958a] mt-3">You'll be redirected here until MFA is enabled.</p>
       </div>
     </div>
 

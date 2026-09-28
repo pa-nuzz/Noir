@@ -1,35 +1,35 @@
 <style>
   .rd-empty {
-    text-align: center; padding: 48px 20px; color: #94A3B8;
+    text-align: center; padding: 48px 20px; color: #88958a;
   }
   .rd-empty svg { width: 40px; height: 40px; margin: 0 auto 12px; opacity: 0.4; }
   .rd-card {
     display: flex; flex-direction: column; gap: 8px;
     padding: 16px; border-radius: 12px;
-    border: 1px solid #E2E8F0; background: #FFFFFF;
+    border: 1px solid #d8e0d5; background: #FFFFFF;
     transition: border-color 0.15s, box-shadow 0.15s;
   }
-  .rd-card:hover { border-color: #06B6D4; box-shadow: 0 2px 12px rgba(6,182,212,0.08); }
-  .rd-card-title { font-size: 0.9375rem; font-weight: 600; color: #0A2540; line-height: 1.4; }
+  .rd-card:hover { border-color: #879b72; box-shadow: 0 2px 12px rgba(135,155,114,0.08); }
+  .rd-card-title { font-size: 0.9375rem; font-weight: 600; color: #17211d; line-height: 1.4; }
   .rd-card-title a { color: inherit; text-decoration: none; }
-  .rd-card-title a:hover { color: #06B6D4; }
-  .rd-card-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 0.75rem; color: #94A3B8; }
-  .rd-card-score { font-size: 0.6875rem; color: #94A3B8; font-weight: 500; margin-left: auto; }
+  .rd-card-title a:hover { color: #879b72; }
+  .rd-card-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 0.75rem; color: #88958a; }
+  .rd-card-score { font-size: 0.6875rem; color: #88958a; font-weight: 500; margin-left: auto; }
   .rd-badge-topic {
     display: inline-flex; align-items: center; gap: 4px;
     padding: 2px 8px; border-radius: 999px;
     font-size: 0.6875rem; font-weight: 600;
     border: 2px solid transparent;
-    background: linear-gradient(#fff, #fff) padding-box, linear-gradient(90deg, #6D28D9, #06B6D4) border-box;
+    background: linear-gradient(#fff, #fff) padding-box, linear-gradient(90deg, #17211d, #879b72) border-box;
     background-clip: padding-box, border-box;
     background-origin: padding-box, border-box;
-    color: #0A2540;
+    color: #17211d;
   }
-  .rd-platform-divider { border: none; border-top: 1px solid #E2E8F0; margin: 8px 0; }
-  .rd-platform-header { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #6D28D9; }
+  .rd-platform-divider { border: none; border-top: 1px solid #d8e0d5; margin: 8px 0; }
+  .rd-platform-header { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #17211d; }
   .rd-platform-body { font-size: 0.8125rem; color: #334155; line-height: 1.6; white-space: pre-wrap; }
   .rd-platform-hashtags { display: flex; flex-wrap: wrap; gap: 4px; font-size: 0.6875rem; font-weight: 600; }
-  .rd-platform-hashtags span { color: #6D28D9; }
+  .rd-platform-hashtags span { color: #17211d; }
 </style>
 
 <div class="flex items-center justify-between mb-4">
@@ -97,7 +97,7 @@
 
 <div id="rd-needs-platform" class="rd-empty hidden">
   <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.274.145.593.22.916.22l.042-.001a7.73 7.73 0 013.214.803 1.28 1.28 0 001.612-.378l.763-1.053a1.125 1.125 0 011.704-.166 9.04 9.04 0 011.794 2.988 1.125 1.125 0 01-.49 1.466l-1.14.662c-.327.19-.552.513-.618.883-.058.327-.03.662.084.96a7.73 7.73 0 01.442 3.362c-.049.33-.177.646-.4.896l-.878 1.005a1.125 1.125 0 01-1.696-.084 7.73 7.73 0 00-2.478-2.106 1.28 1.28 0 00-1.578.341l-.74 1.042a1.125 1.125 0 01-1.678.2 9.04 9.04 0 01-2.02-2.855 1.125 1.125 0 01.354-1.45l1.106-.672c.324-.197.543-.527.596-.9a7.73 7.73 0 00-.302-3.392 1.28 1.28 0 00-1.254-.73 7.73 7.73 0 00-3.158.616 1.125 1.125 0 01-1.538-.624l-.427-1.22z"/></svg>
-  <p style="color:#6D28D9;font-weight:700;">SELECT PLATFORM In Automation</p>
+  <p style="color:#17211d;font-weight:700;">SELECT PLATFORM In Automation</p>
   <p class="text-xs text-slate-400 mt-1">Go to the Automation tab and select at least one platform to generate content.</p>
 </div>
 
@@ -193,8 +193,8 @@ function loadCurrents() {
       }
       if (data.llm_retry) {
         list.innerHTML = '<div class="tr-empty"><svg class="tr-spin" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="width:40px;height:40px;margin:0 auto 12px;opacity:0.4"><path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/></svg>' +
-          '<p style="font-weight:600;color:#6D28D9;">Content generation retrying</p>' +
-          '<p class="text-xs" style="margin-top:4px;color:#94A3B8;">Attempt ' + (data.retry_attempt || 1) + '. This should complete soon.</p></div>';
+          '<p style="font-weight:600;color:#17211d;">Content generation retrying</p>' +
+          '<p class="text-xs" style="margin-top:4px;color:#88958a;">Attempt ' + (data.retry_attempt || 1) + '. This should complete soon.</p></div>';
         return;
       }
       if (!data.items || data.items.length === 0) {

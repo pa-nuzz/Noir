@@ -6,17 +6,17 @@
 <style>
 /* ── Core design tokens matching dashboard ── */
 :root {
-  --ink:        #0A2540;
-  --ink-muted:  #445B73;
-  --ink-subtle: #8FA5BC;
-  --primary:    #6D28D9;
-  --primary-h:  #5B21B6;
-  --primary-l:  #EDE9FE;
-  --cyan:       #06B6D4;
-  --cyan-l:     #ECFEFF;
+  --ink:        #17211d;
+  --ink-muted:  #526057;
+  --ink-subtle: #88958a;
+  --primary:    #17211d;
+  --primary-h:  #101713;
+  --primary-l:  #edf1eb;
+  --cyan:       #879b72;
+  --cyan-l:     #f2f6ef;
   --surface:    #FFFFFF;
-  --surface-r:  #F8FAFC;
-  --border:     #E2E8F0;
+  --surface-r:  #fbfcf9;
+  --border:     #d8e0d5;
   --border-h:   #CBD5E1;
 }
 
@@ -42,7 +42,7 @@
   font-size: .65rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
   padding: .3rem .75rem; border-radius: 9999px;
 }
-.badge-cyan { background: var(--cyan-l); color: #0891B2; }
+.badge-cyan { background: var(--cyan-l); color: #6f845d; }
 .badge-sm {
   display: inline-flex; align-items: center;
   background: var(--primary-l); color: var(--primary);
@@ -54,8 +54,8 @@
 .section-label { font-family: 'Plus Jakarta Sans', sans-serif; font-size: .65rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-subtle); margin-bottom: .75rem; }
 
 /* ── Status chips (from Social Hub) ── */
-.status-draft      { background: #F1F5F9; color: #475569; }
-.status-scheduled  { background: #EDE9FE; color: #6D28D9; }
+.status-draft      { background: #F1F5F9; color: #526057; }
+.status-scheduled  { background: #edf1eb; color: #17211d; }
 .status-published  { background: #ECFDF5; color: #059669; }
 .status-failed     { background: #FEF2F2; color: #DC2626; }
 
@@ -64,7 +64,7 @@
 .plat-instagram { background: #FDF2F8; color: #BE185D; }
 .plat-twitter   { background: #F0F9FF; color: #0369A1; }
 .plat-linkedin  { background: #EFF6FF; color: #1E40AF; }
-.plat-tiktok    { background: #F8FAFC; color: #1E293B; }
+.plat-tiktok    { background: #fbfcf9; color: #1E293B; }
 .plat-youtube   { background: #FEF2F2; color: #B91C1C; }
 .chip { display: inline-flex; align-items: center; gap: .375rem; padding: .25rem .625rem; border-radius: .5rem; font-size: .7rem; font-weight: 600; }
 
@@ -81,8 +81,8 @@
 @keyframes marqueeGlow { 0%,100%{opacity:.5} 50%{opacity:1} }
 .trust-marquee-wrap { position:relative; overflow:hidden; }
 .trust-marquee-wrap::before, .trust-marquee-wrap::after { content:''; position:absolute; top:0; bottom:0; width:80px; z-index:1; pointer-events:none; }
-.trust-marquee-wrap::before { left:0; background:linear-gradient(to right, #f8fafc, transparent); }
-.trust-marquee-wrap::after { right:0; background:linear-gradient(to left, #f8fafc, transparent); }
+.trust-marquee-wrap::before { left:0; background:linear-gradient(to right, #fbfcf9, transparent); }
+.trust-marquee-wrap::after { right:0; background:linear-gradient(to left, #fbfcf9, transparent); }
 .trust-marquee-inner { animation: marqueeLeft 36s linear infinite, marqueeGlow 4s ease-in-out infinite; }
 
 /* ── Float anims ── */
@@ -96,12 +96,12 @@
 .faq-item.open .faq-answer { max-height:300px; }
 .faq-chevron { transition: transform .3s ease; }
 .faq-item.open .faq-chevron { transform: rotate(180deg); }
-.faq-item.open { border-left: 4px solid #c4b5fd; }
+.faq-item.open { border-left: 4px solid #b8c7a4; }
 
 /* ── Bento Features ── */
 .bento-grid { display:grid; grid-template-columns:repeat(12,1fr); gap:16px; }
 .bento-card { position:relative; border-radius:1rem; border:1px solid var(--border); background:var(--surface); overflow:hidden; cursor:pointer; transition:border-color .2s,box-shadow .2s,border-left-color .2s; border-left:4px solid transparent; }
-.bento-card:hover { border-color:var(--border-h); border-left-color:#C4B5FD; box-shadow:0 4px 24px -4px rgba(109,40,217,.08),0 12px 40px -12px rgba(10,37,64,.06); }
+.bento-card:hover { border-color:var(--border-h); border-left-color:#b8c7a4; box-shadow:0 4px 24px -4px rgba(23,33,29,.08),0 12px 40px -12px rgba(10,37,64,.06); }
 .bento-features { max-height:0;opacity:0;overflow:hidden;transition:max-height .35s ease,opacity .25s ease; }
 .bento-card:hover .bento-features,.bento-card.active .bento-features { max-height:260px;opacity:1; }
 .bento-feature-item { opacity:0;transform:translateY(4px);transition:opacity .2s ease,transform .2s ease; }
@@ -110,8 +110,8 @@
 .bento-card:hover .bento-feature-item:nth-child(2),.bento-card.active .bento-feature-item:nth-child(2){transition-delay:.06s}
 .bento-card:hover .bento-feature-item:nth-child(3),.bento-card.active .bento-feature-item:nth-child(3){transition-delay:.09s}
 .bento-card:hover .bento-feature-item:nth-child(4),.bento-card.active .bento-feature-item:nth-child(4){transition-delay:.12s}
-.bento-num { font-size:4.5rem;line-height:1;font-weight:800;color:rgba(109,40,217,.04);position:absolute;top:-8px;right:12px;pointer-events:none;transition:color .2s; }
-.bento-card:hover .bento-num { color:rgba(109,40,217,.07); }
+.bento-num { font-size:4.5rem;line-height:1;font-weight:800;color:rgba(23,33,29,.04);position:absolute;top:-8px;right:12px;pointer-events:none;transition:color .2s; }
+.bento-card:hover .bento-num { color:rgba(23,33,29,.07); }
 @media(max-width:640px){ .bento-grid{grid-template-columns:1fr!important;} }
 
 
@@ -124,12 +124,12 @@
 .feature-tab:hover:not(.active) { color:var(--ink); }
 
 /* ── Hero graph bars ── */
-.bar { border-radius: 4px 4px 0 0; min-width:10px; background: #EDE9FE; transition: background .2s; }
+.bar { border-radius: 4px 4px 0 0; min-width:10px; background: #edf1eb; transition: background .2s; }
 .bar.accent { background: var(--primary); }
 
 /* ── Connector line animation ── */
 @keyframes lineFlow { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
-.how-line-animated { background:linear-gradient(90deg, #ddd6fe, #a855f7, #06b6d4, #ddd6fe); background-size: 200% 100%; animation: lineFlow 3s linear infinite; }
+.how-line-animated { background:linear-gradient(90deg, #ddd6fe, #a855f7, #879b72, #ddd6fe); background-size: 200% 100%; animation: lineFlow 3s linear infinite; }
 
 /* ── Sparkline bars ── */
 @keyframes sparkPulse { 0%,100%{opacity:.6;transform:scaleY(.85)} 50%{opacity:1;transform:scaleY(1)} }
@@ -491,7 +491,7 @@
 <!-- ══════════════════════════════════════════
      STATS — primary gradient strip
 ══════════════════════════════════════════ -->
-<section class="py-20 relative overflow-hidden" style="background:linear-gradient(135deg,#6D28D9 0%,#06B6D4 100%)">
+<section class="py-20 relative overflow-hidden" style="background:linear-gradient(135deg,#17211d 0%,#879b72 100%)">
   <div class="absolute inset-0 pointer-events-none opacity-[.06]" style="background-image:radial-gradient(circle,#fff 1px,transparent 1px);background-size:28px 28px;"></div>
   <div class="relative max-w-8xl mx-auto px-5 sm:px-8 lg:px-12">
     <div class="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -518,7 +518,7 @@
      HOW IT WORKS — visually enhanced 3-step
 ══════════════════════════════════════════ -->
 <section class="py-20 bg-white relative overflow-hidden">
-  <div class="absolute inset-0 pointer-events-none opacity-[0.03]" style="background-image:radial-gradient(circle,#6D28D9 1px,transparent 1px);background-size:32px 32px;"></div>
+  <div class="absolute inset-0 pointer-events-none opacity-[0.03]" style="background-image:radial-gradient(circle,#17211d 1px,transparent 1px);background-size:32px 32px;"></div>
   <div class="max-w-7xl mx-auto px-6 lg:px-12 relative">
     <div class="text-center mb-16 reveal">
       <span class="badge mb-4 inline-flex">Process</span>
@@ -705,7 +705,7 @@
 <!-- ══════════════════════════════════════════
      FOOTER
 ══════════════════════════════════════════ -->
-<footer class="relative overflow-hidden" style="background:linear-gradient(135deg,#6D28D9 0%,#5B21B6 100%)">
+<footer class="relative overflow-hidden" style="background:linear-gradient(135deg,#17211d 0%,#101713 100%)">
   <div class="absolute inset-0 pointer-events-none opacity-[.05]" style="background-image:radial-gradient(circle,#fff 1px,transparent 1px);background-size:28px 28px;"></div>
   <div class="relative max-w-8xl mx-auto px-5 sm:px-8 lg:px-12 pt-14 pb-10">
     <div class="flex flex-col lg:flex-row items-start gap-12 lg:gap-16">
@@ -809,7 +809,7 @@
         </div>
 
         <!-- Demo content — Noir light theme -->
-        <div class="relative overflow-hidden" style="height:540px; background:#f8fafc;">
+        <div class="relative overflow-hidden" style="height:540px; background:#fbfcf9;">
 
           <!-- Scene: full dashboard overview -->
           <div id="demo-scene" class="absolute inset-0 p-5">

@@ -7,7 +7,7 @@
 <style>
   .sch-tabs {
     display: flex; align-items: center; gap: 0;
-    border-bottom: 1px solid #E2E8F0; margin-top: 4px;
+    border-bottom: 1px solid #d8e0d5; margin-top: 4px;
   }
   .sch-tab {
     display: inline-flex; align-items: center; gap: 8px;
@@ -18,8 +18,8 @@
     cursor: pointer; transition: all 0.15s ease;
     text-decoration: none; white-space: nowrap;
   }
-  .sch-tab:hover { color: #0A2540; background: #F8FAFC; }
-  .sch-tab.active { color: #0A2540; border-bottom-color: #06B6D4; font-weight: 700; }
+  .sch-tab:hover { color: #17211d; background: #fbfcf9; }
+  .sch-tab.active { color: #17211d; border-bottom-color: #879b72; font-weight: 700; }
   .sch-tab svg { width: 18px; height: 18px; }
   .sch-tab-panel { display: none; }
   .sch-tab-panel.active { display: block; }
@@ -29,7 +29,7 @@
     display: grid; grid-template-columns: 36px 1fr 110px 90px; align-items: center; gap: 10px;
     padding: 14px 20px; transition: background-color 0.15s;
   }
-  .cs-item:hover { background-color: #F8FAFC; }
+  .cs-item:hover { background-color: #fbfcf9; }
   .cs-type-badge {
     width: 36px; height: 36px; border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
@@ -49,18 +49,18 @@
   .cs-gen-card {
     display: flex; align-items: center; gap: 12px;
     padding: 14px 16px; border-radius: 12px;
-    border: 1px solid #E2E8F0; background: #FFFFFF;
+    border: 1px solid #d8e0d5; background: #FFFFFF;
     text-decoration: none; transition: all 0.15s;
   }
-  .cs-gen-card:hover { border-color: #06B6D4; box-shadow: 0 4px 12px rgba(6,182,212,0.1); }
+  .cs-gen-card:hover { border-color: #879b72; box-shadow: 0 4px 12px rgba(135,155,114,0.1); }
   .cs-gen-icon {
     width: 40px; height: 40px; border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
     background: #F1F5F9; flex-shrink: 0; transition: background 0.15s;
   }
-  .cs-gen-card:hover .cs-gen-icon { background: #ECFEFF; }
+  .cs-gen-card:hover .cs-gen-icon { background: #f2f6ef; }
   .cs-gen-icon svg { width: 18px; height: 18px; color: #64748B; transition: color 0.15s; }
-  .cs-gen-card:hover .cs-gen-icon svg { color: #06B6D4; }
+  .cs-gen-card:hover .cs-gen-icon svg { color: #879b72; }
 
 
 </style>

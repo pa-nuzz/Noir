@@ -19,7 +19,7 @@
       {% url 'content_studio:approve' item.id as approve_url %}
       {% url 'content_studio:delete' item.id as delete_url %}
       {% can_edit 'content_studio' as can_edit_content %}{% if can_edit_content %}
-      {% include "components/button.html" with label="Edit" variant="secondary" href=edit_url icon="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" primary_start="#7C3AED" primary_end="#5B21B6" %}
+      {% include "components/button.html" with label="Edit" variant="secondary" href=edit_url icon="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" primary_start="#6f845d" primary_end="#101713" %}
       {% endif %}
       {% include "components/button.html" with label="Refine" variant="secondary" href=refine_url icon="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" %}
                 <button type="button" onclick="document.getElementById('saveDraftModal').showModal()" class="btn-action btn-action-secondary inline-flex items-center gap-1.5">

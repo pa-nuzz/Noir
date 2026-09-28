@@ -3,49 +3,49 @@
     position: relative;
     display: flex; flex-direction: column; gap: 8px;
     padding: 16px; border-radius: 12px;
-    border: 1px solid #E2E8F0; background: #FFFFFF;
+    border: 1px solid #d8e0d5; background: #FFFFFF;
     transition: border-color 0.15s, box-shadow 0.15s;
   }
-  .tr-feed-card:hover { border-color: #06B6D4; box-shadow: 0 2px 12px rgba(6,182,212,0.08); }
-  .tr-feed-title { font-size: 0.9375rem; font-weight: 600; color: #0A2540; line-height: 1.4; }
+  .tr-feed-card:hover { border-color: #879b72; box-shadow: 0 2px 12px rgba(135,155,114,0.08); }
+  .tr-feed-title { font-size: 0.9375rem; font-weight: 600; color: #17211d; line-height: 1.4; }
   .tr-feed-title a { color: inherit; text-decoration: none; }
-  .tr-feed-title a:hover { color: #06B6D4; }
+  .tr-feed-title a:hover { color: #879b72; }
   .tr-feed-summary { font-size: 0.8125rem; color: #64748B; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .tr-feed-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 0.75rem; color: #94A3B8; margin-top: 4px; }
+  .tr-feed-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 0.75rem; color: #88958a; margin-top: 4px; }
   .tr-feed-topic { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 0.6875rem; font-weight: 600; }
   .tr-feed-actions { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-  .tr-feed-btn { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 600; border: 1px solid #E2E8F0; background: #FFFFFF; color: #64748B; cursor: pointer; transition: all 0.12s; text-decoration: none; }
-  .tr-feed-btn:hover { border-color: #06B6D4; color: #06B6D4; background: #F0FDFA; }
+  .tr-feed-btn { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 600; border: 1px solid #d8e0d5; background: #FFFFFF; color: #64748B; cursor: pointer; transition: all 0.12s; text-decoration: none; }
+  .tr-feed-btn:hover { border-color: #879b72; color: #879b72; background: #F0FDFA; }
   .tr-feed-btn svg { width: 14px; height: 14px; }
   .tr-feed-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .tr-feed-score { font-size: 0.6875rem; color: #94A3B8; font-weight: 500; margin-left: auto; }
-  .tr-dismiss-btn { position: absolute; top: 8px; right: 8px; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; border: none; background: transparent; color: #94A3B8; cursor: pointer; transition: all 0.12s; z-index: 1; }
+  .tr-feed-score { font-size: 0.6875rem; color: #88958a; font-weight: 500; margin-left: auto; }
+  .tr-dismiss-btn { position: absolute; top: 8px; right: 8px; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; border: none; background: transparent; color: #88958a; cursor: pointer; transition: all 0.12s; z-index: 1; }
   .tr-dismiss-btn:hover { background: #F1F5F9; color: #64748B; }
   .tr-dismiss-btn svg { width: 14px; height: 14px; }
-  .tr-topic-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; cursor: pointer; border: 2px solid #E2E8F0; background: #FFFFFF; color: #64748B; transition: all 0.12s; }
+  .tr-topic-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; cursor: pointer; border: 2px solid #d8e0d5; background: #FFFFFF; color: #64748B; transition: all 0.12s; }
   .tr-topic-chip:hover {
     border-color: transparent;
-    background: linear-gradient(#fff, #fff) padding-box, linear-gradient(90deg, #6D28D9, #06B6D4) border-box;
+    background: linear-gradient(#fff, #fff) padding-box, linear-gradient(90deg, #17211d, #879b72) border-box;
     background-clip: padding-box, border-box;
     background-origin: padding-box, border-box;
-    color: #0A2540;
+    color: #17211d;
   }
   .tr-topic-chip.active {
     border-color: transparent;
-    background: linear-gradient(#fff, #fff) padding-box, linear-gradient(90deg, #6D28D9, #06B6D4) border-box;
+    background: linear-gradient(#fff, #fff) padding-box, linear-gradient(90deg, #17211d, #879b72) border-box;
     background-clip: padding-box, border-box;
     background-origin: padding-box, border-box;
-    color: #0A2540;
+    color: #17211d;
   }
   .tr-topic-chip.subscribed {
     border-width: 2px;
     border-color: transparent;
-    background: linear-gradient(#fff, #fff) padding-box, linear-gradient(90deg, #6D28D9, #06B6D4) border-box;
+    background: linear-gradient(#fff, #fff) padding-box, linear-gradient(90deg, #17211d, #879b72) border-box;
     background-clip: padding-box, border-box;
     background-origin: padding-box, border-box;
   }
-  .tr-loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: #94A3B8; font-size: 0.875rem; }
-  .tr-empty { text-align: center; padding: 40px 20px; color: #94A3B8; }
+  .tr-loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: #88958a; font-size: 0.875rem; }
+  .tr-empty { text-align: center; padding: 40px 20px; color: #88958a; }
   .tr-empty svg { width: 40px; height: 40px; margin: 0 auto 12px; opacity: 0.4; }
   .tr-toast { position: fixed; top: 24px; right: 24px; padding: 12px 20px; border-radius: 10px; font-size: 0.8125rem; font-weight: 600; color: #FFFFFF; z-index: 9999; opacity: 0; transform: translateX(10px); transition: all 0.25s; pointer-events: none; }
   .tr-toast.show { opacity: 1; transform: translateX(0); }
@@ -57,13 +57,13 @@
     display: inline-flex; align-items: center; gap: 6px;
     padding: 8px 16px; border-radius: 8px; border: none;
     font-size: 0.75rem; font-weight: 600; color: #FFFFFF;
-    background: linear-gradient(90deg, #6D28D9, #06B6D4);
+    background: linear-gradient(90deg, #17211d, #879b72);
     cursor: pointer; transition: all 0.15s; text-decoration: none;
-    box-shadow: 0 1px 3px rgba(109,40,217,0.15);
+    box-shadow: 0 1px 3px rgba(23,33,29,0.15);
   }
   .tr-btn-gradient:hover {
-    background: linear-gradient(90deg, #5B21B6, #0891B2);
-    box-shadow: 0 2px 8px rgba(109,40,217,0.25);
+    background: linear-gradient(90deg, #101713, #6f845d);
+    box-shadow: 0 2px 8px rgba(23,33,29,0.25);
   }
   .tr-btn-gradient:disabled {
     opacity: 0.6; cursor: not-allowed;
@@ -75,10 +75,10 @@
     display: inline-flex; align-items: center; justify-content: center;
     width: 32px; height: 32px; border-radius: 8px; border: none;
     font-size: 0.75rem; font-weight: 600;
-    color: #6D28D9; background: transparent;
+    color: #17211d; background: transparent;
     cursor: pointer; transition: all 0.12s;
   }
-  .tr-btn-ghost:hover { background: rgba(109,40,217,0.08); color: #5B21B6; }
+  .tr-btn-ghost:hover { background: rgba(23,33,29,0.08); color: #101713; }
   .tr-btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
   .tr-btn-ghost svg { width: 16px; height: 16px; }
 
@@ -194,8 +194,8 @@ function renderPagination(page, totalPages, total) {
   var startIdx = (page - 1) * 40 + 1;
   var endIdx   = Math.min(page * 40, total);
 
-  var html = '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 4px 4px;margin-top:8px;border-top:1px solid #E2E8F0;">' +
-    '<span style="font-size:0.75rem;color:#94A3B8;">Showing ' + startIdx + '–' + endIdx + ' of ' + total + '</span>' +
+  var html = '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 4px 4px;margin-top:8px;border-top:1px solid #d8e0d5;">' +
+    '<span style="font-size:0.75rem;color:#88958a;">Showing ' + startIdx + '–' + endIdx + ' of ' + total + '</span>' +
     '<div style="display:flex;gap:6px;">';
 
   if (page > 1) {
@@ -206,14 +206,14 @@ function renderPagination(page, totalPages, total) {
   var endP   = Math.min(totalPages, page + 2);
   if (startP > 1) {
     html += '<button onclick="trGoPage(1)" class="tr-feed-btn">1</button>';
-    if (startP > 2) html += '<span style="padding:6px 4px;font-size:0.75rem;color:#94A3B8;">…</span>';
+    if (startP > 2) html += '<span style="padding:6px 4px;font-size:0.75rem;color:#88958a;">…</span>';
   }
   for (var p = startP; p <= endP; p++) {
-    var activeStyle = p === page ? 'border-color:#06B6D4;color:#06B6D4;background:#F0FDFA;' : '';
+    var activeStyle = p === page ? 'border-color:#879b72;color:#879b72;background:#F0FDFA;' : '';
     html += '<button onclick="trGoPage(' + p + ')" class="tr-feed-btn" style="' + activeStyle + '">' + p + '</button>';
   }
   if (endP < totalPages) {
-    if (endP < totalPages - 1) html += '<span style="padding:6px 4px;font-size:0.75rem;color:#94A3B8;">…</span>';
+    if (endP < totalPages - 1) html += '<span style="padding:6px 4px;font-size:0.75rem;color:#88958a;">…</span>';
     html += '<button onclick="trGoPage(' + totalPages + ')" class="tr-feed-btn">' + totalPages + '</button>';
   }
 
@@ -249,7 +249,7 @@ function loadTrendingFeed(topicId, page) {
         list.innerHTML = '<div class="tr-empty">' +
           '<svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="width:40px;height:40px;margin:0 auto 12px;opacity:0.4"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>' +
           '<p>No categories selected.</p>' +
-          '<p class="text-xs" style="margin-top:4px;color:#94A3B8;">Go to the Automation tab and enable at least one category to see trending content.</p>' +
+          '<p class="text-xs" style="margin-top:4px;color:#88958a;">Go to the Automation tab and enable at least one category to see trending content.</p>' +
           '<button onclick="switchTab(\'automation\')" class="tr-feed-btn" style="margin-top:12px;">Go to Automation →</button>' +
         '</div>';
         return;
@@ -258,7 +258,7 @@ function loadTrendingFeed(topicId, page) {
         list.innerHTML = '<div class="tr-empty">' +
           '<svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="width:40px;height:40px;margin:0 auto 12px;opacity:0.4"><path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/></svg>' +
           '<p>Collecting trending content from your sources...</p>' +
-          '<p class="text-xs" style="margin-top:4px;color:#94A3B8;">Sources are polled every 30 minutes. Check back soon or refresh now.</p>' +
+          '<p class="text-xs" style="margin-top:4px;color:#88958a;">Sources are polled every 30 minutes. Check back soon or refresh now.</p>' +
           '<button onclick="refreshTrendingFeed()" class="tr-feed-btn" style="margin-top:12px;">↻ Refresh Now</button>' +
         '</div>';
         return;

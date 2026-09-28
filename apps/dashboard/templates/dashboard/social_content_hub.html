@@ -7,7 +7,7 @@
 <style>
   .sch-tabs {
     display: flex; align-items: center; gap: 0;
-    border-bottom: 1px solid #E2E8F0;
+    border-bottom: 1px solid #d8e0d5;
     margin-top: 4px;
   }
   .sch-tab {
@@ -19,8 +19,8 @@
     cursor: pointer; transition: all 0.15s ease;
     text-decoration: none; white-space: nowrap;
   }
-  .sch-tab:hover { color: #0A2540; background: #F8FAFC; }
-  .sch-tab.active { color: #0A2540; border-bottom-color: #06B6D4; font-weight: 700; }
+  .sch-tab:hover { color: #17211d; background: #fbfcf9; }
+  .sch-tab.active { color: #17211d; border-bottom-color: #879b72; font-weight: 700; }
   .sch-tab svg { width: 18px; height: 18px; }
   .sch-tab-panel { display: none; }
   .sch-tab-panel.active { display: block; }
@@ -33,16 +33,16 @@
     font-size: 0.8125rem; font-weight: 500; color: #64748B;
     text-decoration: none; transition: all 0.12s;
   }
-  .sch-media-filter:hover { background: #F1F5F9; color: #0A2540; }
-  .sch-media-filter.active { background: #ECFEFF; color: #06B6D4; font-weight: 600; }
+  .sch-media-filter:hover { background: #F1F5F9; color: #17211d; }
+  .sch-media-filter.active { background: #f2f6ef; color: #879b72; font-weight: 600; }
   .sch-media-filter svg { width: 16px; height: 16px; flex-shrink: 0; }
   .sch-media-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
   .sch-media-card {
     position: relative; border-radius: 12px; overflow: hidden;
-    border: 1px solid #E2E8F0; background: #FFFFFF;
+    border: 1px solid #d8e0d5; background: #FFFFFF;
     aspect-ratio: 1; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s;
   }
-  .sch-media-card:hover { border-color: #06B6D4; box-shadow: 0 4px 16px rgba(6,182,212,0.12); }
+  .sch-media-card:hover { border-color: #879b72; box-shadow: 0 4px 16px rgba(135,155,114,0.12); }
   .sch-media-thumb { width: 100%; height: 100%; object-fit: cover; background: #F1F5F9; }
   .sch-media-icon {
     width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
@@ -65,18 +65,18 @@
   .sch-action-card {
     display: flex; align-items: center; gap: 12px;
     padding: 14px 16px; border-radius: 12px;
-    border: 1px solid #E2E8F0; background: #FFFFFF;
+    border: 1px solid #d8e0d5; background: #FFFFFF;
     text-decoration: none; transition: all 0.15s;
   }
-  .sch-action-card:hover { border-color: #06B6D4; box-shadow: 0 4px 12px rgba(6,182,212,0.1); }
+  .sch-action-card:hover { border-color: #879b72; box-shadow: 0 4px 12px rgba(135,155,114,0.1); }
   .sch-action-icon {
     width: 40px; height: 40px; border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
     background: #F1F5F9; flex-shrink: 0; transition: background 0.15s;
   }
-  .sch-action-card:hover .sch-action-icon { background: #ECFEFF; }
+  .sch-action-card:hover .sch-action-icon { background: #f2f6ef; }
   .sch-action-icon svg { width: 18px; height: 18px; color: #64748B; transition: color 0.15s; }
-  .sch-action-card:hover .sch-action-icon svg { color: #06B6D4; }
+  .sch-action-card:hover .sch-action-icon svg { color: #879b72; }
 
   .sch-media-grid-sm { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
   .sch-media-grid-sm .sch-media-card { border-radius: 10px; }

@@ -685,7 +685,7 @@
             @keyframes copilotOrbit { 0%, 100% { opacity: .72; transform: rotate(0deg) scale(.98); } 50% { opacity: 1; transform: rotate(18deg) scale(1.06); } }
             @media (prefers-reduced-motion: reduce) { .copilot-trigger, .copilot-trigger-mark, .copilot-trigger-orbit { animation: none; } }
           </style>
-          <defs><linearGradient id="copilot-mark-gradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4C1D95"/><stop offset="45%" stop-color="#7C3AED"/><stop offset="100%" stop-color="#A855F7"/></linearGradient></defs>
+          <defs><linearGradient id="copilot-mark-gradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4C1D95"/><stop offset="45%" stop-color="#6f845d"/><stop offset="100%" stop-color="#A855F7"/></linearGradient></defs>
           <g><path class="copilot-trigger-orbit" d="M31.6 9.5C34.3 11.1 35.7 13.7 35.7 16.9" fill="none" stroke="url(#copilot-mark-gradient)" stroke-width="2.5" stroke-linecap="round"/><circle class="copilot-trigger-orbit" cx="35.8" cy="17.1" r="1.8" fill="url(#copilot-mark-gradient)"/><text x="11" y="30" fill="url(#copilot-mark-gradient)" font-size="21.5" font-weight="900" font-family="Inter, system-ui, sans-serif" letter-spacing="-1.5">AI</text></g>
         </svg>
       </button>
@@ -708,7 +708,7 @@
               @keyframes copilotBadgeOrbit { 0%, 100% { opacity: .72; transform: rotate(0deg) scale(.98); } 50% { opacity: 1; transform: rotate(18deg) scale(1.06); } }
               @media (prefers-reduced-motion: reduce) { .copilot-badge-mark, .copilot-badge-orbit { animation: none; } }
             </style>
-            <defs><linearGradient id="copilot-mark-gradient-header" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4C1D95"/><stop offset="45%" stop-color="#7C3AED"/><stop offset="100%" stop-color="#A855F7"/></linearGradient></defs>
+            <defs><linearGradient id="copilot-mark-gradient-header" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4C1D95"/><stop offset="45%" stop-color="#6f845d"/><stop offset="100%" stop-color="#A855F7"/></linearGradient></defs>
             <g class="copilot-badge-mark"><path class="copilot-badge-orbit" d="M31.6 9.5C34.3 11.1 35.7 13.7 35.7 16.9" fill="none" stroke="url(#copilot-mark-gradient-header)" stroke-width="2.5" stroke-linecap="round"/><circle class="copilot-badge-orbit" cx="35.8" cy="17.1" r="1.8" fill="url(#copilot-mark-gradient-header)"/><text x="10" y="30" fill="url(#copilot-mark-gradient-header)" font-size="21.5" font-weight="900" font-family="Inter, system-ui, sans-serif" letter-spacing="-1.5">AI</text></g>
           </svg>
         </div>
@@ -833,17 +833,17 @@
   background: white; z-index: 200;
   border-radius: 16px;
   box-shadow: 0 20px 60px -24px rgba(15,23,42,0.35), 0 8px 20px -12px rgba(15,23,42,0.12);
-  border: 1px solid #e2e8f0;
+  border: 1px solid #d8e0d5;
   animation: fadeInUp 0.2s ease-out;
   max-height: 70vh;
 }
 .copilot-drawer.hidden { display: none !important; }
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-.copilot-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; }
+.copilot-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid #d8e0d5; flex-shrink: 0; }
 .copilot-header .left { display: flex; align-items: center; gap: 0.75rem; }
 .copilot-body { flex: 1; overflow-y: auto; padding: 1.25rem; max-height: 360px; }
-.copilot-footer { padding: 1rem 1.25rem; border-top: 1px solid #e2e8f0; flex-shrink: 0; }
-.copilot-note { font-size: 0.75rem; color: #94a3b8; margin-top: 0.125rem; font-weight: 500; }
+.copilot-footer { padding: 1rem 1.25rem; border-top: 1px solid #d8e0d5; flex-shrink: 0; }
+.copilot-note { font-size: 0.75rem; color: #88958a; margin-top: 0.125rem; font-weight: 500; }
 </style>
 
 {% endblock %}
@@ -1184,10 +1184,10 @@ function buildCampaignPreviewHtml() {
   b = previewFixImages(b);
   return previewEmailShell({
     title: 'Campaign Preview',
-    headerRows: '<tr><td style="padding:20px 24px 16px;border-bottom:1px solid #e2e8f0">'
+    headerRows: '<tr><td style="padding:20px 24px 16px;border-bottom:1px solid #d8e0d5">'
       + '<h1 style="font-size:18px;font-weight:600;margin:0;color:#1e293b;font-family:' + PREVIEW_FONT + ';line-height:1.4">' + s + '</h1></td></tr>',
     bodyRows: '<tr><td style="padding:20px 24px;font-size:15px;line-height:1.6;color:#1e293b;font-family:' + PREVIEW_FONT + '">' + b + '</td></tr>',
-    footerRows: '<tr><td style="padding:16px 24px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e2e8f0;font-family:' + PREVIEW_FONT + '">'
+    footerRows: '<tr><td style="padding:16px 24px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #d8e0d5;font-family:' + PREVIEW_FONT + '">'
       + '<p style="margin:0;line-height:1.5">This is a preview. Sent from Noir.</p></td></tr>',
   });
 }
