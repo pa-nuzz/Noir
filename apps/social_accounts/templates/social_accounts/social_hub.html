@@ -2,7 +2,7 @@
 {% load static dashboard_tags workspace_tags %}
 {% can_create 'social' as can_create_social %}
 {% can_delete 'social' as can_delete_social %}
-{% block title %}Social Hub — IDA{% endblock %}
+{% block title %}Social Hub — Noir{% endblock %}
 
 {% block content %}
 <style>
@@ -89,7 +89,7 @@
     <div class="sch-tab-panel active" id="panel-overview">
       {% if not accounts %}
       <div class="premium-surface rounded-2xl p-6 mt-6">
-        <h2 class="text-lg font-bold text-slate-900 mb-2">IDA Social!</h2>
+        <h2 class="text-lg font-bold text-slate-900 mb-2">Noir Social!</h2>
         <p class="text-sm text-slate-600 mb-4">Connect your first platform to start publishing across all your accounts from one place.</p>
         <div class="flex flex-wrap gap-2">
           {% for p in platforms|slice:":4" %}

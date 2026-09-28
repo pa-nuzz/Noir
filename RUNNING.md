@@ -1,4 +1,4 @@
-# Running MailFlow locally
+# Running Noir locally
 
 ## First-time setup
 

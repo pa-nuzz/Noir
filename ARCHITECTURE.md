@@ -1,4 +1,4 @@
-# MailFlow AI — Architecture
+# Noir — Architecture
 
 > **Platform**: AI-Powered Communication & Social Media Automation  
 > **Framework**: Django 6.0.2 + DRF 3.15.2  
@@ -28,7 +28,7 @@
 ## 1. Project Structure
 
 ```
-MailFlow AI/
+Noir/
 ├── core/                     # Django project config & shared infra
 │   ├── settings.py           # All settings (auth, DB, Celery, Stripe, etc.)
 │   ├── urls.py               # Root URL conf (18 app namespaces + API + Swagger)

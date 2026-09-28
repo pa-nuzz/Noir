@@ -1,19 +1,19 @@
 :root {
-  --primary: #6D28D9; /* stronger, more balanced purple */
-  --primary-600: #5B21B6;
+  --primary: #17211d; /* stronger, more balanced purple */
+  --primary-600: #101713;
   --primary-hover: #5424c8;
-  --primary-light: #F3E8FF;
+  --primary-light: #edf1eb;
   --primary-glow: rgba(109,40,217,0.12);
-  --navy: #0A2540;
+  --navy: #17211d;
   --navy-light: #1A3A5C;
-  --cyan: #06B6D4;
-  --cyan-dark: #0891B2;
-  --cyan-light: #ECFEFF;
-  --text-primary: #0A2540;
-  --text-secondary: #475569;
+  --cyan: #879b72;
+  --cyan-dark: #6f845d;
+  --cyan-light: #f2f6ef;
+  --text-primary: #17211d;
+  --text-secondary: #526057;
   --text-muted: #9CA3AF;
   --surface: #FFFFFF;
-  --surface-2: #F8FAFC;
+  --surface-2: #fbfcf9;
   --border: #E5E7EB;
   --border-focus: #5B4CF5;
   --success: #10B981;
@@ -113,8 +113,8 @@ textarea:focus-visible {
 }
 
 .sidebar-link.active {
-  background-color: #ECFEFF;
-  color: #06B6D4;
+  background-color: #f2f6ef;
+  color: #879b72;
   font-weight: 600;
 }
 
@@ -193,7 +193,7 @@ select.auth-input {
   width: 100%;
   min-height: 40px;
   padding: 0 12px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #d8e0d5;
   border-radius: 10px;
   font-size: 0.875rem;
   color: #0F172A;
@@ -203,12 +203,12 @@ select.auth-input {
 
 .input-field:focus {
   outline: none;
-  border-color: #06B6D4;
+  border-color: #879b72;
   box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
 }
 
 .input-field::placeholder {
-  color: #94A3B8;
+  color: #88958a;
 }
 
 textarea.input-field {
@@ -264,7 +264,7 @@ a {
   border: 1px solid transparent;
   border-radius: 0.75rem;
   padding: 0 0.55rem;
-  color: #475569;
+  color: #526057;
   font-weight: 500;
   transition: background-color .2s ease, color .2s ease;
 }
@@ -292,7 +292,7 @@ a {
   transform: translateY(-50%);
   width: 3px;
   height: 54%;
-  background: #06B6D4;
+  background: #879b72;
   border-radius: 0 4px 4px 0;
 }
 /* Sidebar link position and active indicator */
@@ -318,12 +318,12 @@ tbody tr {
 
 /* Badge component variants */
 .badge { display: inline-flex; align-items: center; font-size: 0.75rem; font-weight: 600; padding: 0.25rem 0.625rem; border-radius: 0.5rem; }
-.badge-draft { background: #f1f5f9; color: #475569; }
+.badge-draft { background: #f1f5f9; color: #526057; }
 .badge-pending_review { background: #fef3c7; color: #92400e; }
 .badge-approved { background: #d1fae5; color: #065f46; }
 .badge-rejected { background: #fee2e2; color: #991b1b; }
 .badge-published { background: #dbeafe; color: #1e40af; }
-.badge-archived { background: #f1f5f9; color: #94a3b8; }
+.badge-archived { background: #f1f5f9; color: #88958a; }
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
@@ -372,7 +372,7 @@ tbody tr {
   background: white;
   border-radius: 16px;
   box-shadow: 0 20px 60px -24px rgba(15,23,42,0.35), 0 8px 20px -12px rgba(15,23,42,0.12);
-  border: 1px solid #e2e8f0;
+  border: 1px solid #d8e0d5;
   overflow: hidden;
   z-index: 60;
   display: flex;
@@ -552,7 +552,7 @@ tbody tr {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .12em;
-  color: #94a3b8;
+  color: #88958a;
 }
 
 .page-title {
@@ -601,7 +601,7 @@ tbody tr {
   font-size: 0.75rem;
   line-height: 1rem;
   font-weight: 600;
-  color: #94a3b8;
+  color: #88958a;
 }
 
 /* Unified button styles for primary and secondary actions */
@@ -624,14 +624,14 @@ tbody tr {
 }
 
 .btn-action-primary {
-  background: linear-gradient(135deg, #6D28D9, #06B6D4);
+  background: linear-gradient(135deg, #17211d, #879b72);
   color: #fff;
   border: none;
   box-shadow: 0 4px 12px var(--primary-glow);
 }
 
 .btn-action-primary:hover {
-  background: linear-gradient(135deg, #5B21B6, #0891B2);
+  background: linear-gradient(135deg, #101713, #6f845d);
   transform: translateY(-1px);
   box-shadow: 0 8px 16px var(--primary-glow);
 }
@@ -665,7 +665,7 @@ tbody tr {
 }
 
 .auth-card .auth-input::placeholder {
-  color: #94a3b8;
+  color: #88958a;
 }
 
 .btn-action-secondary {
@@ -676,8 +676,8 @@ tbody tr {
 }
 
 .btn-action-secondary:hover {
-  border-color: #94a3b8;
-  background: #f8fafc;
+  border-color: #88958a;
+  background: #fbfcf9;
 }
 
 .btn-action-danger {

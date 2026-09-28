@@ -1,6 +1,8 @@
+import re
+
 from django.contrib.auth import get_user_model
 from django.core import mail
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from apps.accounts.forms import RegisterForm
@@ -84,6 +86,30 @@ class AuthFlowTests(TestCase):
         self.assertTrue(
             get_user_model().objects.filter(username="visiblefields").exists()
         )
+
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    def test_register_submission_requires_and_accepts_csrf_token(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        page = csrf_client.get(reverse("accounts:register"))
+        token = re.search(
+            rb'name="csrfmiddlewaretoken" value="([^"]+)"', page.content
+        ).group(1).decode()
+        data = {
+            "username": "csrfuser",
+            "email": "csrf@example.com",
+            "first_name": "Csrf",
+            "last_name": "User",
+            "password1": "StrongPass123!",
+            "password2": "StrongPass123!",
+        }
+
+        missing_token = csrf_client.post(reverse("accounts:register"), data)
+        self.assertEqual(missing_token.status_code, 403)
+
+        successful = csrf_client.post(
+            reverse("accounts:register"), {**data, "csrfmiddlewaretoken": token}
+        )
+        self.assertRedirects(successful, reverse("dashboard:dashboard"))
 
     def test_dashboard_requires_authentication(self):
         response = self.client.get(reverse("dashboard:dashboard"))

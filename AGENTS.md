@@ -1,7 +1,7 @@
-# IDA Development Agent Brief
+# Noir Development Agent Brief
 
 ## Context
-You are working on the **Intelligent Digital Automation (IDA)** project — a Django-based SaaS platform for email campaigns, social media management, AI content generation, and workflow automation.
+You are working on the **Noir (Noir)** project — a Django-based SaaS platform for email campaigns, social media management, AI content generation, and workflow automation.
 
 ## Core Principles
 1. **Full authority** over: Email Module, Landing Page, Dashboard, Auth Pages

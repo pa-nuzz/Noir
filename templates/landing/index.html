@@ -1,7 +1,7 @@
 
 {% extends "base.html" %}
 {% load static %}
-{% block title %}IDA — Intelligent Digital Automation Platform{% endblock %}
+{% block title %}Noir — Noir Platform{% endblock %}
 {% block extra_head %}
 <style>
 /* ── Core design tokens matching dashboard ── */
@@ -175,7 +175,7 @@
         <span class="bg-gradient-to-r from-violet-600 to-cyan-500 bg-clip-text text-transparent">Every channel.</span>
       </h1>
       <p class="mt-6 text-slate-500 text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed">
-        IDA unifies email, social, content, and AI automation into one intelligent workspace — so your team ships campaigns that actually convert.
+        Noir unifies email, social, content, and AI automation into one intelligent workspace — so your team ships campaigns that actually convert.
       </p>
 
       <!-- Premium CTA Buttons -->
@@ -287,7 +287,7 @@
       <div class="rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden">
         <div class="flex items-center gap-2 px-4 py-3 bg-slate-50 border-b border-slate-100">
           <span class="h-2 w-2 rounded-full bg-slate-300"></span>
-          <span class="ml-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">IDA Dashboard</span>
+          <span class="ml-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">Noir Dashboard</span>
         </div>
         <div class="grid grid-cols-3 divide-x divide-slate-100 p-4">
           <div class="text-center"><p class="text-[10px] text-slate-400 font-bold uppercase">Emails</p><p class="text-base font-extrabold text-slate-900">42.1K</p></div>
@@ -352,7 +352,7 @@
     <div class="max-w-2xl mx-auto text-center mb-14 reveal">
       <span class="badge mb-4 inline-flex">The platform</span>
       <h2 class="font-serif text-3xl sm:text-4xl lg:text-5xl text-ink leading-tight">Five powerful products.<br><em style="color:var(--primary);font-style:normal;">One unified platform.</em></h2>
-      <p class="mt-4 text-ink-muted">Stop juggling tools. IDA brings your entire digital operation under one login, one bill, one source of truth.</p>
+      <p class="mt-4 text-ink-muted">Stop juggling tools. Noir brings your entire digital operation under one login, one bill, one source of truth.</p>
     </div>
 
     <div class="max-w-7xl mx-auto space-y-5">
@@ -580,7 +580,7 @@
         <div class="absolute top-6 left-6 text-8xl text-violet-100 font-serif leading-none select-none">"</div>
         <div class="relative">
           <div class="text-amber-400 text-lg mb-5">★★★★★</div>
-          <p class="text-slate-700 text-lg sm:text-xl font-medium leading-relaxed">"We switched from Mailchimp and our inbox delivery rate jumped from 71% to 98.4% in the first two weeks. The AI optimization alone paid for itself in the first campaign — and IDA's social tools saved us another subscription."</p>
+          <p class="text-slate-700 text-lg sm:text-xl font-medium leading-relaxed">"We switched from Mailchimp and our inbox delivery rate jumped from 71% to 98.4% in the first two weeks. The AI optimization alone paid for itself in the first campaign — and Noir's social tools saved us another subscription."</p>
           <div class="mt-6 flex items-center gap-3">
             <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center text-white text-sm font-black shadow-lg shadow-violet-500/20">AM</div>
             <div>
@@ -711,7 +711,7 @@
     <div class="flex flex-col lg:flex-row items-start gap-12 lg:gap-16">
       <div class="flex-shrink-0 max-w-xs">
         <a href="{% if user.is_authenticated %}{% url 'dashboard:dashboard' %}{% else %}{% url 'home' %}{% endif %}">
-          <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="IDA" class="h-24 w-auto brightness-0 invert opacity-80 hover:opacity-100 transition-opacity"/>
+          <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="Noir" class="h-24 w-auto brightness-0 invert opacity-80 hover:opacity-100 transition-opacity"/>
         </a>
         <p class="mt-4 text-white/60 text-sm leading-relaxed">Unify email, social, content, and AI into one intelligent platform.</p>
         <div class="mt-5 flex items-center gap-2">
@@ -766,7 +766,7 @@
   </div>
   <div class="border-t border-white/10">
     <div class="max-w-8xl mx-auto px-5 sm:px-8 lg:px-12 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
-      <p class="text-[10px] text-white/40">&copy; {% now "Y" %} IDA — Intelligent Digital Automation. All rights reserved.</p>
+      <p class="text-[10px] text-white/40">&copy; {% now "Y" %} Noir — Noir. All rights reserved.</p>
       <div class="flex items-center gap-5">
         <a href="{% url 'privacy' %}" class="text-[10px] text-white/40 hover:text-white/60 transition-colors">Privacy Policy</a>
         <a href="{% url 'terms' %}" class="text-[10px] text-white/40 hover:text-white/60 transition-colors">Terms of Service</a>
@@ -785,13 +785,13 @@
       <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white">
         <div>
           <p class="text-[10px] font-bold uppercase tracking-widest text-violet-600">Live Preview</p>
-          <h3 class="text-slate-900 font-bold text-sm mt-0.5">IDA Platform — 30-second walkthrough</h3>
+          <h3 class="text-slate-900 font-bold text-sm mt-0.5">Noir Platform — 30-second walkthrough</h3>
         </div>
         <button type="button" id="closeVideoModal" class="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-200 flex items-center justify-center transition-all">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
-      <!-- Animated "Remotion-style" product demo video — premium IDA dashboard mockup -->
+      <!-- Animated "Remotion-style" product demo video — premium Noir dashboard mockup -->
       <div class="relative bg-white rounded-2xl overflow-hidden shadow-2xl shadow-violet-500/10 border border-slate-200">
         <!-- Browser chrome — light theme -->
         <div class="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200">
@@ -808,7 +808,7 @@
           <div class="w-16"></div>
         </div>
 
-        <!-- Demo content — IDA light theme -->
+        <!-- Demo content — Noir light theme -->
         <div class="relative overflow-hidden" style="height:540px; background:#f8fafc;">
 
           <!-- Scene: full dashboard overview -->
@@ -821,7 +821,7 @@
                   <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                 </div>
                 <div>
-                  <p class="text-slate-900 font-bold text-sm leading-none">IDA Command Center</p>
+                  <p class="text-slate-900 font-bold text-sm leading-none">Noir Command Center</p>
                   <p class="text-slate-400 text-[10px] mt-0.5">June 27, 2026</p>
                 </div>
               </div>
@@ -1024,7 +1024,7 @@
 
           
 
-          <!-- Progress bar at bottom - IDA theme -->
+          <!-- Progress bar at bottom - Noir theme -->
           <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-200">
             <div id="demo-progress" class="h-full bg-gradient-to-r from-violet-600 via-purple-600 to-cyan-500 rounded-r-full" style="width:0%"></div>
           </div>
@@ -1033,7 +1033,7 @@
       </div>
       <!-- Modal footer -->
       <div class="px-6 py-4 border-t border-slate-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-3">
-        <p class="text-slate-600 text-xs">Interactive preview of the IDA platform — email, social, AI content & automations.</p>
+        <p class="text-slate-600 text-xs">Interactive preview of the Noir platform — email, social, AI content & automations.</p>
         <a href="{% if user.is_authenticated %}{% url 'dashboard:dashboard' %}{% else %}{% url 'accounts:register' %}{% endif %}"
            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-xs font-bold
                   bg-gradient-to-r from-violet-600 to-cyan-500 hover:shadow-lg hover:-translate-y-0.5 transition-all">

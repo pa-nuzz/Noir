@@ -176,7 +176,7 @@
                 </button>
                 <button type="button" id="openMediaPicker" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-600 hover:border-primary/40 hover:text-primary hover:bg-primary-light/30 transition-all">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
-                  Choose from IDA Media
+                  Choose from Noir Media
                 </button>
               </div>
             </div>
@@ -376,7 +376,7 @@
           <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
         </div>
         <div class="flex-1 min-w-0">
-          <h2 class="text-base font-bold text-slate-900">IDA Media Library</h2>
+          <h2 class="text-base font-bold text-slate-900">Noir Media Library</h2>
           <p class="text-xs text-slate-500">Select images or videos from /creative/media/.</p>
         </div>
         <button type="button" class="w-9 h-9 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors" data-close-media-picker>
@@ -1047,7 +1047,7 @@
 
       grid.innerHTML = '';
       if (!filtered.length) {
-        status.textContent = assets.length ? 'No media matches your search.' : 'No media found in your IDA library.';
+        status.textContent = assets.length ? 'No media matches your search.' : 'No media found in your Noir library.';
         status.classList.remove('hidden');
         grid.classList.add('hidden');
         return;

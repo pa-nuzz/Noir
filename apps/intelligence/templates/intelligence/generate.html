@@ -1,7 +1,7 @@
 {% extends "base_dashboard.html" %}
 {% load static %}
 
-{% block title %}Generate — IDA{% endblock %}
+{% block title %}Generate — Noir{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -126,7 +126,7 @@ input:checked+.slider::before { transform:translateX(16px); background:var(--v);
   <div class="gen-wrap">
     <div class="gen-header">
       <h1>AI Generation Studio</h1>
-      <p>Powered by IDA</p>
+      <p>Powered by Noir</p>
     </div>
 
     <div class="tab-bar">
@@ -159,7 +159,7 @@ input:checked+.slider::before { transform:translateX(16px); background:var(--v);
                 <span class="slider"></span>
               </label>
             </div>
-            <div id="imgAutoNote" class="auto-note">Auto — IDA selects best model</div>
+            <div id="imgAutoNote" class="auto-note">Auto — Noir selects best model</div>
             <div id="imgManualList" style="display:none">
               <div class="model-list" id="imgModelList">
                 {% for m in image_models %}
@@ -230,7 +230,7 @@ input:checked+.slider::before { transform:translateX(16px); background:var(--v);
                 <span class="slider"></span>
               </label>
             </div>
-            <div id="txtAutoNote" class="auto-note">Auto — IDA selects best model</div>
+            <div id="txtAutoNote" class="auto-note">Auto — Noir selects best model</div>
             <div id="txtManualList" style="display:none">
               <div class="model-list" id="txtModelList">
                 {% for m in text_models %}

@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>{% block title %}Dashboard — Intelligent Digital Automation (IDA){% endblock %}</title>
+    <title>{% block title %}Dashboard — Noir{% endblock %}</title>
     <link rel="icon" type="image/svg+xml" href="{% static 'images/logo-mark.svg' %}?v={{ STATIC_VERSION }}" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -57,7 +57,7 @@
     </script>
     {% block extra_head %}{% endblock %}
     <style id="ida-global">
-      /* ===== IDA Global Shell Styles (refined light design) ===== */
+      /* ===== Noir Global Shell Styles (refined light design) ===== */
       .reveal-on-scroll, .reveal-up { opacity: 1 !important; transform: none !important; }
       :root {
         --brand: #6D28D9;
@@ -273,7 +273,7 @@
     <aside class="sidebar w-64 bg-white border-r border-slate-200 hidden lg:flex flex-col fixed h-full z-30 shadow-[10px_0_24px_rgba(15,23,42,0.08)]">
       <div class="px-6 py-5 border-b border-white/10">
         <a href="{% url 'dashboard:dashboard' %}" class="inline-flex items-center">
-          <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="IDA" class="h-[39px] w-auto" />
+          <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="Noir" class="h-[39px] w-auto" />
         </a>
       </div>
 
@@ -492,7 +492,7 @@
     <div id="mobile-sidebar-panel" class="fixed top-0 left-0 bottom-0 w-72 max-w-[85vw] bg-white z-50 shadow-2xl overflow-y-auto transform -translate-x-full transition-transform duration-300 ease-in-out lg:hidden" style="padding-bottom: env(safe-area-inset-bottom, 0px);">
       <div class="px-6 py-5 border-b border-slate-200 flex items-center justify-between">
         <a href="{% url 'dashboard:dashboard' %}" class="inline-flex items-center">
-          <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="IDA" class="h-[39px] w-auto" />
+          <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="Noir" class="h-[39px] w-auto" />
         </a>
         <button type="button" onclick="toggleMobileSidebar()" class="p-2 rounded-xl hover:bg-slate-100 transition-colors">
           <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -646,7 +646,7 @@
                 <svg id="close-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
               <a href="{% url 'dashboard:dashboard' %}" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-primary-light text-primary border border-primary/10 flex-shrink-0">
-                <img src="{% static 'images/logo-mark.svg' %}?v={{ STATIC_VERSION }}" alt="IDA" class="w-5 h-5" />
+                <img src="{% static 'images/logo-mark.svg' %}?v={{ STATIC_VERSION }}" alt="Noir" class="w-5 h-5" />
               </a>
             </div>
 
@@ -1209,7 +1209,7 @@
       </main>
 
       <footer class="hidden sm:flex mt-auto px-4 sm:px-6 lg:px-8 py-3.5 bg-white border-t border-gray-100 flex-col sm:flex-row gap-2 sm:gap-0 justify-between sm:items-center text-xs text-gray-400 font-medium">
-        <p>&copy; {% now "Y" %} Intelligent Digital Automation (IDA). High-Deliverability Command Center.</p>
+        <p>&copy; {% now "Y" %} Noir. High-Deliverability Command Center.</p>
         <div class="flex gap-6">
           <a href="#" class="hover:text-primary transition-colors">Documentation</a>
           <a href="#" class="hover:text-primary transition-colors">System Status</a>

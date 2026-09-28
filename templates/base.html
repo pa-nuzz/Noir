@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{% block title %}IDA — Intelligent Digital Automation{% endblock %}</title>
+  <title>{% block title %}Noir — Noir{% endblock %}</title>
   <link rel="icon" type="image/svg+xml" href="{% static 'images/logo-mark.svg' %}?v={{ STATIC_VERSION }}"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -40,7 +40,7 @@
 <nav class="fixed top-0 left-0 w-full z-50 bg-white/95 backdrop-blur-xl border-b border-surface-border">
   <div class="max-w-8xl mx-auto h-16 px-6 sm:px-10 flex items-center justify-between">
     <a href="{% if user.is_authenticated %}{% url 'dashboard:dashboard' %}{% else %}{% url 'home' %}{% endif %}" class="flex-shrink-0 flex items-center">
-      <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="IDA" class="h-9 w-auto"/>
+      <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="Noir" class="h-9 w-auto"/>
     </a>
     <div class="hidden md:flex items-center gap-2">
       <a href="#platform" class="px-4 py-2 text-sm font-semibold text-ink-muted hover:text-ink hover:bg-surface-raised rounded-xl transition-all">Platform</a>

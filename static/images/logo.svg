@@ -2,21 +2,21 @@
   <defs>
     <!-- Primary gradient: Purple to Deep Purple -->
     <linearGradient id="primaryGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#6D28D9"/>
-      <stop offset="100%" stop-color="#5B21B6"/>
+      <stop offset="0%" stop-color="#17211d"/>
+      <stop offset="100%" stop-color="#101713"/>
     </linearGradient>
 
-    <!-- Cyan accent gradient -->
+    <!-- Sage accent gradient -->
     <linearGradient id="cyanGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#06B6D4"/>
-      <stop offset="100%" stop-color="#0891B2"/>
+      <stop offset="0%" stop-color="#879b72"/>
+      <stop offset="100%" stop-color="#6f845d"/>
     </linearGradient>
 
-    <!-- IDA text gradient: Purple to Cyan -->
-    <linearGradient id="idaGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#6D28D9"/>
-      <stop offset="50%" stop-color="#7C3AED"/>
-      <stop offset="100%" stop-color="#06B6D4"/>
+    <!-- Noir wordmark gradient -->
+    <linearGradient id="noirGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#17211d"/>
+      <stop offset="50%" stop-color="#6f845d"/>
+      <stop offset="100%" stop-color="#879b72"/>
     </linearGradient>
 
     <!-- Subtle glow filter -->
@@ -34,10 +34,10 @@
 
   <!-- Background (transparent) -->
 
-  <!-- === FLAME DOT OF "I" === -->
+  <!-- === FLAME MARK === -->
   <g>
-    <!-- Cyan light rays emanating from the flame -->
-    <g stroke="#06B6D4" stroke-width="2.5" stroke-linecap="round" opacity="0.8">
+    <!-- Sage light rays emanating from the mark -->
+    <g stroke="#879b72" stroke-width="2.5" stroke-linecap="round" opacity="0.8">
       <line x1="51" y1="87" x2="51" y2="72"/>
       <line x1="36" y1="93" x2="26" y2="83"/>
       <line x1="66" y1="93" x2="76" y2="83"/>
@@ -47,12 +47,12 @@
       <line x1="77" y1="83" x2="87" y2="78"/>
     </g>
 
-    <!-- Flame shape (the dot of "I") — Purple to Cyan gradient -->
+    <!-- Flame shape — Night Moss gradient -->
     <g transform="translate(45, 82) scale(1.35)">
       <path d="M 4.5,24 Q -5,17 -2,9 Q 0,1 4.5,-6 Q 9,1 11,9 Q 14,17 4.5,24 Z"
-            fill="url(#cyanGradient)" stroke="#0891B2" stroke-width="1.5"/>
+            fill="url(#cyanGradient)" stroke="#6f845d" stroke-width="1.5"/>
       <path d="M 4.5,17 Q 0,12 2,7 Q 3,2 4.5,-2 Q 6,2 7,7 Q 9,12 4.5,17 Z"
-            fill="#ECFEFF" opacity="0.8"/>
+            fill="#f2f6ef" opacity="0.8"/>
       <circle cx="3" cy="7" r="1.5" fill="#FFFFFF" opacity="0.9"/>
       <circle cx="7" cy="4" r="1" fill="#FFFFFF" opacity="0.8"/>
       <circle cx="4.5" cy="1" r="1.5" fill="#FFFFFF" opacity="0.7"/>
@@ -60,37 +60,37 @@
   </g>
 
   <!-- Separator line -->
-  <line x1="465" y1="157" x2="465" y2="257" stroke="#6D28D9" stroke-width="1.5" opacity="0.25"/>
+  <line x1="465" y1="157" x2="465" y2="257" stroke="#17211d" stroke-width="1.5" opacity="0.25"/>
 
-  <!-- Main text: IDA — Purple to Cyan gradient -->
+  <!-- Main text: Noir — Night Moss gradient -->
   <text x="225" y="307"
         text-anchor="middle"
         font-family="'Helvetica Neue', 'Arial Black', 'Arial', sans-serif"
         font-size="230"
         font-weight="900"
-        fill="url(#idaGradient)"
+        fill="url(#noirGradient)"
         letter-spacing="-6"
-        filter="url(#glow)">IDA</text>
+        filter="url(#glow)">NOIR</text>
 
-  <!-- Arc text: INTELLIGENCE -->
+  <!-- Arc text -->
   <text font-family="'Helvetica Neue', 'Arial', sans-serif"
         font-size="47"
         font-weight="600"
-        fill="#6D28D9"
+        fill="#17211d"
         letter-spacing="11">
-    <textPath href="#rightArc" startOffset="50%" text-anchor="middle">INTELLIGENT</textPath>
+    <textPath href="#rightArc" startOffset="50%" text-anchor="middle">WORKSPACE</textPath>
   </text>
 
-  <!-- Bottom text: DIGITAL AUTOMATION -->
+  <!-- Bottom text -->
   <text x="940" y="307"
         text-anchor="middle"
         font-family="'Helvetica Neue', 'Arial', sans-serif"
         font-size="48"
         font-weight="600"
-        fill="#0A2540"
-        letter-spacing="15">DIGITAL AUTOMATION</text>
+        fill="#17211d"
+        letter-spacing="15">CAMPAIGN STUDIO</text>
 
-  <!-- Subtle cyan accent line under "DIGITAL AUTOMATION" -->
+  <!-- Subtle sage accent line under the wordmark -->
   <line x1="680" y1="325" x2="1200" y2="325"
         stroke="url(#cyanGradient)" stroke-width="2" opacity="0.4"/>
 </svg>

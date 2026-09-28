@@ -6,13 +6,13 @@
     <h1 class="text-4xl font-bold mb-6">Terms of Service</h1>
     <p class="text-ink-subtle mb-4">Last updated: {% now "d F Y" %}</p>
     <div class="prose prose-invert max-w-none text-ink-subtle space-y-6">
-        <p>Welcome to IDA. By using our platform, you agree to comply with and be bound by the following terms and conditions.</p>
+        <p>Welcome to Noir. By using our platform, you agree to comply with and be bound by the following terms and conditions.</p>
         <h2 class="text-2xl font-semibold text-black">1. Acceptance of Terms</h2>
         <p>By creating an account or using any of our services, you agree to these Terms of Service and any applicable product-specific terms.</p>
         <h2 class="text-2xl font-semibold text-black">2. User Obligations</h2>
         <p>You agree to use the platform for lawful purposes only and to provide accurate information during registration.</p>
         <h2 class="text-2xl font-semibold text-black">3. Limitation of Liability</h2>
-        <p>IDA is provided "as is" without warranties of any kind, either express or implied.</p>
+        <p>Noir is provided "as is" without warranties of any kind, either express or implied.</p>
     </div>
 </div>
 <!-- ══════════════════════════════════════════
@@ -23,7 +23,7 @@
     <div class="flex flex-col lg:flex-row items-start gap-12 lg:gap-16">
       <div class="flex-shrink-0 max-w-xs">
         <a href="{% if user.is_authenticated %}{% url 'dashboard:dashboard' %}{% else %}{% url 'home' %}{% endif %}">
-          <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="IDA" class="h-24 w-auto brightness-0 invert opacity-80 hover:opacity-100 transition-opacity"/>
+          <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="Noir" class="h-24 w-auto brightness-0 invert opacity-80 hover:opacity-100 transition-opacity"/>
         </a>
         <p class="mt-4 text-ink-subtle text-sm leading-relaxed">Unify email, social, content, and AI into one intelligent platform.</p>
         <div class="mt-5 flex items-center gap-2">
@@ -78,7 +78,7 @@
   </div>
   <div class="border-t border-white/5">
     <div class="max-w-8xl mx-auto px-5 sm:px-8 lg:px-12 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
-      <p class="text-[10px] text-ink-subtle/50">&copy; {% now "Y" %} IDA — Intelligent Digital Automation. All rights reserved.</p>
+      <p class="text-[10px] text-ink-subtle/50">&copy; {% now "Y" %} Noir — Noir. All rights reserved.</p>
       <div class="flex items-center gap-5">
         <a href="{% url 'privacy' %}" class="text-[10px] text-ink-subtle/50 hover:text-ink-subtle transition-colors">Privacy Policy</a>
         <a href="{% url 'terms' %}" class="text-[10px] text-ink-subtle/50 hover:text-ink-subtle transition-colors">Terms of Service</a>

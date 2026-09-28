@@ -6,7 +6,7 @@
     <h1 class="text-4xl font-bold mb-6">Cookie Policy</h1>
     <p class="text-ink-subtle mb-4">Last updated: {% now "d F Y" %}</p>
     <div class="prose prose-invert max-w-none text-ink-subtle space-y-6">
-        <p>This Cookie Policy explains how IDA uses cookies and similar technologies to recognize you when you visit our website.</p>
+        <p>This Cookie Policy explains how Noir uses cookies and similar technologies to recognize you when you visit our website.</p>
         <h2 class="text-2xl font-semibold text-black">1. What are Cookies?</h2>
         <p>Cookies are small data files that are placed on your computer or mobile device when you visit a website.</p>
         <h2 class="text-2xl font-semibold text-black">2. How We Use Cookies</h2>
@@ -23,7 +23,7 @@
     <div class="flex flex-col lg:flex-row items-start gap-12 lg:gap-16">
       <div class="flex-shrink-0 max-w-xs">
         <a href="{% if user.is_authenticated %}{% url 'dashboard:dashboard' %}{% else %}{% url 'home' %}{% endif %}">
-          <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="IDA" class="h-24 w-auto brightness-0 invert opacity-80 hover:opacity-100 transition-opacity"/>
+          <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="Noir" class="h-24 w-auto brightness-0 invert opacity-80 hover:opacity-100 transition-opacity"/>
         </a>
         <p class="mt-4 text-ink-subtle text-sm leading-relaxed">Unify email, social, content, and AI into one intelligent platform.</p>
         <div class="mt-5 flex items-center gap-2">
@@ -78,7 +78,7 @@
   </div>
   <div class="border-t border-white/5">
     <div class="max-w-8xl mx-auto px-5 sm:px-8 lg:px-12 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
-      <p class="text-[10px] text-ink-subtle/50">&copy; {% now "Y" %} IDA — Intelligent Digital Automation. All rights reserved.</p>
+      <p class="text-[10px] text-ink-subtle/50">&copy; {% now "Y" %} Noir — Noir. All rights reserved.</p>
       <div class="flex items-center gap-5">
         <a href="{% url 'privacy' %}" class="text-[10px] text-ink-subtle/50 hover:text-ink-subtle transition-colors">Privacy Policy</a>
         <a href="{% url 'terms' %}" class="text-[10px] text-ink-subtle/50 hover:text-ink-subtle transition-colors">Terms of Service</a>

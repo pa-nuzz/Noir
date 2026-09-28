@@ -1,7 +1,7 @@
 {% extends 'base_dashboard.html' %}
 {% load widget_tweaks %}
 
-{% block title %}Create Campaign — Intelligent Digital Automation (IDA){% endblock %}
+{% block title %}Create Campaign — Noir{% endblock %}
 {% block page_title %}{% if read_only %}View Campaign{% elif campaign %}Edit Campaign{% else %}Create Campaign{% endif %}{% endblock %}
 
 {% block content %}
@@ -246,7 +246,7 @@
 
             <div class="md:col-span-2">
               <label for="id_from_name" class="block text-sm font-semibold text-slate-700 mb-2">From Name</label>
-              {{ form.from_name|add_class:"auth-input"|attr:"placeholder:IDA Team" }}
+              {{ form.from_name|add_class:"auth-input"|attr:"placeholder:Noir Team" }}
               {% if form.from_name.errors %}<p class="mt-1 text-xs text-red-600">{{ form.from_name.errors.0 }}</p>{% endif %}
             </div>
 
@@ -1188,7 +1188,7 @@ function buildCampaignPreviewHtml() {
       + '<h1 style="font-size:18px;font-weight:600;margin:0;color:#1e293b;font-family:' + PREVIEW_FONT + ';line-height:1.4">' + s + '</h1></td></tr>',
     bodyRows: '<tr><td style="padding:20px 24px;font-size:15px;line-height:1.6;color:#1e293b;font-family:' + PREVIEW_FONT + '">' + b + '</td></tr>',
     footerRows: '<tr><td style="padding:16px 24px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e2e8f0;font-family:' + PREVIEW_FONT + '">'
-      + '<p style="margin:0;line-height:1.5">This is a preview. Sent from Intelligent Digital Automation (IDA).</p></td></tr>',
+      + '<p style="margin:0;line-height:1.5">This is a preview. Sent from Noir.</p></td></tr>',
   });
 }
 function openCampaignPreview(event) {

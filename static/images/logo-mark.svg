@@ -2,21 +2,21 @@
   <defs>
     <!-- Primary gradient: Purple -->
     <linearGradient id="primaryGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#6D28D9"/>
-      <stop offset="100%" stop-color="#5B21B6"/>
+      <stop offset="0%" stop-color="#17211d"/>
+      <stop offset="100%" stop-color="#101713"/>
     </linearGradient>
 
-    <!-- Cyan accent gradient -->
+    <!-- Sage accent gradient -->
     <linearGradient id="cyanGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#06B6D4"/>
-      <stop offset="100%" stop-color="#0891B2"/>
+      <stop offset="0%" stop-color="#879b72"/>
+      <stop offset="100%" stop-color="#6f845d"/>
     </linearGradient>
 
-    <!-- IDA text gradient: Purple to Cyan -->
-    <linearGradient id="idaGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#6D28D9"/>
-      <stop offset="50%" stop-color="#7C3AED"/>
-      <stop offset="100%" stop-color="#06B6D4"/>
+    <!-- Noir mark gradient -->
+    <linearGradient id="noirGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#17211d"/>
+      <stop offset="50%" stop-color="#6f845d"/>
+      <stop offset="100%" stop-color="#879b72"/>
     </linearGradient>
 
     <!-- Subtle glow filter -->
@@ -29,31 +29,31 @@
     </filter>
   </defs>
 
-  <!-- === FLAME DOT OF "I" === -->
+  <!-- === FLAME MARK === -->
   <g transform="translate(96, 18) scale(1.1)">
     <!-- Cyan rays -->
-    <g stroke="#06B6D4" stroke-width="2" stroke-linecap="round" opacity="0.7">
+    <g stroke="#879b72" stroke-width="2" stroke-linecap="round" opacity="0.7">
       <line x1="4.5" y1="6" x2="4.5" y2="-4"/>
       <line x1="-5" y1="10" x2="-12" y2="3"/>
       <line x1="14" y1="10" x2="21" y2="3"/>
     </g>
     <!-- Flame shape — Cyan -->
     <path d="M 4.5,22 Q -4,16 -1.5,9 Q 0,2 4.5,-4 Q 9,2 10.5,9 Q 13,16 4.5,22 Z"
-          fill="url(#cyanGradient)" stroke="#0891B2" stroke-width="1.2"/>
+          fill="url(#cyanGradient)" stroke="#6f845d" stroke-width="1.2"/>
     <path d="M 4.5,16 Q 0.5,11 2,6.5 Q 3,2 4.5,-1 Q 6,2 7,6.5 Q 8.5,11 4.5,16 Z"
-          fill="#ECFEFF" opacity="0.8"/>
+          fill="#f2f6ef" opacity="0.8"/>
     <circle cx="3" cy="6.5" r="1.2" fill="#FFFFFF" opacity="0.9"/>
     <circle cx="7" cy="4" r="0.8" fill="#FFFFFF" opacity="0.8"/>
     <circle cx="4.5" cy="1" r="1.2" fill="#FFFFFF" opacity="0.7"/>
   </g>
 
-  <!-- Main text: IDA — Purple to Cyan gradient -->
+  <!-- Main text: Noir — Night Moss gradient -->
   <text x="200" y="250"
         text-anchor="middle"
         font-family="'Helvetica Neue', 'Arial Black', 'Arial', sans-serif"
         font-size="200"
         font-weight="900"
-        fill="url(#idaGradient)"
+        fill="url(#noirGradient)"
         letter-spacing="-4"
-        filter="url(#glow)">IDA</text>
+        filter="url(#glow)">NOIR</text>
 </svg>
