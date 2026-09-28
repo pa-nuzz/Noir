@@ -225,6 +225,7 @@ pip-selfcheck.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python,visualstudiocode,venv.DS_Store
 .DS_Store
+.superpowers/
 
 # Machine Learning Models
 models_ml/
