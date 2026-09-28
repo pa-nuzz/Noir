@@ -22,25 +22,15 @@
               sans: ["Raleway", "system-ui", "sans-serif"],
             },
             colors: {
-              brand: "#17211d",
-              primary: {
-                DEFAULT: "#17211d",
-                hover: "#5424c8",
-                light: "#edf1eb",
-              },
-              navy: {
-                DEFAULT: "#17211d",
-                light: "#1A3A5C",
-              },
-              cyan: {
-                DEFAULT: "#879b72",
-                dark: "#6f845d",
-                light: "#f2f6ef",
-              },
-              dark: {
-                bg: "#0F1117",
-                surface: "#1A1D29",
-              }
+              sage: "#879b72",
+              "dark-sage": "#6f845d",
+              primary: { DEFAULT: "#879b72", hover: "#6f845d", light: "#edf1eb" },
+              paper: "#fbfcf9",
+              surface: "#edf1eb",
+              "night-border": "#d8e0d5",
+              "night-muted": "#536254",
+              "night-surface": "#edf1eb",
+              ink: "#17211d",
             },
             keyframes: {
               'toast-in':  { '0%': { opacity: '0', transform: 'translateX(100%)' }, '100%': { opacity: '1', transform: 'translateX(0)' } },
@@ -60,20 +50,20 @@
       /* ===== Noir Global Shell Styles (refined light design) ===== */
       .reveal-on-scroll, .reveal-up { opacity: 1 !important; transform: none !important; }
       :root {
-        --brand: #17211d;
-        --brand-light: #edf1eb;
-        --brand-mid: #b8c7a4;
-        --navy: #17211d;
-        --cyan: #879b72;
-        --cyan-dark: #6f845d;
-        --cyan-light: #f2f6ef;
-        --text-primary: #17211d;
-        --text-secondary: #526057;
-        --text-tertiary: #88958a;
-        --border-subtle: #d8e0d5;
-        --border-faint: #F1F5F9;
-        --bg-app: #fbfcf9;
-        --surface: #FFFFFF;
+        --brand: var(--sage);
+        --brand-light: var(--surface);
+        --brand-mid: var(--border);
+        --navy: var(--ink);
+        --cyan: var(--sage);
+        --cyan-dark: var(--dark-sage);
+        --cyan-light: var(--surface);
+        --text-primary: var(--ink);
+        --text-secondary: #536254;
+        --text-tertiary: #718071;
+        --border-subtle: var(--border);
+        --border-faint: var(--surface);
+        --bg-app: var(--paper);
+        --surface: #edf1eb;
         --radius-sm: 8px;
         --radius-md: 10px;
         --radius-lg: 12px;
@@ -83,7 +73,7 @@
         background: rgba(255, 255, 255, 0.92);
         border: 1px solid rgba(226, 232, 240, 0.9);
         border-radius: 1rem;
-        box-shadow: 0 18px 42px -26px rgba(15, 23, 42, 0.28), 0 2px 10px rgba(91, 76, 245, 0.05);
+        box-shadow: 0 18px 42px -26px rgba(23, 33, 29, 0.18), 0 2px 10px rgba(135, 155, 114, 0.05);
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
       }
@@ -108,26 +98,26 @@
         white-space: nowrap; position: relative; overflow: hidden;
       }
       .btn-premium:focus { outline: none; }
-      .btn-premium:focus-visible { box-shadow: 0 0 0 3px rgba(23,33,29,0.3); }
+      .btn-premium:focus-visible { box-shadow: 0 0 0 3px rgba(135,155,114,0.3); }
       .btn-premium.primary {
-        background: linear-gradient(135deg, #17211d 0%, #6f845d 50%, #879b72 100%);
+        background: linear-gradient(135deg, #879b72 0%, #718563 50%, #879b72 100%);
         color: #fff; border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(23,33,29,0.3);
+        box-shadow: 0 2px 8px rgba(135,155,114,0.3);
         padding: 9px 18px; font-size: 13.5px;
       }
       .btn-premium.primary:hover:not(:disabled) {
         transform: translateY(-1px);
-        box-shadow: 0 6px 20px rgba(23,33,29,0.35);
+        box-shadow: 0 6px 20px rgba(135,155,114,0.35);
       }
       .btn-premium.primary:active:not(:disabled) { transform: translateY(0); }
       .btn-premium.secondary {
         background: rgba(255,255,255,0.9); color: #17211d;
         border: 1px solid #d8e0d5; border-radius: 10px;
         padding: 9px 18px; font-size: 13.5px;
-        box-shadow: 0 1px 3px rgba(15,23,42,0.06);
+        box-shadow: 0 1px 3px rgba(23,33,29,0.06);
       }
       .btn-premium.secondary:hover:not(:disabled) {
-        background: #fff; border-color: #17211d; color: #17211d;
+        background: #fff; border-color: #879b72; color: #879b72;
         transform: translateY(-1px);
       }
       .btn-premium.danger {
@@ -145,7 +135,7 @@
         border-top-color: #fff; animation: spin 0.6s linear infinite;
       }
       .btn-premium.secondary .spinner, .btn-premium.danger .spinner {
-        border: 2px solid rgba(0,0,0,0.15); border-top-color: #17211d;
+        border: 2px solid rgba(0,0,0,0.15); border-top-color: #879b72;
       }
       @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -155,12 +145,12 @@
         border-radius: 14px; transition: all 0.18s ease;
       }
       .premium-card:hover {
-        border-color: #b8c7a4; box-shadow: 0 4px 20px rgba(23,33,29,0.08);
+        border-color: #B5C5A7; box-shadow: 0 4px 20px rgba(135,155,114,0.08);
         transform: translateY(-1px);
       }
       .premium-stat {
-        background: linear-gradient(135deg, rgba(23,33,29,0.04) 0%, rgba(135,155,114,0.04) 100%);
-        border: 1px solid rgba(23,33,29,0.08);
+        background: linear-gradient(135deg, rgba(135,155,114,0.04) 0%, rgba(135,155,114,0.04) 100%);
+        border: 1px solid rgba(135,155,114,0.08);
         border-radius: 14px; padding: 20px;
       }
       .premium-stat .stat-value {
@@ -168,7 +158,7 @@
         letter-spacing: -0.02em;
       }
       .premium-stat .stat-label {
-        font-size: 12px; font-weight: 600; color: #88958a; text-transform: uppercase;
+        font-size: 12px; font-weight: 600; color: #94A3B8; text-transform: uppercase;
         letter-spacing: 0.05em; margin-top: 4px;
       }
       .premium-stat .stat-change {
@@ -182,8 +172,8 @@
       .premium-table { width: 100%; border-collapse: collapse; }
       .premium-table th {
         font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
-        color: #88958a; padding: 10px 16px; text-align: left;
-        border-bottom: 1px solid #F1F5F9;
+        color: #94A3B8; padding: 10px 16px; text-align: left;
+        border-bottom: 1px solid #F1F4F0;
       }
       .premium-table td {
         padding: 14px 16px; font-size: 13.5px; color: #17211d;
@@ -201,8 +191,8 @@
       .badge-premium.warning { background: rgba(245,158,11,0.1); color: #D97706; }
       .badge-premium.danger { background: rgba(220,38,38,0.1); color: #DC2626; }
       .badge-premium.info { background: rgba(135,155,114,0.1); color: #6f845d; }
-      .badge-premium.neutral { background: #F1F5F9; color: #64748B; }
-      .badge-premium.purple { background: rgba(23,33,29,0.1); color: #17211d; }
+      .badge-premium.neutral { background: #F1F4F0; color: #64748B; }
+      .badge-premium.purple { background: rgba(135,155,114,0.1); color: #879b72; }
 
       /* ===== Premium Empty State ===== */
       .empty-state {
@@ -211,12 +201,12 @@
       }
       .empty-state .empty-icon {
         width: 56px; height: 56px; border-radius: 16px;
-        background: linear-gradient(135deg, rgba(23,33,29,0.08), rgba(135,155,114,0.08));
+        background: linear-gradient(135deg, rgba(135,155,114,0.08), rgba(135,155,114,0.08));
         display: flex; align-items: center; justify-content: center;
         margin-bottom: 16px;
       }
       .empty-state .empty-title { font-size: 16px; font-weight: 700; color: #17211d; margin-bottom: 6px; }
-      .empty-state .empty-desc { font-size: 13px; color: #88958a; max-width: 320px; line-height: 1.6; }
+      .empty-state .empty-desc { font-size: 13px; color: #94A3B8; max-width: 320px; line-height: 1.6; }
 
       .ida-layout * { box-sizing: border-box; margin: 0; padding: 0; }
       .ida-layout { display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: #fbfcf9; font-family:"Raleway", system-ui, sans-serif; }
@@ -253,24 +243,11 @@
       .ida-footer a { color: var(--text-tertiary); text-decoration: none; transition: color .15s; cursor: pointer; }
       .ida-footer a:hover { color: var(--brand); }
 
-      /* Platform badges (shared across content studio pages) */
-      .cs-platform {
-        display: inline-block; padding: 1px 8px; border-radius: 9999px;
-        font-size: 10px; font-weight: 700; text-transform: uppercase;
-        letter-spacing: 0.025em; color: #fff;
-      }
-      .cs-platform-linkedin { background: #0A66C2; }
-      .cs-platform-twitter { background: #1DA1F2; }
-      .cs-platform-instagram { background: #E4405F; }
-      .cs-platform-facebook { background: #1877F2; }
-      .cs-platform-tiktok { background: #FE2C55; }
-      .cs-platform-youtube { background: #FF0000; }
-
     </style>
   </head>
-  <body class="premium-bg text-[#0F1117] font-sans min-h-screen flex flex-col relative overflow-x-auto" style="font-family:'Raleway',system-ui,sans-serif">
+  <body class="premium-bg text-ink font-sans min-h-screen flex flex-col relative overflow-x-auto" style="font-family:'Raleway',system-ui,sans-serif">
     <!-- Sidebar -->
-    <aside class="sidebar w-64 bg-white border-r border-slate-200 hidden lg:flex flex-col fixed h-full z-30 shadow-[10px_0_24px_rgba(15,23,42,0.08)]">
+    <aside class="sidebar w-64 bg-white border-r border-slate-200 hidden lg:flex flex-col fixed h-full z-30 shadow-[10px_0_24px_rgba(23,33,29,0.08)]">
       <div class="px-6 py-5 border-b border-white/10">
         <a href="{% url 'dashboard:dashboard' %}" class="inline-flex items-center">
           <img src="{% static 'images/logo.svg' %}?v={{ STATIC_VERSION }}" alt="Noir" class="h-[39px] w-auto" />
@@ -285,13 +262,13 @@
         .sidebar-group-btn {
           display: flex; align-items: center; width: 100%;
           padding: 0.5rem 0.75rem; border-radius: 0.75rem;
-          color: #526057; font-size: 0.875rem;
+          color: #475569; font-size: 0.875rem;
           transition: all 0.15s ease; cursor: pointer;
           background: transparent; border: none; text-align: left;
         }
         .sidebar-group-btn:hover { background: #f1f5f9; color: #1e293b; }
         .sidebar-nav .sidebar-link.sub-link { padding-left: 2.75rem; font-size: 0.8125rem; margin: 1px 0; border-left: 3px solid transparent; }
-        .sidebar-nav .sidebar-link.sub-link.active { background: #f2f6ef; color: #879b72; font-weight: 600; border-left-color: #879b72; }
+        .sidebar-nav .sidebar-link.sub-link.active { background: #edf1eb; color: #879b72; font-weight: 600; border-left-color: #879b72; }
         .sidebar-nav .sidebar-link.sub-link.active .opacity-40 { opacity: 1 !important; }
 
         .onboarding-card {
@@ -308,7 +285,7 @@
           background: #d8e0d5; transition: background 0.3s;
         }
         .onboarding-step.done { background: #10B981; }
-        .onboarding-step.active { background: #818CF8; }
+        .onboarding-step.active { background: var(--sage); }
       </style>
 
       <nav class="flex-grow px-4 overflow-y-auto sidebar-nav">
@@ -465,13 +442,13 @@
       <!-- Sidebar Pro Tip -->
       <!--<div class="px-5 py-4 mx-4 mb-4 premium-surface rounded-xl border border-slate-200">
         <div class="flex items-center gap-2 mb-2">
-          <div class="w-6 h-6 bg-primary-light rounded-md flex items-center justify-center text-primary text-[10px] font-black italic">AI</div>
-          <span class="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1">
+          <div class="w-6 h-6 bg-night-surface rounded-md flex items-center justify-center text-sage text-[10px] font-black italic">AI</div>
+          <span class="text-[10px] font-bold text-sage uppercase tracking-widest flex items-center gap-1">
             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2l1.9 3.86L16 8l-4.1 2.14L10 14l-1.9-3.86L4 8l4.1-2.14L10 2z"/></svg>
             Pro Tip
           </span>
         </div>
-        <p class="text-[11px] text-slate-600 leading-relaxed">Use our AI Spam Guard before each campaign for up to <span class="font-bold text-primary">3x</span> better inbox rates.</p>
+        <p class="text-[11px] text-slate-600 leading-relaxed">Use our AI Spam Guard before each campaign for up to <span class="font-bold text-sage">3x</span> better inbox rates.</p>
       </div>-->
 
       <div class="px-6 py-4 border-t border-gray-50 bg-gray-50/50">
@@ -641,18 +618,18 @@
           <div class="flex h-full items-center justify-between gap-4">
 
             <div class="lg:hidden flex items-center gap-2">
-              <button type="button" onclick="toggleMobileSidebar()" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-white text-slate-600 border border-slate-200 hover:bg-primary-light hover:text-primary hover:border-primary/30 transition-all flex-shrink-0" aria-label="Toggle navigation menu">
+              <button type="button" onclick="toggleMobileSidebar()" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-white text-slate-600 border border-slate-200 hover:bg-night-surface hover:text-sage hover:border-sage/30 transition-all flex-shrink-0" aria-label="Toggle navigation menu">
                 <svg id="hamburger-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                 <svg id="close-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
-              <a href="{% url 'dashboard:dashboard' %}" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-primary-light text-primary border border-primary/10 flex-shrink-0">
+              <a href="{% url 'dashboard:dashboard' %}" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-surface text-sage border border-night-border flex-shrink-0">
                 <img src="{% static 'images/logo-mark.svg' %}?v={{ STATIC_VERSION }}" alt="Noir" class="w-5 h-5" />
               </a>
             </div>
 
             <!-- Smart Breadcrumbs -->
             <nav class="hidden sm:flex items-center gap-2 text-sm text-slate-500 min-w-0 overflow-hidden" aria-label="Breadcrumb">
-              <a href="{% url 'dashboard:dashboard' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+              <a href="{% url 'dashboard:dashboard' %}" class="hover:text-sage transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
                 <span class="font-medium">Home</span>
               </a>
@@ -663,7 +640,7 @@
               <!-- Contacts Section -->
               {% if app_name == 'contacts' %}
                 <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                <a href="{% url 'contacts:list' %}" class="{% if view_name == 'list' %}text-slate-900 font-semibold{% else %}hover:text-primary{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'list' %}hover:bg-slate-100{% endif %}">
+                <a href="{% url 'contacts:list' %}" class="{% if view_name == 'list' %}text-slate-900 font-semibold{% else %}hover:text-sage{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'list' %}hover:bg-slate-100{% endif %}">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                   Contacts
                 </a>
@@ -683,7 +660,7 @@
                 {% if view_name == 'template_list' or view_name == 'template_create' or view_name == 'template_edit' %}
                   <!-- Templates Sub-section -->
                   <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                  <a href="{% url 'campaigns:template_list' %}" class="{% if view_name == 'template_list' %}text-slate-900 font-semibold{% else %}hover:text-primary{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'template_list' %}hover:bg-slate-100{% endif %}">
+                  <a href="{% url 'campaigns:template_list' %}" class="{% if view_name == 'template_list' %}text-slate-900 font-semibold{% else %}hover:text-sage{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'template_list' %}hover:bg-slate-100{% endif %}">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     Templates
                   </a>
@@ -697,7 +674,7 @@
                 {% else %}
                   <!-- Campaigns Sub-section -->
                   <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                  <a href="{% url 'campaigns:campaign_list' %}" class="{% if view_name == 'campaign_list' %}text-slate-900 font-semibold{% else %}hover:text-primary{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'campaign_list' %}hover:bg-slate-100{% endif %}">
+                  <a href="{% url 'campaigns:campaign_list' %}" class="{% if view_name == 'campaign_list' %}text-slate-900 font-semibold{% else %}hover:text-sage{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'campaign_list' %}hover:bg-slate-100{% endif %}">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                     Campaigns
                   </a>
@@ -735,7 +712,7 @@
                   </span>
                 {% elif view_name == 'social_content_hub' %}
                   <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                  <a href="{% url 'dashboard:dashboard' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+                  <a href="{% url 'dashboard:dashboard' %}" class="hover:text-sage transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
                     Dashboard
                   </a>
@@ -749,7 +726,7 @@
               <!-- Automations Section -->
               {% elif app_name == 'automations' %}
                 <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                <a href="{% url 'automations:workflow_list' %}" class="{% if view_name == 'workflow_list' %}text-slate-900 font-semibold{% else %}hover:text-primary{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'workflow_list' %}hover:bg-slate-100{% endif %}">
+                <a href="{% url 'automations:workflow_list' %}" class="{% if view_name == 'workflow_list' %}text-slate-900 font-semibold{% else %}hover:text-sage{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'workflow_list' %}hover:bg-slate-100{% endif %}">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                   Automations
                 </a>
@@ -768,7 +745,7 @@
               {% elif app_name == 'social_accounts' %}
                 <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                 {% if view_name == 'social_hub' or view_name == 'connect_platform' or view_name == 'oauth_callback' or view_name == 'disconnect_account' or view_name == 'select_page' %}
-                  <a href="{% url 'social_accounts:social_hub' %}" class="{% if view_name == 'social_hub' %}text-slate-900 font-semibold{% else %}hover:text-primary{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'social_hub' %}hover:bg-slate-100{% endif %}">
+                  <a href="{% url 'social_accounts:social_hub' %}" class="{% if view_name == 'social_hub' %}text-slate-900 font-semibold{% else %}hover:text-sage{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'social_hub' %}hover:bg-slate-100{% endif %}">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
                     Connected Accounts
                   </a>
@@ -777,7 +754,7 @@
                     <span class="text-slate-900 font-semibold p-2">Select Page</span>
                   {% endif %}
                 {% elif view_name == 'post_list' or view_name == 'post_create' or view_name == 'post_detail' or view_name == 'post_delete' or view_name == 'publish_post' %}
-                  <a href="{% url 'social_accounts:post_list' %}" class="{% if view_name == 'post_list' %}text-slate-900 font-semibold{% else %}hover:text-primary{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'post_list' %}hover:bg-slate-100{% endif %}">
+                  <a href="{% url 'social_accounts:post_list' %}" class="{% if view_name == 'post_list' %}text-slate-900 font-semibold{% else %}hover:text-sage{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'post_list' %}hover:bg-slate-100{% endif %}">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                     Connected Accounts
                   </a>
@@ -789,12 +766,12 @@
                     <span class="text-slate-900 font-semibold p-2">Detail</span>
                   {% endif %}
                 {% elif view_name == 'analytics_overview' or view_name == 'analytics_detail' %}
-                  <a href="{% url 'social_accounts:analytics_overview' %}" class="{% if view_name == 'analytics_overview' %}text-slate-900 font-semibold{% else %}hover:text-primary{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'analytics_overview' %}hover:bg-slate-100{% endif %}">
+                  <a href="{% url 'social_accounts:analytics_overview' %}" class="{% if view_name == 'analytics_overview' %}text-slate-900 font-semibold{% else %}hover:text-sage{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'analytics_overview' %}hover:bg-slate-100{% endif %}">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                     Analytics
                   </a>
                 {% elif view_name == 'calendar' or view_name == 'calendar_month' %}
-                  <a href="{% url 'social_accounts:social_hub' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+                  <a href="{% url 'social_accounts:social_hub' %}" class="hover:text-sage transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
                     Connected Accounts
                   </a>
@@ -816,21 +793,21 @@
                     AI Content Studio
                   </span>
                 {% elif view_name == 'generate' %}
-                  <a href="{% url 'content_studio:content_hub' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+                  <a href="{% url 'content_studio:content_hub' %}" class="hover:text-sage transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     AI Content Studio
                   </a>
                   <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                   <span class="text-slate-900 font-semibold p-2">Generate Content</span>
                 {% elif view_name == 'history' %}
-                  <a href="{% url 'content_studio:content_hub' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+                  <a href="{% url 'content_studio:content_hub' %}" class="hover:text-sage transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     AI Content Studio
                   </a>
                   <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                   <span class="text-slate-900 font-semibold p-2">History</span>
                 {% elif view_name == 'detail' or view_name == 'edit' or view_name == 'refine' or view_name == 'approve' or view_name == 'save_draft' or view_name == 'calendar' %}
-                  <a href="{% url 'content_studio:dashboard' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+                  <a href="{% url 'content_studio:dashboard' %}" class="hover:text-sage transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     AI Content Studio
                   </a>
@@ -853,21 +830,21 @@
                     Media Library
                   </span>
                 {% elif view_name == 'upload' %}
-                  <a href="{% url 'media_assets:library' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+                  <a href="{% url 'media_assets:library' %}" class="hover:text-sage transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                     Media Library
                   </a>
                   <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                   <span class="text-slate-900 font-semibold p-2">Upload</span>
                 {% elif view_name == 'detail' or view_name == 'delete_asset' %}
-                  <a href="{% url 'media_assets:library' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+                  <a href="{% url 'media_assets:library' %}" class="hover:text-sage transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                     Media Library
                   </a>
                   <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                   <span class="text-slate-900 font-semibold p-2 capitalize">{{ view_name }}</span>
                 {% elif view_name == 'folders' or view_name == 'folder_detail' or view_name == 'delete_folder' %}
-                  <a href="{% url 'media_assets:folders' %}" class="{% if view_name == 'folders' %}text-slate-900 font-semibold{% else %}hover:text-primary{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'folders' %}hover:bg-slate-100{% endif %}">
+                  <a href="{% url 'media_assets:folders' %}" class="{% if view_name == 'folders' %}text-slate-900 font-semibold{% else %}hover:text-sage{% endif %} transition-colors flex items-center gap-1 p-2 rounded-lg {% if view_name != 'folders' %}hover:bg-slate-100{% endif %}">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
                     Folders
                   </a>
@@ -886,7 +863,7 @@
                     Strategy Studio
                   </span>
                 {% elif view_name == 'strategy_detail' %}
-                  <a href="{% url 'creative:strategy_studio' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+                  <a href="{% url 'creative:strategy_studio' %}" class="hover:text-sage transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5"/></svg>
                     Strategy Studio
                   </a>
@@ -913,14 +890,14 @@
                     Email
                   </span>
                 {% elif view_name == 'connect' or view_name == 'disconnect' %}
-                  <a href="{% url 'inbox:dashboard' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+                  <a href="{% url 'inbox:dashboard' %}" class="hover:text-sage transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                     Email
                   </a>
                   <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                   <span class="text-slate-900 font-semibold p-2">Connect Inbox</span>
                 {% elif view_name == 'message_detail' or view_name == 'message_summarize' or view_name == 'generate_draft' or view_name == 'trash' or view_name == 'message_delete' or view_name == 'message_restore' or view_name == 'sync' %}
-                  <a href="{% url 'inbox:dashboard' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+                  <a href="{% url 'inbox:dashboard' %}" class="hover:text-sage transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                     Email
                   </a>
@@ -943,7 +920,7 @@
                     {% endif %}
                   </span>
                 {% elif view_name == 'draft_detail' or view_name == 'draft_review' or view_name == 'draft_approve' or view_name == 'draft_send' or view_name == 'draft_send_test' %}
-                  <a href="{% url 'inbox:dashboard' %}" class="hover:text-primary transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
+                  <a href="{% url 'inbox:dashboard' %}" class="hover:text-sage transition-colors flex items-center gap-1 p-2 rounded-lg hover:bg-slate-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                     Email
                   </a>
@@ -1023,7 +1000,7 @@
 
             <!-- Workspace Switcher Dropdown -->
             <div class="hidden md:relative md:flex ws-switcher" id="ws-switcher">
-              <button onclick="toggleWsDropdown()" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 min-w-0 max-w-[220px] hover:border-primary/30 hover:bg-white transition-all cursor-pointer ws-switcher-btn">
+              <button onclick="toggleWsDropdown()" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 min-w-0 max-w-[220px] hover:border-sage/30 hover:bg-white transition-all cursor-pointer ws-switcher-btn">
                 {% if active_workspace %}
                 <span class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0"></span>
                 <span class="text-xs font-semibold text-slate-700 truncate">{{ active_workspace.name }}</span>
@@ -1046,7 +1023,7 @@
                 </div>
                 <div class="max-h-72 overflow-y-auto divide-y divide-slate-50">
                   {% for ws in user_workspaces %}
-                  <a href="{% url 'workspaces:activate' ws.id %}" class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors {% if active_workspace and active_workspace.id == ws.id %}bg-primary-light/30{% endif %}">
+                  <a href="{% url 'workspaces:activate' ws.id %}" class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors {% if active_workspace and active_workspace.id == ws.id %}bg-night-surface/30{% endif %}">
                     <div class="w-8 h-8 rounded-lg {% if active_workspace and active_workspace.id == ws.id %}bg-primary text-white{% else %}bg-slate-100 text-slate-600{% endif %} flex items-center justify-center text-xs font-bold flex-shrink-0">
                       {{ ws.name|first|upper }}
                     </div>
@@ -1055,7 +1032,7 @@
                       <p class="text-[10px] text-slate-400 truncate">{{ ws.member_count }} member{{ ws.member_count|pluralize }}</p>
                     </div>
                     {% if active_workspace and active_workspace.id == ws.id %}
-                    <svg class="w-4 h-4 text-primary flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                    <svg class="w-4 h-4 text-sage flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                     {% endif %}
                   </a>
                   {% endfor %}
@@ -1067,7 +1044,7 @@
                     <span class="text-sm font-semibold">Personal Mode</span>
                   </a>
                   {% endif %}
-                  <a href="{% url 'workspaces:list' %}" class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-primary">
+                  <a href="{% url 'workspaces:list' %}" class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-sage">
                     <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     <span class="text-sm font-semibold">Manage Workspaces</span>
                   </a>
@@ -1119,7 +1096,7 @@
 
             <div class="flex items-center gap-3 sm:gap-4">
               <div class="relative" id="notif-wrapper" data-clear-url="{% url 'dashboard:clear_notifications' %}" data-check-url="{% url 'dashboard:check_notifications' %}" data-csrf-token="{{ csrf_token }}">
-                <button onclick="toggleNotifications()" class="w-9 h-9 flex items-center justify-center text-slate-600 bg-white border border-slate-200 shadow-sm hover:text-primary hover:border-primary/30 hover:bg-primary-light rounded-xl transition-all relative hover-scale-soft">
+                <button onclick="toggleNotifications()" class="w-9 h-9 flex items-center justify-center text-slate-600 bg-white border border-slate-200 shadow-sm hover:text-sage hover:border-sage/30 hover:bg-night-surface rounded-xl transition-all relative hover-scale-soft">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
                   <span id="notif-badge" class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white {% if dashboard_notification_count == 0 %}hidden{% endif %}"></span>
                 </button>
@@ -1127,7 +1104,7 @@
                 <div id="notif-dropdown" class="absolute right-0 top-14 w-[22rem] max-w-[calc(100vw-1.5rem)] bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-[60] opacity-0 pointer-events-none transition-opacity duration-150 ease-out">
                   <div class="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
                     <h4 class="text-sm font-bold text-slate-900">Notifications</h4>
-                    <button onclick="clearNotifications()" class="text-[10px] font-bold text-primary hover:underline uppercase tracking-wider">Clear all</button>
+                    <button onclick="clearNotifications()" class="text-[10px] font-bold text-sage hover:underline uppercase tracking-wider">Clear all</button>
                   </div>
                   <div id="notif-list" class="max-h-96 overflow-y-auto divide-y divide-gray-50 pr-1 {% if dashboard_notification_count == 0 %}hidden{% endif %}">
                     {% for notification in dashboard_notifications %}
@@ -1136,7 +1113,7 @@
                         {% if notification.tone == 'success' %}bg-emerald-50 text-emerald-600
                         {% elif notification.tone == 'warning' %}bg-amber-50 text-amber-600
                         {% elif notification.tone == 'danger' %}bg-red-50 text-red-600
-                        {% else %}bg-primary-light text-primary{% endif %}">
+                        {% else %}bg-night-surface text-sage{% endif %}">
                         {% if notification.tone == 'success' %}
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                         {% elif notification.tone == 'warning' %}
@@ -1148,7 +1125,7 @@
                         {% endif %}
                       </div>
                       <div>
-                        <p class="text-sm font-semibold text-slate-800 group-hover:text-primary transition-colors">{{ notification.title }}</p>
+                        <p class="text-sm font-semibold text-slate-800 group-hover:text-sage transition-colors">{{ notification.title }}</p>
                         <p class="text-xs text-gray-400 mt-0.5">{{ notification.message }}</p>
                       </div>
                     </a>
@@ -1165,7 +1142,7 @@
                   <p class="text-sm font-bold text-slate-900">{{ user.get_full_name }}</p>
                   <p class="text-[11px] text-gray-400 font-medium uppercase">{{ user.company|default:"User" }}</p>
                 </div>
-                <div class="w-10 h-10 rounded-xl bg-primary-light flex items-center justify-center text-primary font-bold shadow-inner overflow-hidden border-2 border-white">
+                <div class="w-10 h-10 rounded-xl bg-night-surface flex items-center justify-center text-sage font-bold shadow-inner overflow-hidden border-2 border-white">
                   {% if user.avatar %}
                   <img src="{{ user.avatar.url }}" alt="" class="w-full h-full object-cover">
                   {% else %}
@@ -1211,8 +1188,8 @@
       <footer class="hidden sm:flex mt-auto px-4 sm:px-6 lg:px-8 py-3.5 bg-white border-t border-gray-100 flex-col sm:flex-row gap-2 sm:gap-0 justify-between sm:items-center text-xs text-gray-400 font-medium">
         <p>&copy; {% now "Y" %} Noir. High-Deliverability Command Center.</p>
         <div class="flex gap-6">
-          <a href="#" class="hover:text-primary transition-colors">Documentation</a>
-          <a href="#" class="hover:text-primary transition-colors">System Status</a>
+          <a href="#" class="hover:text-sage transition-colors">Documentation</a>
+          <a href="#" class="hover:text-sage transition-colors">System Status</a>
         </div>
       </footer>
     </div>
@@ -1310,141 +1287,71 @@
         }
       });
 
-// ── Notification Polling ──────────────────────────────────────────
-      // Single leader tab polls every 30s; all tabs receive results via
-      // BroadcastChannel so multiple tabs don't multiply DB queries.
-      // Exponential backoff kicks in when the endpoint returns errors.
-      // Uses Page Visibility API to pause polling when tab is hidden.
-
-      var NOTIF_CHANNEL_NAME = 'ida-notif-v1';
-      var NOTIF_POLL_MS = 30000;       // 30s (was 15s)
-      var NOTIF_BACKOFF_MS = [30000, 60000, 120000, 300000]; // [30s, 1m, 2m, 5m]
-
+      // Poll for new notifications every 15 seconds — syncs toast + bell dropdown + badge
+      // Uses Page Visibility API to pause polling when tab is hidden
       var lastNotifCount = {{ dashboard_notification_count }};
       var toneMap = {
         success: { bg: 'bg-emerald-50 text-emerald-600', icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>', toastClass: 'text-emerald-700' },
         warning: { bg: 'bg-amber-50 text-amber-600', icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.2 16c-.77 1.333.192 3 1.73 3z"/></svg>', toastClass: 'text-amber-700' },
         danger:  { bg: 'bg-red-50 text-red-600', icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M4.93 19h14.14c1.54 0 2.502-1.667 1.732-3L13.73 4c-.77-1.333-2.694-1.333-3.464 0L3.2 16c-.77 1.333.192 3 1.73 3z"/></svg>', toastClass: 'text-red-700' },
       };
-      var defaultTone = { bg: 'bg-primary-light text-primary', icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>', toastClass: 'text-slate-700' };
-
+      var defaultTone = { bg: 'bg-night-surface text-sage', icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>', toastClass: 'text-slate-700' };
       function escapeHtml(value) {
         var div = document.createElement('div');
         div.textContent = value || '';
         return div.innerHTML;
       }
-
       var maxNotifId = 0;
-      var backoffIdx = 0;
-      var pollTimer = null;
-      var isLeader = false;
-
-      // ── BroadcastChannel: coordinate one poller across tabs ───────────
-      var channel = null;
-      try { channel = new BroadcastChannel(NOTIF_CHANNEL_NAME); } catch(e) { channel = null; }
-
-      function broadcastResult(data) {
-        if (!channel) return;
-        try { channel.postMessage({ type: 'notif-result', data: data, tabId: Date.now() }); } catch(e) {}
-      }
-
-      function onBroadcastMessage(event) {
-        if (!event.data || event.data.type !== 'notif-result') return;
-        renderNotifications(event.data.data);
-      }
-
-      if (channel) {
-        channel.addEventListener('message', onBroadcastMessage);
-      }
-
-      // ── Render notifications from poll (or broadcast) ─────────────────
-      function renderNotifications(data) {
-        var badge = document.getElementById('notif-badge');
-        if (badge) {
-          if (data.count > 0) badge.classList.remove('hidden');
-          else badge.classList.add('hidden');
-        }
-        (data.notifications || []).forEach(function(n) {
-          if (n.id > maxNotifId) maxNotifId = n.id;
-          var list = document.getElementById('notif-list');
-          if (!list) return;
-          if (list.querySelector('[data-nid="' + n.id + '"]')) return;
-          var t = toneMap[n.tone] || defaultTone;
-          var item = document.createElement('a');
-          item.setAttribute('href', n.url || '#');
-          item.setAttribute('data-nid', n.id);
-          item.className = 'px-5 py-4 hover:bg-slate-100 transition-colors flex gap-3 group';
-          item.innerHTML = '<div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center ' + t.bg + '">' + t.icon + '</div><div><p class="text-sm font-semibold text-slate-800 group-hover:text-primary transition-colors">' + escapeHtml(n.title) + '</p><p class="text-xs text-gray-400 mt-0.5">' + escapeHtml(n.message) + '</p></div>';
-          list.insertBefore(item, list.firstChild);
-          list.classList.remove('hidden');
-          var empty = document.getElementById('notif-empty');
-          if (empty) empty.classList.add('hidden');
-          // Toast
-          var toast = document.createElement('div');
-          toast.className = 'toast-msg animate-toast-in px-5 py-4 rounded-2xl shadow-2xl glass border border-white/50 flex items-center gap-3 ' + t.toastClass;
-          toast.innerHTML = '<div class="w-8 h-8 rounded-full flex items-center justify-center bg-white/80">' + t.icon + '</div><div><p class="text-sm font-bold">' + escapeHtml(n.title) + '</p><p class="text-xs opacity-80 mt-0.5">' + escapeHtml(n.message) + '</p></div>';
-          var container = document.getElementById('toast-container');
-          if (!container) {
-            container = document.createElement('div');
-            container.id = 'toast-container';
-            container.className = 'fixed top-24 right-10 z-[60] flex flex-col gap-3';
-            document.body.appendChild(container);
-          }
-          container.appendChild(toast);
-          setTimeout(function() {
-            toast.classList.add('animate-toast-out');
-            setTimeout(function() { toast.remove(); }, 400);
-          }, 5000);
-        });
-        lastNotifCount = data.count;
-      }
-
-      // ── Core poll: only fires if no other tab is known to be polling ──
-      function doPoll() {
+      function pollNotifications() {
+        if (document.hidden) { setTimeout(pollNotifications, 15000); return; }
         var wrapper = document.getElementById('notif-wrapper');
-        if (!wrapper) return;
+        if (!wrapper) { setTimeout(pollNotifications, 15000); return; }
         var url = new URL(wrapper.dataset.checkUrl, window.location.origin);
         if (maxNotifId > 0) {
           url.searchParams.set('since_id', maxNotifId);
         }
         fetch(url.toString(), {
           headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        }).then(function(r) {
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          return r.json();
-        }).then(function(data) {
-          renderNotifications(data);
-          broadcastResult(data);
-          // Reset backoff on success
-          backoffIdx = 0;
-        }).catch(function() {
-          // Exponential backoff: double wait time on errors
-          backoffIdx = Math.min(backoffIdx + 1, NOTIF_BACKOFF_MS.length - 1);
-        }).finally(function() {
-          var delay = NOTIF_BACKOFF_MS[backoffIdx];
-          pollTimer = setTimeout(doPoll, delay);
-        });
-      }
-
-      function pollNotifications() {
-        if (document.hidden) {
-          pollTimer = setTimeout(pollNotifications, NOTIF_POLL_MS);
-          return;
-        }
-        var wrapper = document.getElementById('notif-wrapper');
-        if (!wrapper) {
-          pollTimer = setTimeout(pollNotifications, NOTIF_POLL_MS);
-          return;
-        }
-        // Claim leadership: if another tab polls within 5s it will broadcast;
-        // we skip our poll to halve total traffic.
-        isLeader = true;
-        clearTimeout(pollTimer);
-        doPoll();
-      }
-
-      // ── Start polling (30s interval as baseline) ────────────────────
-      pollTimer = setTimeout(pollNotifications, NOTIF_POLL_MS);
+        }).then(function(r) { return r.json(); }).then(function(data) {
+          var badge = document.getElementById('notif-badge');
+          if (badge) {
+            if (data.count > 0) badge.classList.remove('hidden');
+            else badge.classList.add('hidden');
+          }
+          data.notifications.forEach(function(n) {
+            if (n.id > maxNotifId) maxNotifId = n.id;
+            var list = document.getElementById('notif-list');
+            if (!list) return;
+            if (list.querySelector('[data-nid="' + n.id + '"]')) return;
+            var t = toneMap[n.tone] || defaultTone;
+            var item = document.createElement('a');
+            item.setAttribute('href', n.url);
+            item.setAttribute('data-nid', n.id);
+            item.className = 'px-5 py-4 hover:bg-slate-100 transition-colors flex gap-3 group';
+            item.innerHTML = '<div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center ' + t.bg + '">' + t.icon + '</div><div><p class="text-sm font-semibold text-slate-800 group-hover:text-sage transition-colors">' + escapeHtml(n.title) + '</p><p class="text-xs text-gray-400 mt-0.5">' + escapeHtml(n.message) + '</p></div>';
+            list.appendChild(item);
+            list.classList.remove('hidden');
+            var empty = document.getElementById('notif-empty');
+            if (empty) empty.classList.add('hidden');
+            var toast = document.createElement('div');
+            toast.className = 'toast-msg animate-toast-in px-5 py-4 rounded-2xl shadow-2xl glass border border-white/50 flex items-center gap-3 ' + t.toastClass;
+            toast.innerHTML = '<div class="w-8 h-8 rounded-full flex items-center justify-center bg-white/80">' + t.icon + '</div><div><p class="text-sm font-bold">' + escapeHtml(n.title) + '</p><p class="text-xs opacity-80 mt-0.5">' + escapeHtml(n.message) + '</p></div>';
+            var container = document.getElementById('toast-container');
+            if (!container) {
+              container = document.createElement('div');
+              container.id = 'toast-container';
+              container.className = 'fixed top-24 right-10 z-[60] flex flex-col gap-3';
+              document.body.appendChild(container);
+            }
+            container.appendChild(toast);
+            setTimeout(function() {
+              toast.classList.add('animate-toast-out');
+              setTimeout(function() { toast.remove(); }, 400);
+            }, 5000);
+          });
+          lastNotifCount = data.count;
+        }).catch(function() {}).finally(function() {
+          setTimeout(pollNotifications, 15000);
         });
       }
       setTimeout(pollNotifications, 15000);
@@ -1523,7 +1430,7 @@
         <form id="upload-form" method="post" enctype="multipart/form-data" class="p-5 space-y-4">
           {% csrf_token %}
           <div>
-            <div class="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer" onclick="document.getElementById('upload-file-input').click()">
+            <div class="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center hover:border-sage/50 transition-colors cursor-pointer" onclick="document.getElementById('upload-file-input').click()">
               <svg class="w-10 h-10 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
               <p class="text-sm font-semibold text-slate-600 mb-1" id="upload-drop-text">Click to select or drag &amp; drop</p>
               <p class="text-xs text-gray-400">Images, videos, audio, or documents up to 100MB</p>
@@ -1651,10 +1558,10 @@
     <style>
       /* Mobile Bottom Navigation */
       .mobile-bottom-nav { padding-bottom: env(safe-area-inset-bottom, 0px); }
-      .mobile-nav-item { color: #88958a; transition: all 0.15s; }
-      .mobile-nav-item.active, .mobile-nav-item:active { color: #17211d; }
-      .mobile-nav-item.active svg, .mobile-nav-item:active svg { stroke: #17211d; }
-      .mobile-nav-item.active span, .mobile-nav-item:active span { color: #17211d; }
+      .mobile-nav-item { color: #94A3B8; transition: all 0.15s; }
+      .mobile-nav-item.active, .mobile-nav-item:active { color: #879b72; }
+      .mobile-nav-item.active svg, .mobile-nav-item:active svg { stroke: #879b72; }
+      .mobile-nav-item.active span, .mobile-nav-item:active span { color: #879b72; }
 
       @media (max-width: 1023px) {
         .ida-main { padding-bottom: 56px; }
