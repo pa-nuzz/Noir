@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.core import mail
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from apps.accounts.forms import RegisterForm
@@ -33,6 +34,33 @@ class AuthFlowTests(TestCase):
             {"username": self.user.email, "password": self.user_password},
         )
         self.assertRedirects(response, reverse("dashboard:dashboard"))
+
+    def test_login_accepts_username(self):
+        response = self.client.post(
+            reverse("accounts:login"),
+            {"username": self.user.username, "password": self.user_password},
+        )
+        self.assertRedirects(response, reverse("dashboard:dashboard"))
+
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    def test_register_creates_user_and_redirects(self):
+        response = self.client.post(
+            reverse("accounts:register"),
+            {
+                "username": "newuser",
+                "email": "new@example.com",
+                "first_name": "New",
+                "last_name": "User",
+                "password1": "StrongPass123!",
+                "password2": "StrongPass123!",
+            },
+        )
+
+        self.assertRedirects(response, reverse("dashboard:dashboard"))
+        user = get_user_model().objects.get(username="newuser")
+        self.assertEqual(user.email, "new@example.com")
+        self.assertFalse(user.email_verified)
+        self.assertEqual(len(mail.outbox), 1)
 
     def test_dashboard_requires_authentication(self):
         response = self.client.get(reverse("dashboard:dashboard"))
