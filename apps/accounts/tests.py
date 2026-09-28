@@ -62,6 +62,29 @@ class AuthFlowTests(TestCase):
         self.assertFalse(user.email_verified)
         self.assertEqual(len(mail.outbox), 1)
 
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    def test_register_accepts_the_fields_shown_on_registration_form(self):
+        page = self.client.get(reverse("accounts:register"))
+        self.assertContains(page, 'name="first_name"')
+        self.assertContains(page, 'name="last_name"')
+
+        response = self.client.post(
+            reverse("accounts:register"),
+            {
+                "username": "visiblefields",
+                "email": "visible@example.com",
+                "first_name": "Visible",
+                "last_name": "Fields",
+                "password1": "StrongPass123!",
+                "password2": "StrongPass123!",
+            },
+        )
+
+        self.assertRedirects(response, reverse("dashboard:dashboard"))
+        self.assertTrue(
+            get_user_model().objects.filter(username="visiblefields").exists()
+        )
+
     def test_dashboard_requires_authentication(self):
         response = self.client.get(reverse("dashboard:dashboard"))
         self.assertEqual(response.status_code, 302)
