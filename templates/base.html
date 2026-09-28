@@ -21,10 +21,10 @@
             serif: ['"Raleway"', 'Georgia', 'serif'],
           },
           colors: {
-            primary: { DEFAULT: '#6D28D9', hover: '#5B21B6', light: '#EDE9FE' },
-            cyan:    { DEFAULT: '#06B6D4', light: '#ECFEFF' },
-            ink:     { DEFAULT: '#0A2540', muted: '#445B73', subtle: '#8FA5BC' },
-            surface: { DEFAULT: '#FFFFFF', raised: '#F8FAFC', border: '#E2E8F0' },
+            primary: { DEFAULT: '#17211d', hover: '#101713', light: '#edf1eb' },
+            cyan:    { DEFAULT: '#879b72', light: '#f2f6ef' },
+            ink:     { DEFAULT: '#17211d', muted: '#526057', subtle: '#88958a' },
+            surface: { DEFAULT: '#FFFFFF', raised: '#fbfcf9', border: '#d8e0d5' },
           },
           maxWidth: { '8xl': '88rem' },
           borderRadius: { '2xl': '1rem', '3xl': '1.25rem' },
@@ -73,7 +73,7 @@
       </div>
       {% else %}
       <a href="{% url 'accounts:login' %}" class="text-sm font-bold text-ink-muted hover:text-ink px-4 py-2 transition-colors">Log In</a>
-      <a href="{% url 'accounts:register' %}" class="text-sm font-bold bg-gradient-to-r from-[#6D28D9] to-[#06B6D4] hover:from-[#5B21B6] hover:to-[#0891B2] text-white px-6 py-2.5 rounded-xl transition-all shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30">Get started free</a>
+      <a href="{% url 'accounts:register' %}" class="text-sm font-bold bg-gradient-to-r from-[#17211d] to-[#879b72] hover:from-[#101713] hover:to-[#6f845d] text-white px-6 py-2.5 rounded-xl transition-all shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30">Get started free</a>
       {% endif %}
     </div>
   </div>

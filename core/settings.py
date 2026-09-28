@@ -79,7 +79,7 @@ for default_origin in [
 # Remove duplicates and empty strings
 ALLOWED_HOSTS = list({h for h in ALLOWED_HOSTS if h})
 CSRF_TRUSTED_ORIGINS = list({o for o in CSRF_TRUSTED_ORIGINS if o})
-STATIC_VERSION = config('STATIC_VERSION', default='2')
+STATIC_VERSION = config('STATIC_VERSION', default='3')
 
 if not DEBUG and SECRET_KEY == 'django-insecure-test-key':
     raise ValueError('SECRET_KEY must be set from environment in production')

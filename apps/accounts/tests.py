@@ -22,6 +22,8 @@ class AuthFlowTests(TestCase):
     def test_login_page_renders(self):
         response = self.client.get(reverse("accounts:login"))
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Noir")
+        self.assertContains(response, "#17211d")
 
     def test_auth_pages_are_not_cached(self):
         for url_name in ("accounts:login", "accounts:register"):
@@ -29,6 +31,14 @@ class AuthFlowTests(TestCase):
 
             self.assertEqual(response.status_code, 200)
             self.assertIn("no-store", response.headers.get("Cache-Control", ""))
+
+    def test_registration_page_renders_noir_branding_and_required_fields(self):
+        response = self.client.get(reverse("accounts:register"))
+
+        self.assertContains(response, "Noir")
+        self.assertContains(response, "#17211d")
+        self.assertContains(response, 'name="first_name"')
+        self.assertContains(response, 'name="last_name"')
 
     def test_login_redirects_to_dashboard(self):
         response = self.client.post(
